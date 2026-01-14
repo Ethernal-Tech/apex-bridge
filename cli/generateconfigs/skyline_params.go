@@ -195,7 +195,6 @@ func (p *skylineGenerateConfigsParams) Execute(
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
-			MinColCoinsAllowedToBridge:     common.MinColCoinsAllowedToBridgeDefault,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},

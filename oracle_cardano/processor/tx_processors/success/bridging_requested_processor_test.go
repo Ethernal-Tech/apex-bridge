@@ -38,7 +38,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
-	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(0).SetUint64(1000006))
+	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(1000006))
 	testChainID := "test"
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}

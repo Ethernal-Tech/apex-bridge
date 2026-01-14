@@ -146,8 +146,9 @@ type ReceiverValidationContext struct {
 	CardanoDestConfig *CardanoChainConfig
 	EthDestConfig     *EthChainConfig
 
-	BridgingSettings *BridgingSettings
-	DestFeeAddress   string
+	BridgingSettings           *BridgingSettings
+	MinColCoinsAllowedToBridge *big.Int
+	DestFeeAddress             string
 
 	CurrencySrcID  uint16
 	CurrencyDestID uint16

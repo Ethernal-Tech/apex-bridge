@@ -68,9 +68,10 @@ func GetTokenPair(
 }
 
 type DestChainInfo struct {
-	FeeAddress         string
-	FeeAddrBridgingWei *big.Int
-	CurrencyTokenID    uint16
+	FeeAddress                 string
+	FeeAddrBridgingWei         *big.Int
+	CurrencyTokenID            uint16
+	MinColCoinsAllowedToBridge *big.Int
 }
 
 func GetDestChainInfo(
@@ -87,9 +88,10 @@ func GetDestChainInfo(
 		}
 
 		return &DestChainInfo{
-			FeeAddress:         appConfig.GetFeeMultisigAddress(destChainID),
-			FeeAddrBridgingWei: common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)),
-			CurrencyTokenID:    currencyDestID,
+			FeeAddress:                 appConfig.GetFeeMultisigAddress(destChainID),
+			FeeAddrBridgingWei:         common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)),
+			CurrencyTokenID:            currencyDestID,
+			MinColCoinsAllowedToBridge: common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.MinColCoinsAllowedToBridge)),
 		}, nil
 	case ethDestConfig != nil:
 		currencyDestID, err := ethDestConfig.GetCurrencyID()
@@ -98,9 +100,10 @@ func GetDestChainInfo(
 		}
 
 		return &DestChainInfo{
-			FeeAddress:         common.EthZeroAddr,
-			FeeAddrBridgingWei: ethDestConfig.FeeAddrBridgingAmount,
-			CurrencyTokenID:    currencyDestID,
+			FeeAddress:                 common.EthZeroAddr,
+			FeeAddrBridgingWei:         ethDestConfig.FeeAddrBridgingAmount,
+			CurrencyTokenID:            currencyDestID,
+			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge,
 		}, nil
 	default:
 		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)
@@ -111,4 +114,12 @@ func NormalizeAddr(addr string) string {
 	addr = strings.ToLower(addr)
 
 	return strings.TrimPrefix(addr, "0x")
+}
+
+func MaxBigInt(a, b *big.Int) *big.Int {
+	if a.Cmp(b) >= 0 { // a >= b
+		return a
+	}
+
+	return b
 }

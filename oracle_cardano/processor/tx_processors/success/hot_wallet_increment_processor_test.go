@@ -203,9 +203,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 		require.Len(t, claims.HotWalletIncrementClaims, 1)
 		require.Equal(t, common.ChainIDIntPrime, claims.HotWalletIncrementClaims[0].ChainId)
-		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(6)),
-			claims.HotWalletIncrementClaims[0].Amount)
-		require.Equal(t, common.DfmToWei(big.NewInt(0)),
-			claims.HotWalletIncrementClaims[0].AmountWrapped)
+		require.Equal(t, common.DfmToWei(big.NewInt(6)), claims.HotWalletIncrementClaims[0].Amount)
+		require.Equal(t, common.DfmToWei(big.NewInt(0)), claims.HotWalletIncrementClaims[0].AmountWrapped)
 	})
 }

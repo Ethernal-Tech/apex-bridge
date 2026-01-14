@@ -32,7 +32,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
-	minFeeForBridgingWei := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingDfm))
+	minFeeForBridgingWei := common.DfmToWei(big.NewInt(minFeeForBridgingDfm))
 	testChainID := "test"
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
@@ -381,9 +381,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingDfm - 1)),
+			BridgingFee: common.DfmToWei(big.NewInt(minFeeForBridgingDfm - 1)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -415,10 +415,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 				{Address: primeBridgingFeeAddr, Amount: minFeeForBridgingWei},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(100)),
+			BridgingFee: common.DfmToWei(big.NewInt(100)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -428,7 +428,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		ethTx := &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridgingDfm + 100)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridgingDfm + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -450,8 +450,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(2))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(2))},
 			},
 			BridgingFee: big.NewInt(0),
 		})
@@ -485,8 +485,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: nexusBridgingAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: nexusBridgingAddr, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 			},
 			BridgingFee: big.NewInt(0),
 		})
@@ -520,8 +520,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: "stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d", Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: "stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d", Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 			},
 			BridgingFee: big.NewInt(0),
 		})
@@ -556,7 +556,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: minFeeForBridgingWei},
-			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+			{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -575,7 +575,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridgingDfm - 1)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridgingDfm - 1)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -600,7 +600,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: minFeeForBridgingWei},
-			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+			{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -619,7 +619,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridgingDfm + 1)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridgingDfm + 1)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -643,7 +643,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "addr1",
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingDfm - 1))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(minFeeForBridgingDfm - 1))},
 			},
 			BridgingFee: big.NewInt(0),
 		})
@@ -677,7 +677,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: minFeeForBridgingWei},
-			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).Add(new(big.Int).SetUint64(1), maxAmountAllowedToBridge))},
+			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).Add(big.NewInt(1), maxAmountAllowedToBridge))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -720,7 +720,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: minFeeForBridgingWei},
-			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+			{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -737,7 +737,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridgingDfm)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridgingDfm)),
 		}
 
 		appConfig := getAppConfig(false)

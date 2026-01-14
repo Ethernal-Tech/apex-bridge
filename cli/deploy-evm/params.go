@@ -294,14 +294,14 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm)).String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minTokenBridgingAmountString,
 		minTokenBridgingAmountFlag,
-		common.MinColCoinsAllowedToBridgeDefault.String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minTokenBridgingAmountFlagDesc,
 	)
 

@@ -234,9 +234,11 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			EthDestConfig:     ethDestConfig,
 			DestFeeAddress:    destChainInfo.FeeAddress,
 			BridgingSettings:  &appConfig.BridgingSettings,
-			AmountsSums:       make(map[uint16]*big.Int),
-			CurrencySrcID:     currencySrcID,
-			CurrencyDestID:    destChainInfo.CurrencyTokenID,
+			MinColCoinsAllowedToBridge: cUtils.MaxBigInt(new(big.Int).SetUint64(cardanoSrcConfig.MinColCoinsAllowedToBridge),
+				destChainInfo.MinColCoinsAllowedToBridge),
+			AmountsSums:    make(map[uint16]*big.Int),
+			CurrencySrcID:  currencySrcID,
+			CurrencyDestID: destChainInfo.CurrencyTokenID,
 		},
 	}
 
@@ -354,14 +356,14 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 	if tokenPair.SourceTokenID != ctx.CurrencySrcID &&
 		tokenPair.DestinationTokenID != ctx.CurrencyDestID {
 		// source token is not currency and is not wrapped token - it's colored coin on source
-		minColCoinsDfm := common.WeiToDfm(ctx.BridgingSettings.MinColCoinsAllowedToBridge)
+		minColCoinsDfm := common.WeiToDfm(ctx.MinColCoinsAllowedToBridge)
 		if new(big.Int).SetUint64(receiver.Amount).Cmp(minColCoinsDfm) < 0 {
 			return fmt.Errorf(
 				"receiver amount of token with ID %d too low: got %d, minimum allowed %v (%v wei); metadata: %v, receiver: %v",
 				receiver.TokenID,
 				receiver.Amount,
 				minColCoinsDfm,
-				ctx.BridgingSettings.MinColCoinsAllowedToBridge,
+				ctx.MinColCoinsAllowedToBridge,
 				ctx.metadata,
 				receiver,
 			)
@@ -398,7 +400,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 				ctx.metadata, receiver)
 		}
 	} else {
-		minColCoinsDfm := common.WeiToDfm(ctx.BridgingSettings.MinColCoinsAllowedToBridge)
+		minColCoinsDfm := common.WeiToDfm(ctx.MinColCoinsAllowedToBridge)
 		if new(big.Int).SetUint64(receiver.Amount).Cmp(minColCoinsDfm) < 0 {
 			// check colored coin min amount
 			return fmt.Errorf(
@@ -406,7 +408,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 				receiver.TokenID,
 				receiver.Amount,
 				minColCoinsDfm,
-				ctx.BridgingSettings.MinColCoinsAllowedToBridge,
+				ctx.MinColCoinsAllowedToBridge,
 				ctx.metadata,
 				receiver,
 			)

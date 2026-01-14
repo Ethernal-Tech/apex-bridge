@@ -217,6 +217,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			EthDestConfig:     ethDestConfig,
 			DestFeeAddress:    destChainInfo.FeeAddress,
 			BridgingSettings:  &appConfig.BridgingSettings,
+			MinColCoinsAllowedToBridge: oUtils.MaxBigInt(ethSrcConfig.MinColCoinsAllowedToBridge,
+				destChainInfo.MinColCoinsAllowedToBridge),
 
 			AmountsSums:    make(map[uint16]*big.Int),
 			CurrencySrcID:  srcCurrencyID,
@@ -303,10 +305,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 		if receiver.Amount.Cmp(utxoMinWeiDest) < 0 {
 			return fmt.Errorf("found an utxo value below minimum value in metadata receivers: %v", ctx.metadata)
 		}
-	} else {
-		if receiver.Amount.Cmp(ctx.BridgingSettings.MinColCoinsAllowedToBridge) < 0 {
-			return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", ctx.metadata)
-		}
+	} else if receiver.Amount.Cmp(ctx.MinColCoinsAllowedToBridge) < 0 {
+		return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", ctx.metadata)
 	}
 
 	if tokensSum, ok := ctx.AmountsSums[tokenPair.SourceTokenID]; ok {
@@ -335,7 +335,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 		ctx.AmountsSums[tokenPair.SourceTokenID] = new(big.Int).Set(receiver.Amount)
 	}
 
-	if receiver.Amount.Cmp(ctx.BridgingSettings.MinColCoinsAllowedToBridge) < 0 {
+	if receiver.Amount.Cmp(ctx.MinColCoinsAllowedToBridge) < 0 {
 		return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", ctx.metadata)
 	}
 
@@ -521,7 +521,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 
 	amount := big.NewInt(0)
 	amountWrapped := big.NewInt(0)
-	//receiverAmountDfm := common.WeiToDfm(receiver.Amount)
 
 	// currency on destination
 	if tokenPair.DestinationTokenID == currencyDestID {

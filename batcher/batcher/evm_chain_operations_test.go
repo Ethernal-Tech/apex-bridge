@@ -79,37 +79,37 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 				SourceChainId: 2,
 				Receivers: []eth.BridgeReceiver{
 					{
-						Amount:             common.DfmToWei(new(big.Int).SetUint64(100)),
+						Amount:             common.DfmToWei(big.NewInt(100)),
 						AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 						DestinationAddress: "0xff",
 						TokenId:            0,
 					},
 					{
-						Amount:             common.DfmToWei(new(big.Int).SetUint64(1000)),
+						Amount:             common.DfmToWei(big.NewInt(1000)),
 						AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 						DestinationAddress: "0xaa",
 						TokenId:            0,
 					},
 					{
 						Amount:             common.DfmToWei(big.NewInt(0)),
-						AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(1000)),
+						AmountWrapped:      common.DfmToWei(big.NewInt(1000)),
 						DestinationAddress: "0xaa",
 						TokenId:            0,
 					},
 					{
 						Amount:             common.DfmToWei(big.NewInt(0)),
-						AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(1000)),
+						AmountWrapped:      common.DfmToWei(big.NewInt(1000)),
 						DestinationAddress: "0xaa",
 						TokenId:            wrappedCurrencyID,
 					},
 					{
 						Amount:             common.DfmToWei(big.NewInt(1000)),
-						AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(1000)),
+						AmountWrapped:      common.DfmToWei(big.NewInt(1000)),
 						DestinationAddress: "0xaa",
 						TokenId:            tokenID,
 					},
 					{
-						Amount:             common.DfmToWei(new(big.Int).SetUint64(10)),
+						Amount:             common.DfmToWei(big.NewInt(10)),
 						AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 						DestinationAddress: "cc",
 						TokenId:            0,
@@ -130,27 +130,27 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xaa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(2000)),
+				Amount:  common.DfmToWei(big.NewInt(2000)),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xaa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(2000)),
+				Amount:  common.DfmToWei(big.NewInt(2000)),
 				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xaa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(1000)),
+				Amount:  common.DfmToWei(big.NewInt(1000)),
 				TokenID: tokenID,
 			},
 			{
 				Address: common.HexToAddress("0xcc"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(10)),
+				Amount:  common.DfmToWei(big.NewInt(10)),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(100)),
+				Amount:  common.DfmToWei(big.NewInt(100)),
 				TokenID: currencyID,
 			},
 		}, txs.Receivers)
@@ -214,14 +214,14 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(100)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(100)),
+					Amount:             common.DfmToWei(big.NewInt(100)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(100)),
 					DestinationAddress: "0xff",
 					TokenId:            wrappedCurrencyID,
 				},
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(200)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(200)),
+					Amount:             common.DfmToWei(big.NewInt(200)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(200)),
 					DestinationAddress: "0xfa",
 					TokenId:            tokenID,
 				},
@@ -230,8 +230,8 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(10)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					Amount:             common.DfmToWei(big.NewInt(10)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: "0xff",
 					TokenId:            0,
 				},
@@ -240,14 +240,14 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(15)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					Amount:             common.DfmToWei(big.NewInt(15)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: "0xf0",
 					TokenId:            0,
 				},
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(11)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					Amount:             common.DfmToWei(big.NewInt(11)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: "0xff",
 					TokenId:            0,
 				},
@@ -256,14 +256,14 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(15)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					Amount:             common.DfmToWei(big.NewInt(15)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: "0xf0",
 					TokenId:            0,
 				},
 				{
 					Amount:             common.DfmToWei(feeAmount),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: common.EthZeroAddr,
 					TokenId:            0,
 				},
@@ -281,27 +281,27 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xf0"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(30)),
+				Amount:  common.DfmToWei(big.NewInt(30)),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(200)),
+				Amount:  common.DfmToWei(big.NewInt(200)),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(200)),
+				Amount:  common.DfmToWei(big.NewInt(200)),
 				TokenID: tokenID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(121)),
+				Amount:  common.DfmToWei(big.NewInt(121)),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(100)),
+				Amount:  common.DfmToWei(big.NewInt(100)),
 				TokenID: wrappedCurrencyID,
 			},
 		},
@@ -341,14 +341,14 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(100)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(100)),
+					Amount:             common.DfmToWei(big.NewInt(100)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(100)),
 					DestinationAddress: "0xff",
 					TokenId:            0,
 				},
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(200)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(2)),
+					Amount:             common.DfmToWei(big.NewInt(200)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(2)),
 					DestinationAddress: "0xfa",
 					TokenId:            wrappedCurrencyID,
 				},
@@ -357,8 +357,8 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(10)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(50)),
+					Amount:             common.DfmToWei(big.NewInt(10)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(50)),
 					DestinationAddress: "0xff",
 					TokenId:            tokenID,
 				},
@@ -368,14 +368,14 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(15)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(15)),
+					Amount:             common.DfmToWei(big.NewInt(15)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(15)),
 					DestinationAddress: "0xf0",
 					TokenId:            0,
 				},
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(11)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(11)),
+					Amount:             common.DfmToWei(big.NewInt(11)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(11)),
 					DestinationAddress: "0xff",
 					TokenId:            wrappedCurrencyID,
 				},
@@ -384,14 +384,14 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					Amount:             common.DfmToWei(new(big.Int).SetUint64(15)),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(2)),
+					Amount:             common.DfmToWei(big.NewInt(15)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(2)),
 					DestinationAddress: "0xf0",
 					TokenId:            0,
 				},
 				{
 					Amount:             common.DfmToWei(feeAmount),
-					AmountWrapped:      common.DfmToWei(new(big.Int).SetUint64(0)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(0)),
 					DestinationAddress: common.EthZeroAddr,
 					TokenId:            1,
 				},
@@ -411,39 +411,39 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 				Address: common.HexToAddress("0xf0"),
 				// 30 - 2 * minFeeForBridging due to refund tx
 				Amount: big.NewInt(0).Sub(
-					common.DfmToWei(new(big.Int).SetUint64(30)), minFeeForBridging),
+					common.DfmToWei(big.NewInt(30)), minFeeForBridging),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xf0"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(17)),
+				Amount:  common.DfmToWei(big.NewInt(17)),
 				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
 				// 200 - 1 * minFeeForBridging due to refund tx
-				Amount:  big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(200)), minFeeForBridging),
+				Amount:  big.NewInt(0).Sub(common.DfmToWei(big.NewInt(200)), minFeeForBridging),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(2)),
+				Amount:  common.DfmToWei(big.NewInt(2)),
 				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
 				// 121 - 2 * minFeeForBridging due to refund txs
-				Amount:  big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(121)), big.NewInt(0).Mul(minFeeForBridging, big.NewInt(2))),
+				Amount:  big.NewInt(0).Sub(common.DfmToWei(big.NewInt(121)), big.NewInt(0).Mul(minFeeForBridging, big.NewInt(2))),
 				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(111)),
+				Amount:  common.DfmToWei(big.NewInt(111)),
 				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
-				Amount:  common.DfmToWei(new(big.Int).SetUint64(50)),
+				Amount:  common.DfmToWei(big.NewInt(50)),
 				TokenID: tokenID,
 			},
 		},

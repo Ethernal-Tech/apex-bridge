@@ -218,19 +218,20 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
-		NodeURL:                 p.evmChainNodeURL,
-		SyncBatchSize:           defaultEvmSyncBatchSize,
-		NumBlockConfirmations:   defaultEvmBlockConfirmationCount,
-		StartBlockNumber:        p.evmChainStartingBlock,
-		PoolIntervalMiliseconds: defaultEvmPoolIntervalMiliseconds,
-		TTLBlockNumberInc:       p.evmChainTTLBlockNumberInc,
-		BlockRoundingThreshold:  p.evmChainBlockRoundingThreshold,
-		NoBatchPeriodPercent:    defaultEvmNoBatchPeriodPercent,
-		DynamicTx:               true,
-		MinFeeForBridging:       p.evmChainMinFeeForBridging,
-		MinOperationFee:         p.minOperationFee,
-		RestartTrackerPullCheck: time.Second * 150,
-		FeeAddrBridgingAmount:   defaultEvmFeeAddrBridgingAmount,
+		NodeURL:                    p.evmChainNodeURL,
+		SyncBatchSize:              defaultEvmSyncBatchSize,
+		NumBlockConfirmations:      defaultEvmBlockConfirmationCount,
+		StartBlockNumber:           p.evmChainStartingBlock,
+		PoolIntervalMiliseconds:    defaultEvmPoolIntervalMiliseconds,
+		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
+		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
+		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
+		DynamicTx:                  true,
+		MinFeeForBridging:          p.evmChainMinFeeForBridging,
+		MinOperationFee:            p.minOperationFee,
+		MinColCoinsAllowedToBridge: common.MinAmountAllowedToBridgeEVM,
+		RestartTrackerPullCheck:    time.Second * 150,
+		FeeAddrBridgingAmount:      defaultEvmFeeAddrBridgingAmount,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {

@@ -78,14 +78,15 @@ type MinConfig struct {
 }
 
 const (
-	MinUtxoAmountDefaultDfm = uint64(1_000_000)
+	MinUtxoAmountDefaultDfm              = uint64(1_000_000)
+	MinColCoinsAllowedToBridgeDfmCardano = uint64(1) // 1 DFM
 )
 
 // vaules in wei
 var (
-	MinOperationFeeDefault            *big.Int = DfmToWei(new(big.Int).SetUint64(0))
-	MinFeeForBridgingDefault          *big.Int = DfmToWei(new(big.Int).SetUint64(1_000_010))
-	MinColCoinsAllowedToBridgeDefault *big.Int = DfmToWei(new(big.Int).SetUint64(1))
+	MinOperationFeeDefault      *big.Int = big.NewInt(0)
+	MinFeeForBridgingDefault    *big.Int = DfmToWei(big.NewInt(1_000_010))
+	MinAmountAllowedToBridgeEVM *big.Int = big.NewInt(1) // 1 wei
 )
 
 var (
@@ -112,7 +113,7 @@ var (
 			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
 			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
-			MinColCoinsAllowedToBridge: WeiToDfm(MinColCoinsAllowedToBridgeDefault).Uint64(),
+			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDfmCardano,
 		},
 	}
 )

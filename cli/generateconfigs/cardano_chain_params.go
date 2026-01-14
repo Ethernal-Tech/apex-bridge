@@ -422,13 +422,14 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			CustodialNft:             custodialNFT,
 			RelayerAddress:           p.relayerAddress,
 		},
-		NetworkAddress:           p.networkAddress,
-		StartBlockHash:           startingHash,
-		StartSlot:                startingSlot,
-		ConfirmationBlockCount:   p.blockConfirmationCount,
-		OtherAddressesOfInterest: []string{},
-		MinOperationFee:          p.minOperationFee,
-		FeeAddrBridgingAmount:    p.utxoMinAmount,
+		NetworkAddress:             p.networkAddress,
+		StartBlockHash:             startingHash,
+		StartSlot:                  startingSlot,
+		ConfirmationBlockCount:     p.blockConfirmationCount,
+		OtherAddressesOfInterest:   []string{},
+		MinOperationFee:            p.minOperationFee,
+		FeeAddrBridgingAmount:      p.utxoMinAmount,
+		MinColCoinsAllowedToBridge: common.MinColCoinsAllowedToBridgeDfmCardano,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {

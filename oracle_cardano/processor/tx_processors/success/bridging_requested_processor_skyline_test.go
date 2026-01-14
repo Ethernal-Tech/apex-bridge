@@ -76,7 +76,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	maxTokenAmountAllowedToBridgeDfm := uint64(100000000)
 	minColCoinsAllowedToBridgeDfm := uint64(100000)
 
-	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(0).SetUint64(1000006))
+	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(1000006))
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr, primeBridgingAddr2}, nil)
@@ -114,8 +114,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
-					MinOperationFee:       minOperationFee,
-					FeeAddrBridgingAmount: feeAddrBridgingAmount,
+					MinOperationFee:            minOperationFee,
+					FeeAddrBridgingAmount:      feeAddrBridgingAmount,
+					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeDfm,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -138,8 +139,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
-					MinOperationFee:       minOperationFee,
-					FeeAddrBridgingAmount: feeAddrBridgingAmount,
+					MinOperationFee:            minOperationFee,
+					FeeAddrBridgingAmount:      feeAddrBridgingAmount,
+					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeDfm,
 				},
 			},
 			EthChains: map[string]*cCore.EthChainConfig{
@@ -147,8 +149,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					BridgingAddresses: cCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging:     common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens)),
-					FeeAddrBridgingAmount: feeAddrBridgingAmountEvm,
+					MinFeeForBridging:          common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens)),
+					FeeAddrBridgingAmount:      feeAddrBridgingAmountEvm,
+					MinColCoinsAllowedToBridge: common.DfmToWei(new(big.Int).SetUint64(minColCoinsAllowedToBridgeDfm)),
 					Tokens: map[uint16]common.Token{
 						nexusCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						usdtTokenID:         {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
@@ -160,7 +163,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridgeDfm)),
 				MaxTokenAmountAllowedToBridge:  common.DfmToWei(new(big.Int).SetUint64(maxTokenAmountAllowedToBridgeDfm)),
-				MinColCoinsAllowedToBridge:     common.DfmToWei(new(big.Int).SetUint64(minColCoinsAllowedToBridgeDfm)),
 			},
 			RefundEnabled:    refundEnabled,
 			ChainIDConverter: common.NewTestChainIDConverter(),
