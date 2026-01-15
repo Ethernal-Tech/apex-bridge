@@ -68,7 +68,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				MaxAmountAllowedToBridge:       cCore.NewBigInt(maxAmountAllowedToBridge),
 			},
 			RefundEnabled:    refundEnabled,
 			ChainIDConverter: common.NewTestChainIDConverter(),

@@ -439,7 +439,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// Remove currency entry from the map
 	delete(receiverCtx.AmountsSums, receiverCtx.CurrencySrcID)
 
-	maxCurrAmt := receiverCtx.BridgingSettings.MaxAmountAllowedToBridge
+	maxCurrAmt := receiverCtx.BridgingSettings.MaxAmountAllowedToBridge.Int
 	if maxCurrAmt != nil && maxCurrAmt.Sign() > 0 && nativeCurrencySum.Cmp(common.WeiToDfm(maxCurrAmt)) == 1 {
 		return fmt.Errorf("sum of receiver amounts: %v greater than maximum allowed: %v (%v wei)",
 			nativeCurrencySum, common.WeiToDfm(maxCurrAmt), maxCurrAmt)

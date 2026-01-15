@@ -148,7 +148,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridgeWei,
+				MaxAmountAllowedToBridge:       oCore.NewBigInt(maxAmountAllowedToBridgeWei),
 				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridgeWei,
 			},
 			RefundEnabled:    refundEnabled,

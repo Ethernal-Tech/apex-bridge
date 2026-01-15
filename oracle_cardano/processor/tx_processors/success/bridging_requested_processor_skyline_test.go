@@ -161,7 +161,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridgeDfm)),
+				MaxAmountAllowedToBridge:       cCore.NewBigInt(common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridgeDfm))),
 				MaxTokenAmountAllowedToBridge:  common.DfmToWei(new(big.Int).SetUint64(maxTokenAmountAllowedToBridgeDfm)),
 			},
 			RefundEnabled:    refundEnabled,

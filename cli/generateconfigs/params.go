@@ -84,7 +84,7 @@ const (
 )
 
 var (
-	defaultMaxAmountAllowedToBridge = common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000))
+	defaultMaxAmountAllowedToBridge = oCore.NewBigInt(common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000)))
 )
 
 type generateConfigsParams struct {

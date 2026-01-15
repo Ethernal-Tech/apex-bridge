@@ -92,7 +92,7 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
+	MaxAmountAllowedToBridge       BigInt   `json:"maxAmountAllowedToBridge"`
 	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`

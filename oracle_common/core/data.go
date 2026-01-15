@@ -2,6 +2,8 @@ package core
 
 import (
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"math"
 	"math/big"
 	"reflect"
@@ -195,4 +197,41 @@ func (totalTokensAmount *TotalTokensAmount) TrackDestTokenAmount(
 
 	totalTokensAmount.TotalAmountWrappedDst.Add(
 		totalTokensAmount.TotalAmountWrappedDst, receiverTokensWei)
+}
+
+type BigInt struct {
+	*big.Int
+}
+
+func NewBigInt(v *big.Int) BigInt {
+	return BigInt{Int: v}
+}
+
+func (b BigInt) MarshalJSON() ([]byte, error) {
+	if b.Int == nil {
+		return []byte("null"), nil
+	}
+	// encode as string to preserve precision
+	return json.Marshal(b.String())
+}
+
+func (b *BigInt) UnmarshalJSON(data []byte) error {
+	// allow null
+	if string(data) == "null" {
+		b.Int = nil
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("big.Int must be a JSON string: %w", err)
+	}
+
+	i, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		return fmt.Errorf("invalid big.Int value: %s", s)
+	}
+
+	b.Int = i
+	return nil
 }

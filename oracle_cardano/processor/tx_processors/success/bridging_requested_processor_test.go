@@ -97,7 +97,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       common.DfmToWei(maxAmountAllowedToBridge),
+				MaxAmountAllowedToBridge:       cCore.NewBigInt(common.DfmToWei(maxAmountAllowedToBridge)),
 			},
 
 			RefundEnabled:    refundEnabled,

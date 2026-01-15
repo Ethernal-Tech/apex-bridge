@@ -83,7 +83,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       common.DfmToWei(maxAmountAllowedToBridge),
+				MaxAmountAllowedToBridge:       oCore.NewBigInt(common.DfmToWei(maxAmountAllowedToBridge)),
 			},
 			RefundEnabled:    refundEnabled,
 			ChainIDConverter: common.NewTestChainIDConverter(),

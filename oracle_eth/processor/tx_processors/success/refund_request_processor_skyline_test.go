@@ -81,7 +81,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				MaxAmountAllowedToBridge:       oCore.NewBigInt(maxAmountAllowedToBridge),
 			},
 			RefundEnabled: refundEnabled,
 			TryCountLimits: oCore.TryCountLimits{
