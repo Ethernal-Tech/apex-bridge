@@ -49,6 +49,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			}
 
 			data := appConfig.EthChains[chainID]
+			data.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			data.DestinationChains = directionConfig.DestinationChains
 			data.Tokens = directionConfig.Tokens
 			appConfig.EthChains[chainID] = data
@@ -60,6 +61,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data := appConfig.CardanoChains[chainID]
 			data.CardanoChainConfig.DestinationChains = directionConfig.DestinationChains
 			data.CardanoChainConfig.Tokens = directionConfig.Tokens
+			data.CardanoChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			appConfig.CardanoChains[chainID] = data
 		}
 	}

@@ -156,11 +156,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 
 	// wTODO: think about whether we should always track all currency amounts,
 	// regardless of .TrackSource and .TrackDestination
-	totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
-		totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.BridgingFee))
+	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency {
+		totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
+			totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.BridgingFee))
 
-	totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
-		totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.OperationFee))
+		totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
+			totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.OperationFee))
+	}
 
 	feeCurrencyDfmDst := new(big.Int).SetUint64(destChainInfo.FeeAddrBridgingAmt)
 	totalTokensAmount.totalAmountCurrencyDst = new(big.Int).Add(
@@ -472,7 +474,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 	if tokenPair.DestinationTokenID == currencyDestID {
 		amount = receiverAmountDfm
 
-		if tokenPair.TrackDestinationToken {
+		if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			trackDestTokenAmount(
 				totalTokensAmount,
 				receiverAmountDfm,
@@ -496,7 +498,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 		amountWrapped = receiverAmountDfm
 
 		// wrapped token on destination
-		if tokenPair.TrackDestinationToken && cardanoDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+		if (ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			cardanoDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
 			trackDestTokenAmount(
 				totalTokensAmount,
 				big.NewInt(0),
@@ -505,7 +508,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		trackSourceTokenAmount(
 			tokenPair.SourceTokenID,
 			currencySrcID,
@@ -546,7 +549,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	if tokenPair.DestinationTokenID == currencyDestID {
 		amount = receiverAmountDfm
 
-		if tokenPair.TrackDestinationToken {
+		if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			trackDestTokenAmount(
 				totalTokensAmount,
 				receiverAmountDfm,
@@ -557,7 +560,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		amountWrapped = receiverAmountDfm
 
 		// wrapped token on destination
-		if tokenPair.TrackDestinationToken && ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+		if (ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
 			trackDestTokenAmount(
 				totalTokensAmount,
 				big.NewInt(0),
@@ -566,7 +570,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		trackSourceTokenAmount(
 			tokenPair.SourceTokenID,
 			currencySrcID,
