@@ -44,12 +44,12 @@ func TestRefundRequestedProcessor(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridgingWei,
+					MinFeeForBridging: common.NewBigInt(minFeeForBridgingWei),
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       oCore.NewBigInt(maxAmountAllowedToBridge),
+				MaxAmountAllowedToBridge:       common.NewBigInt(maxAmountAllowedToBridge),
 			},
 			RefundEnabled: refundEnabled,
 			TryCountLimits: oCore.TryCountLimits{

@@ -101,9 +101,9 @@ func GetDestChainInfo(
 
 		return &DestChainInfo{
 			FeeAddress:                 common.EthZeroAddr,
-			FeeAddrBridgingWei:         ethDestConfig.FeeAddrBridgingAmount,
+			FeeAddrBridgingWei:         ethDestConfig.FeeAddrBridgingAmount.Int,
 			CurrencyTokenID:            currencyDestID,
-			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge,
+			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge.Int,
 		}, nil
 	default:
 		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)

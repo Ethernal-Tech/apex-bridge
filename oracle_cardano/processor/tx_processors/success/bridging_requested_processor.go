@@ -87,7 +87,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		feeCurrencyDstWei = common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount))
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
-		feeCurrencyDstWei = ethDestConfig.FeeAddrBridgingAmount
+		feeCurrencyDstWei = ethDestConfig.FeeAddrBridgingAmount.Int
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 

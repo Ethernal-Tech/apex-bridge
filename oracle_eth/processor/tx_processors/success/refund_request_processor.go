@@ -115,10 +115,11 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if tx.Value.Cmp(chainConfig.MinFeeForBridging) != 1 {
+	minFeeForBridging := chainConfig.MinFeeForBridging.Int
+	if tx.Value.Cmp(minFeeForBridging) != 1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)))
+			tx.Value, new(big.Int).Add(minFeeForBridging, big.NewInt(1)))
 	}
 
 	return nil

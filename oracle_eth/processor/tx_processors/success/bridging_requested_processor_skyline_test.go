@@ -106,8 +106,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: common.DfmToWei(big.NewInt(minFeeForBridging)),
-					MinOperationFee:   common.DfmToWei(big.NewInt(minOperationFee)),
+					MinFeeForBridging: common.NewBigInt(common.DfmToWei(big.NewInt(minFeeForBridging))),
+					MinOperationFee:   common.NewBigInt(common.DfmToWei(big.NewInt(minOperationFee))),
 					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrPrime: []common.TokenPair{
 							{SourceTokenID: nexusCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
@@ -124,15 +124,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						usdtTokenID:     {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
 						ccTokenID:       {ChainSpecific: "0x22", LockUnlock: false, IsWrappedCurrency: false},
 					},
-					FeeAddrBridgingAmount:      feeAddrBridgingAmountEvm,
-					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeWei,
+					FeeAddrBridgingAmount:      common.NewBigInt(feeAddrBridgingAmountEvm),
+					MinColCoinsAllowedToBridge: common.NewBigInt(minColCoinsAllowedToBridgeWei),
 				},
 				common.ChainIDStrPolygon: {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: polygonBridgingAddr,
 					},
-					MinFeeForBridging: common.DfmToWei(big.NewInt(minFeeForBridging)),
-					MinOperationFee:   common.DfmToWei(big.NewInt(minOperationFee)),
+					MinFeeForBridging: common.NewBigInt(common.DfmToWei(big.NewInt(minFeeForBridging))),
+					MinOperationFee:   common.NewBigInt(common.DfmToWei(big.NewInt(minOperationFee))),
 					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrNexus: []common.TokenPair{
 							{SourceTokenID: polygonWrappedTokenID, DestinationTokenID: nexusCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
@@ -142,14 +142,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						polygonCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						polygonWrappedTokenID: {ChainSpecific: "0x33", LockUnlock: false, IsWrappedCurrency: true},
 					},
-					FeeAddrBridgingAmount:      feeAddrBridgingAmountEvm,
-					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeWei,
+					FeeAddrBridgingAmount:      common.NewBigInt(feeAddrBridgingAmountEvm),
+					MinColCoinsAllowedToBridge: common.NewBigInt(minColCoinsAllowedToBridgeWei),
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       oCore.NewBigInt(maxAmountAllowedToBridgeWei),
-				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridgeWei,
+				MaxAmountAllowedToBridge:       common.NewBigInt(maxAmountAllowedToBridgeWei),
+				MaxTokenAmountAllowedToBridge:  common.NewBigInt(maxTokenAmountAllowedToBridgeWei),
 			},
 			RefundEnabled:    refundEnabled,
 			ChainIDConverter: common.NewTestChainIDConverter(),

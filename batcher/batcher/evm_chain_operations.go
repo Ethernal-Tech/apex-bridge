@@ -81,7 +81,7 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		batchNonceID,
 		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
 		confirmedTransactions,
-		cco.config.MinFeeForBridging)
+		cco.config.MinFeeForBridging.Int)
 	if err != nil {
 		return nil, err
 	}

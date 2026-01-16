@@ -203,7 +203,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
 	receiverAmountSum.Add(receiverAmountSum, metadata.BridgingFee)
 
-	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging) < 0 {
+	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging.Int) < 0 {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

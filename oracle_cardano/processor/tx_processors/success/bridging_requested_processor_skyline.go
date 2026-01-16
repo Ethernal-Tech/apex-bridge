@@ -506,7 +506,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 			minCurrency, nativeCurrencySum)
 	}
 
-	maxTokenAmt := receiverCtx.BridgingSettings.MaxTokenAmountAllowedToBridge
+	maxTokenAmt := receiverCtx.BridgingSettings.MaxTokenAmountAllowedToBridge.Int
 	if maxTokenAmt != nil && maxTokenAmt.Sign() > 0 {
 		maxTokenAmtDfm := common.WeiToDfm(maxTokenAmt)
 		for tokenID, tokenAmount := range receiverCtx.AmountsSums {
