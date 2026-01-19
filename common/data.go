@@ -106,6 +106,7 @@ func (b *BigInt) UnmarshalJSON(data []byte) error {
 	// allow null
 	if string(data) == "null" {
 		b.Int = nil
+
 		return nil
 	}
 
@@ -120,5 +121,6 @@ func (b *BigInt) UnmarshalJSON(data []byte) error {
 	}
 
 	b.Int = i
+
 	return nil
 }

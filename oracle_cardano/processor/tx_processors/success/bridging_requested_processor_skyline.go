@@ -234,7 +234,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			EthDestConfig:     ethDestConfig,
 			DestFeeAddress:    destChainInfo.FeeAddress,
 			BridgingSettings:  &appConfig.BridgingSettings,
-			MinColCoinsAllowedToBridge: cUtils.MaxBigInt(new(big.Int).SetUint64(cardanoSrcConfig.MinColCoinsAllowedToBridge),
+			MinColCoinsAllowedToBridge: cUtils.MaxBigInt(
+				common.DfmToWei(new(big.Int).SetUint64(cardanoSrcConfig.MinColCoinsAllowedToBridge)),
 				destChainInfo.MinColCoinsAllowedToBridge),
 			AmountsSums:    make(map[uint16]*big.Int),
 			CurrencySrcID:  currencySrcID,
