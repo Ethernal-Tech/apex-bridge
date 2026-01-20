@@ -102,7 +102,7 @@ func ValidateTxOutputs(
 		return nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
 	}
 
-	if validateTreasury { //nolint:gocritic
+	if validateTreasury {
 		if treasuryUtxoOutput == nil {
 			return nil, fmt.Errorf("treasury output on %s is not found in tx outputs", tx.OriginChainID)
 		}
