@@ -58,9 +58,9 @@ func NewSettingsResponse(
 	}
 
 	for chainID, ethConfig := range appConfig.EthChains {
-		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging.Int
-		minOperationFeeMap[chainID] = ethConfig.MinOperationFee.Int
-		minColCoinsAllowedToBridgeMap[chainID] = ethConfig.MinColCoinsAllowedToBridge.Int
+		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging
+		minOperationFeeMap[chainID] = ethConfig.MinOperationFee
+		minColCoinsAllowedToBridgeMap[chainID] = ethConfig.MinColCoinsAllowedToBridge
 	}
 
 	return &SettingsResponse{

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -166,7 +167,7 @@ type BatcherEVMChainConfig struct {
 	BlockRoundingThreshold uint64                       `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64                      `json:"noBatchPeriodPercent"`
 	TestMode               uint8                        `json:"testMode,omitempty"` // only test mode (`-tags testenv`)
-	MinFeeForBridging      common.BigInt                `json:"minFeeForBridging"`
+	MinFeeForBridging      *big.Int                     `json:"minFeeForBridging"`
 	DestinationChains      map[string]common.TokenPairs `json:"destChains"`
 	Tokens                 map[uint16]common.Token      `json:"tokens"`
 }

@@ -217,7 +217,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			EthDestConfig:     ethDestConfig,
 			DestFeeAddress:    destChainInfo.FeeAddress,
 			BridgingSettings:  &appConfig.BridgingSettings,
-			MinColCoinsAllowedToBridge: oUtils.MaxBigInt(ethSrcConfig.MinColCoinsAllowedToBridge.Int,
+			MinColCoinsAllowedToBridge: oUtils.MaxBigInt(ethSrcConfig.MinColCoinsAllowedToBridge,
 				destChainInfo.MinColCoinsAllowedToBridge),
 
 			AmountsSums:    make(map[uint16]*big.Int),
@@ -246,7 +246,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateOperationAndReceiverLimi
 	ethSrcConfig *oCore.EthChainConfig,
 	appConfig *oCore.AppConfig,
 ) error {
-	if metadata.OperationFee.Cmp(ethSrcConfig.MinOperationFee.Int) < 0 {
+	if metadata.OperationFee.Cmp(ethSrcConfig.MinOperationFee) < 0 {
 		return fmt.Errorf("operation fee in metadata is less than minimum: %v", metadata)
 	}
 
@@ -356,13 +356,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// Remove currency entry from the map
 	delete(receiverCtx.AmountsSums, receiverCtx.CurrencySrcID)
 
-	maxCurrAmt := receiverCtx.BridgingSettings.MaxAmountAllowedToBridge.Int
+	maxCurrAmt := receiverCtx.BridgingSettings.MaxAmountAllowedToBridge
 	if maxCurrAmt != nil && maxCurrAmt.Sign() > 0 && nativeCurrencySum.Cmp(maxCurrAmt) == 1 {
 		return fmt.Errorf("sum of receiver amounts: %v greater than maximum allowed: %v",
 			nativeCurrencySum, maxCurrAmt)
 	}
 
-	maxTokenAmt := receiverCtx.BridgingSettings.MaxTokenAmountAllowedToBridge.Int
+	maxTokenAmt := receiverCtx.BridgingSettings.MaxTokenAmountAllowedToBridge
 	if maxTokenAmt != nil && maxTokenAmt.Sign() > 0 {
 		for tokenID, tokenSum := range receiverCtx.AmountsSums {
 			if tokenSum.Cmp(maxTokenAmt) == 1 {
@@ -378,7 +378,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	nativeCurrencySum.Add(nativeCurrencySum, metadata.BridgingFee)
 	nativeCurrencySum.Add(nativeCurrencySum, metadata.OperationFee)
 
-	if metadata.BridgingFee.Cmp(receiverCtx.ethSrcConfig.MinFeeForBridging.Int) < 0 {
+	if metadata.BridgingFee.Cmp(receiverCtx.ethSrcConfig.MinFeeForBridging) < 0 {
 		return fmt.Errorf("bridging fee in metadata is less than minimum: %v", metadata)
 	}
 

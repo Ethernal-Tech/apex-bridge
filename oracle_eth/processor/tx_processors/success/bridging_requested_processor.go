@@ -192,9 +192,9 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	if appConfig.BridgingSettings.MaxAmountAllowedToBridge.Int != nil &&
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge.Int) == 1 {
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
 			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
@@ -203,7 +203,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
 	receiverAmountSum.Add(receiverAmountSum, metadata.BridgingFee)
 
-	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging.Int) < 0 {
+	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging) < 0 {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

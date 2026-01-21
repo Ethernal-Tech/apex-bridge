@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var defaultMaxTokenAmountAllowedToBridge = common.NewBigInt(common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000)))
+var defaultMaxTokenAmountAllowedToBridge = common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000))
 
 type skylineGenerateConfigsParams struct {
 	bridgeNodeURL   string

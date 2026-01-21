@@ -227,11 +227,11 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
 		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
 		DynamicTx:                  true,
-		MinFeeForBridging:          common.NewBigInt(p.evmChainMinFeeForBridging),
-		MinOperationFee:            common.NewBigInt(p.minOperationFee),
-		MinColCoinsAllowedToBridge: common.NewBigInt(common.MinAmountAllowedToBridgeEVM),
+		MinFeeForBridging:          p.evmChainMinFeeForBridging,
+		MinOperationFee:            p.minOperationFee,
+		MinColCoinsAllowedToBridge: common.MinAmountAllowedToBridgeEVM,
 		RestartTrackerPullCheck:    time.Second * 150,
-		FeeAddrBridgingAmount:      common.NewBigInt(defaultEvmFeeAddrBridgingAmount),
+		FeeAddrBridgingAmount:      defaultEvmFeeAddrBridgingAmount,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {

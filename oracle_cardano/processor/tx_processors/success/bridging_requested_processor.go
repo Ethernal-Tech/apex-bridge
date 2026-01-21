@@ -87,7 +87,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		feeCurrencyDstWei = common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount))
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
-		feeCurrencyDstWei = ethDestConfig.FeeAddrBridgingAmount.Int
+		feeCurrencyDstWei = ethDestConfig.FeeAddrBridgingAmount
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -248,11 +248,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	if appConfig.BridgingSettings.MaxAmountAllowedToBridge.Int != nil &&
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge.Int)) == 1 {
+		receiverAmountSum.Cmp(common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge)) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge.Int))
+			receiverAmountSum, common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge))
 	}
 
 	// update fee amount if needed with sum of fee address receivers

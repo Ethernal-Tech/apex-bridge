@@ -78,12 +78,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					Tokens: map[uint16]common.Token{
 						nexusCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 					},
-					MinFeeForBridging: common.NewBigInt(minFeeForBridgingWei),
+					MinFeeForBridging: minFeeForBridgingWei,
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       common.NewBigInt(common.DfmToWei(maxAmountAllowedToBridge)),
+				MaxAmountAllowedToBridge:       common.DfmToWei(maxAmountAllowedToBridge),
 			},
 			RefundEnabled:    refundEnabled,
 			ChainIDConverter: common.NewTestChainIDConverter(),

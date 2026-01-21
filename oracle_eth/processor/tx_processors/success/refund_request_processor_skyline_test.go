@@ -64,7 +64,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: common.NewBigInt(minFeeForBridgingWei),
+					MinFeeForBridging: minFeeForBridgingWei,
 					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrPrime: []common.TokenPair{
 							{SourceTokenID: nexusCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
@@ -81,7 +81,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 			},
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       common.NewBigInt(maxAmountAllowedToBridge),
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 			},
 			RefundEnabled: refundEnabled,
 			TryCountLimits: oCore.TryCountLimits{

@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -48,11 +49,11 @@ type EthChainConfig struct {
 	NoBatchPeriodPercent       float64                      `json:"noBatchPeriodPercent"`
 	DynamicTx                  bool                         `json:"dynamicTx"`
 	TestMode                   uint8                        `json:"testMode"`
-	MinFeeForBridging          common.BigInt                `json:"minFeeForBridging"`
-	MinOperationFee            common.BigInt                `json:"minOperationFee"`
-	MinColCoinsAllowedToBridge common.BigInt                `json:"minColCoinsAllowedToBridge"`
+	MinFeeForBridging          *big.Int                     `json:"minFeeForBridging"`
+	MinOperationFee            *big.Int                     `json:"minOperationFee"`
+	MinColCoinsAllowedToBridge *big.Int                     `json:"minColCoinsAllowedToBridge"`
 	RestartTrackerPullCheck    time.Duration                `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount      common.BigInt                `json:"feeAddressBridgingAmount"`
+	FeeAddrBridgingAmount      *big.Int                     `json:"feeAddressBridgingAmount"`
 	DestinationChains          map[string]common.TokenPairs `json:"destChain"`
 	Tokens                     map[uint16]common.Token      `json:"tokens"`
 }
@@ -91,10 +92,10 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MaxAmountAllowedToBridge       common.BigInt `json:"maxAmountAllowedToBridge"`
-	MaxTokenAmountAllowedToBridge  common.BigInt `json:"maxTokenAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int           `json:"maxReceiversPerBridgingRequest"`
-	MaxBridgingClaimsToGroup       int           `json:"maxBridgingClaimsToGroup"`
+	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
 }
 
 type RetryUnprocessedSettings struct {
