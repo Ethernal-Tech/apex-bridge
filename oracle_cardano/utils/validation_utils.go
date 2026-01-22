@@ -80,7 +80,8 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 // If validateTreasury is set to true, it will also validate treasury output existence and amount
 // Returns found multisig output utxo
 func ValidateTxOutputs(
-	tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool, validateTreasury bool) (*indexer.TxOutput, error) {
+	tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool, validateTreasury bool,
+) (*indexer.TxOutput, *indexer.TxOutput, error) {
 	var (
 		multisigUtxoOutput *indexer.TxOutput = nil
 		treasuryUtxoOutput *indexer.TxOutput = nil
@@ -91,7 +92,7 @@ func ValidateTxOutputs(
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = output
 			} else if !allowMultiple {
-				return nil, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
+				return nil, nil, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
 			}
 		} else if IsTreasuryAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			treasuryUtxoOutput = output
@@ -99,23 +100,24 @@ func ValidateTxOutputs(
 	}
 
 	if multisigUtxoOutput == nil {
-		return nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
+		return nil, nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
 	}
 
 	if validateTreasury {
 		if treasuryUtxoOutput == nil {
-			return nil, fmt.Errorf("treasury output on %s is not found in tx outputs", tx.OriginChainID)
+			return nil, nil, fmt.Errorf("treasury output on %s is not found in tx outputs", tx.OriginChainID)
 		}
 
 		if appConfig.CardanoChains[tx.OriginChainID].MinOperationFee > treasuryUtxoOutput.Amount {
-			return nil, fmt.Errorf("treasury output amount %d is less than minimum operation fee %d on %s",
+			return nil, nil, fmt.Errorf("treasury output amount %d is less than minimum operation fee %d on %s",
 				treasuryUtxoOutput.Amount, appConfig.CardanoChains[tx.OriginChainID].MinOperationFee, tx.OriginChainID)
 		}
 	} else if treasuryUtxoOutput != nil {
-		return nil, fmt.Errorf("treasury addresses on %s is found in tx outputs, but it shouldn't be there", tx.OriginChainID)
+		return nil, nil,
+			fmt.Errorf("treasury addresses on %s is found in tx outputs, but it shouldn't be there", tx.OriginChainID)
 	}
 
-	return multisigUtxoOutput, nil
+	return multisigUtxoOutput, treasuryUtxoOutput, nil
 }
 
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {

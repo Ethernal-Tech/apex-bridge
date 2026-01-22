@@ -27,7 +27,6 @@ type treasuryBaseParams struct {
 	privateKey       string
 	privateKeyConfig string
 	gatewayAddress   string
-	chainIDsConfig   string
 }
 
 func (bp *treasuryBaseParams) ValidateBaseFlags() error {
@@ -39,12 +38,7 @@ func (bp *treasuryBaseParams) ValidateBaseFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](bp.chainIDsConfig, "")
-	if err != nil {
-		return fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	if !common.IsValidAddress(common.ChainIDStrNexus, bp.gatewayAddress, chainIDsConfig.ToChainIDConverter()) {
+	if !common.IsValidAddress(bp.gatewayAddress, true) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
@@ -80,13 +74,6 @@ func (bp *treasuryBaseParams) RegisterBaseFlags(cmd *cobra.Command) {
 		gatewayAddressFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&bp.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
-	)
-
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, evmPrivateKeyFlag)
 }
 
@@ -101,12 +88,7 @@ func (sp *setTreasuryAddressParams) ValidateFlags() error {
 		return err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](sp.chainIDsConfig, "")
-	if err != nil {
-		return fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	if !common.IsValidAddress(common.ChainIDStrNexus, sp.treasuryAddressStr, chainIDsConfig.ToChainIDConverter()) {
+	if !common.IsValidAddress(sp.treasuryAddressStr, true) {
 		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
 	}
 

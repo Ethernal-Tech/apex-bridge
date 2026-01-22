@@ -213,12 +213,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	validateTreasury := false
-	if appConfig.CardanoChains[tx.OriginChainID].MinOperationFee > 0 {
-		validateTreasury = true
-	}
-
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, validateTreasury)
+	multisigUtxo, treasuryUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, cardanoSrcConfig.MinOperationFee > 0)
 	if err != nil {
 		return err
 	}
@@ -253,7 +248,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	}
 
 	if err := p.validateTokenAmounts(
-		multisigUtxo, receiverCtx,
+		multisigUtxo, treasuryUtxo, receiverCtx,
 	); err != nil {
 		return err
 	}
@@ -423,7 +418,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 }
 
 func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
-	multisigUtxo *indexer.TxOutput,
+	multisigUtxo *indexer.TxOutput, treasuryUtxo *indexer.TxOutput,
 	receiverCtx *receiverValidationCtxCardanoSrc,
 ) error {
 	cardanoSrcConfig := receiverCtx.cardanoSrcConfig
@@ -454,6 +449,11 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	if metadata.BridgingFee < minBridgingFee {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
 			metadata.BridgingFee, minBridgingFee, metadata)
+	}
+
+	if treasuryUtxo != nil && treasuryUtxo.Amount != metadata.OperationFee {
+		return fmt.Errorf("treasury utxo amount %d does not match operation fee %d in metadata",
+			treasuryUtxo.Amount, metadata.OperationFee)
 	}
 
 	nativeTokensNamesInMetadata := make(map[string]struct{}, len(receiverCtx.AmountsSums))

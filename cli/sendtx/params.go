@@ -205,6 +205,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 	}
 
+	isDestEvmChain := ip.chainIDConverter.IsEVMChainID(ip.chainIDDst)
 	receivers := make([]*receiverAmount, 0, len(ip.receivers))
 
 	for i, x := range ip.receivers {
@@ -218,7 +219,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(ip.chainIDDst, vals[0], ip.chainIDConverter) {
+		if !common.IsValidAddress(vals[0], isDestEvmChain) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 

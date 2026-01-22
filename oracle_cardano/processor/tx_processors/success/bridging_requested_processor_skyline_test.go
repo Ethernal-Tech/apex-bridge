@@ -829,6 +829,83 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
 	})
 
+	t.Run("ValidateAndAddClaim operation fee mismatch", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				TokenID: primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				TokenID: primeWrappedTokenID,
+				Amount:  utxoMinValue,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee + 1,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minFeeForBridgingTokens * 2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   utxoMinValue,
+					},
+				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: srcChain,
+		}
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("treasury utxo amount %d does not match operation fee %d in metadata",
+			minOperationFee, minOperationFee+1))
+	})
+
 	t.Run("ValidateAndAddClaim unknown tokens", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),

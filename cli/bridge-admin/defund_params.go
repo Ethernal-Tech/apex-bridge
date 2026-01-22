@@ -80,7 +80,7 @@ func (g *defundParams) ValidateFlags() error {
 
 	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
-	if !common.IsValidAddress(g.chainID, g.address, g.chainIDConverter) {
+	if !common.IsValidAddress(g.address, g.chainIDConverter.IsEVMChainID(g.chainID)) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
 	}
 

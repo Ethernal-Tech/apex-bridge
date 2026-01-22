@@ -159,9 +159,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
 		totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.BridgingFee))
 
-	totalTokensAmount.totalAmountCurrencySrc = new(big.Int).Add(
-		totalTokensAmount.totalAmountCurrencySrc, common.WeiToDfm(metadata.OperationFee))
-
 	feeCurrencyDfmDst := new(big.Int).SetUint64(destChainInfo.FeeAddrBridgingAmt)
 	totalTokensAmount.totalAmountCurrencyDst = new(big.Int).Add(
 		totalTokensAmount.totalAmountCurrencyDst, feeCurrencyDfmDst)

@@ -180,7 +180,7 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, ip.treasuryAddressStr, ip.chainIDConverter) {
+	if !common.IsValidAddress(ip.treasuryAddressStr, true) {
 		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
 	}
 

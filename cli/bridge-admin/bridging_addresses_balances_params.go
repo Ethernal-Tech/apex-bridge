@@ -77,15 +77,15 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 		}
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress, b.appConfig.ChainIDConverter) {
+	if !common.IsValidAddress(b.primeWalletAddress, false) {
 		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrVector, b.vectorWalletAddress, b.appConfig.ChainIDConverter) {
+	if !common.IsValidAddress(b.vectorWalletAddress, false) {
 		return fmt.Errorf("invalid address: --%s", vectorWalletAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, b.nexusWalletAddress, b.appConfig.ChainIDConverter) {
+	if !common.IsValidAddress(b.nexusWalletAddress, true) {
 		return fmt.Errorf("invalid address: --%s", nexusWalletAddressFlag)
 	}
 

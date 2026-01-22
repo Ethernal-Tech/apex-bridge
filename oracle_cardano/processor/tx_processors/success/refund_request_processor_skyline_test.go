@@ -33,6 +33,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		validPrimeTestAddress    = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
 		validCardanoTestAddress  = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
 
+		primeTreasuryAddress = "addr_test1wrz24vv4tvfqsywkxn36rv6zagys2d7euafcgv50gmggqpq4ju9av"
+
 		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 	)
 
@@ -88,6 +90,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
 					MinOperationFee: minOperationFee,
+					TreasuryAddress: primeTreasuryAddress,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -187,11 +190,14 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
+		originChainID := common.ChainIDStrPrime
+
 		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
 			SenderAddr:         []string{validPrimeTestAddress},
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			OperationFee:       minOperationFee,
 		})
 
 		require.NoError(t, err)
@@ -213,6 +219,10 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[originChainID].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
@@ -220,12 +230,12 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 				Metadata: relevantButNotFullMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: originChainID,
 		}, appConfig)
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(originChainID), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(10_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(2_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())

@@ -34,7 +34,6 @@ const (
 	minOperationFeeFlag         = "min-operation-fee"
 	treasuryAddressFlag         = "treasury-address"
 	blockConfirmationCountFlag  = "block-confirmation-count"
-	chainIDsConfigFlag          = "chain-ids-config"
 
 	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
 	mintingScriptTxInputIndexFlag = "minting-script-tx-input-index"
@@ -60,7 +59,6 @@ const (
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
 	treasuryAddressFlagDesc         = "treasury address for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
-	chainIDsConfigFlagDesc          = "path to the chain IDs config file"
 
 	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
 	mintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script"
@@ -95,7 +93,6 @@ type cardanoChainGenerateConfigsParams struct {
 	minOperationFee         uint64
 	treasuryAddress         string
 	blockConfirmationCount  uint
-	chainIDsConfig          string
 
 	mintingScriptTxInputHash  string
 	mintingScriptTxInputIndex int64
@@ -124,12 +121,7 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", networkAddressFlag, p.networkAddress)
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](p.chainIDsConfig, "")
-	if err != nil {
-		return fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	if !common.IsValidAddress(p.chainIDString, p.treasuryAddress, chainIDsConfig.ToChainIDConverter()) {
+	if !common.IsValidAddress(p.treasuryAddress, false) {
 		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
 	}
 
@@ -294,12 +286,6 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlag,
 		defaultEmptyBlocksThreshold,
 		emptyBlocksThresholdFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
 	)
 
 	// Minting script params

@@ -157,7 +157,6 @@ $ apex-bridge generate-configs skyline \
 Cardano chain all options
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
-        --chain-ids-config <path to the chain IDs config file> \
         --network-address <address of the chain network> \
         --network-magic <network magic of the chain network> \
         --network-id <network id of the chain network> \
@@ -193,7 +192,6 @@ $ apex-bridge generate-configs cardano-chain \
 Add cardano chain config minimal example
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
-        --chain-ids-config ./chainIDsConfig.json \
         --network-address localhost:13001 \
         --network-magic 142 \
         --network-id 3 \
@@ -525,7 +523,6 @@ $ apex-bridge bridge-admin set-min-amounts \
 
 ```shell
 $ apex-bridge bridge-admin treasury-addr set \
-        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --gateway-addr 0xeefcd00000000000000000000000000000000013 \
@@ -535,7 +532,6 @@ $ apex-bridge bridge-admin treasury-addr set \
 
 ```shell
 $ apex-bridge bridge-admin treasury-addr get \
-        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --gateway-addr 0xeefcd00000000000000000000000000000000013
@@ -674,7 +670,6 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 
 ```shell
 $ apex-bridge bridge-admin register-gateway-token \
-        --chain-ids-config ./chainIDsConfig.json \
         --node-url http://localhost:12001 \
         --gateway-address 0x020202 \
         --gas-limit 10_000_000 \
