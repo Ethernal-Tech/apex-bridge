@@ -81,10 +81,10 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 // Returns found multisig output utxo
 func ValidateTxOutputs(
 	tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool, validateTreasury bool,
-) (*indexer.TxOutput, *indexer.TxOutput, error) {
+) (*indexer.TxOutput, uint64, error) {
 	var (
 		multisigUtxoOutput *indexer.TxOutput = nil
-		treasuryUtxoOutput *indexer.TxOutput = nil
+		treasuryUtxoAmount uint64            = 0
 	)
 
 	for _, output := range tx.Tx.Outputs {
@@ -92,32 +92,23 @@ func ValidateTxOutputs(
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = output
 			} else if !allowMultiple {
-				return nil, nil, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
+				return nil, 0, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
 			}
 		} else if IsTreasuryAddrForChain(appConfig, tx.OriginChainID, output.Address) {
-			treasuryUtxoOutput = output
+			treasuryUtxoAmount += output.Amount
 		}
 	}
 
 	if multisigUtxoOutput == nil {
-		return nil, nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
+		return nil, 0, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
 	}
 
-	if validateTreasury {
-		if treasuryUtxoOutput == nil {
-			return nil, nil, fmt.Errorf("treasury output on %s is not found in tx outputs", tx.OriginChainID)
-		}
-
-		if appConfig.CardanoChains[tx.OriginChainID].MinOperationFee > treasuryUtxoOutput.Amount {
-			return nil, nil, fmt.Errorf("treasury output amount %d is less than minimum operation fee %d on %s",
-				treasuryUtxoOutput.Amount, appConfig.CardanoChains[tx.OriginChainID].MinOperationFee, tx.OriginChainID)
-		}
-	} else if treasuryUtxoOutput != nil {
-		return nil, nil,
-			fmt.Errorf("treasury addresses on %s is found in tx outputs, but it shouldn't be there", tx.OriginChainID)
+	if validateTreasury && appConfig.CardanoChains[tx.OriginChainID].MinOperationFee > treasuryUtxoAmount {
+		return nil, 0, fmt.Errorf("treasury output amount %d is less than minimum operation fee %d on %s",
+			treasuryUtxoAmount, appConfig.CardanoChains[tx.OriginChainID].MinOperationFee, tx.OriginChainID)
 	}
 
-	return multisigUtxoOutput, treasuryUtxoOutput, nil
+	return multisigUtxoOutput, treasuryUtxoAmount, nil
 }
 
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {

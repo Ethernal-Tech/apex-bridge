@@ -116,23 +116,6 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	t.Run("ValidateAndAddClaim treasury address in outputs", func(t *testing.T) {
-		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: 1},
-			{Address: appConfig.CardanoChains[common.ChainIDStrPrime].TreasuryAddress, Amount: 1},
-		}
-
-		err := proc.PreValidate(&core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: []byte{},
-				Outputs:  txOutputs,
-			},
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, " is found in tx outputs, but it shouldn't be there")
-	})
-
 	t.Run("ValidateAndAddClaim metadata should be empty", func(t *testing.T) {
 		err := proc.PreValidate(&core.CardanoTx{
 			Tx: indexer.Tx{

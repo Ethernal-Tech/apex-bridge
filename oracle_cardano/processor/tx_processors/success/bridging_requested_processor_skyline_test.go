@@ -737,7 +737,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, fmt.Sprintf("treasury output on %s", common.ChainIDStrPrime))
+		require.ErrorContains(t, err, "treasury output amount 0 is less than minimum operation fee")
 	})
 
 	t.Run("ValidateAndAddClaim treasury addrs amount less than min in outputs", func(t *testing.T) {
