@@ -15,8 +15,9 @@ type DirectionConfigFile struct {
 }
 
 type DirectionConfig struct {
-	DestinationChains map[string]TokenPairs `json:"destChain"`
-	Tokens            map[uint16]Token      `json:"tokens"`
+	AlwaysTrackCurrencyAndWrappedCurrency bool                  `json:"alwaysTrackCurrencyAndWrappedCurrency"`
+	DestinationChains                     map[string]TokenPairs `json:"destChain"`
+	Tokens                                map[uint16]Token      `json:"tokens"`
 }
 
 type ChainIDsConfigFile struct {

@@ -456,7 +456,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 	if tokenPair.DestinationTokenID == currencyDestID {
 		amount = receiver.Amount
 
-		if tokenPair.TrackDestinationToken {
+		if cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			totalTokensAmount.TrackDestTokenAmount(
 				receiver.Amount,
 				big.NewInt(0),
@@ -479,7 +479,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 		amountWrapped = receiver.Amount
 
 		// wrapped token on destination
-		if tokenPair.TrackDestinationToken && cardanoDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+		if (cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			cardanoDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
 			totalTokensAmount.TrackDestTokenAmount(
 				big.NewInt(0),
 				receiver.Amount,
@@ -487,7 +488,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		totalTokensAmount.TrackSourceTokenAmount(
 			tokenPair.SourceTokenID,
 			currencySrcID,
@@ -526,7 +527,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	if tokenPair.DestinationTokenID == currencyDestID {
 		amount = receiver.Amount
 
-		if tokenPair.TrackDestinationToken {
+		if ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			totalTokensAmount.TrackDestTokenAmount(
 				receiver.Amount, big.NewInt(0),
 			)
@@ -535,14 +536,15 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		amountWrapped = receiver.Amount
 
 		// wrapped token on destination
-		if tokenPair.TrackDestinationToken && ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+		if (ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
 			totalTokensAmount.TrackDestTokenAmount(
 				big.NewInt(0), receiver.Amount,
 			)
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		totalTokensAmount.TrackSourceTokenAmount(
 			tokenPair.SourceTokenID, currencySrcID, receiver.Amount, ethSrcConfig.Tokens,
 		)

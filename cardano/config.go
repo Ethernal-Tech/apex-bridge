@@ -11,27 +11,28 @@ import (
 )
 
 type CardanoChainConfig struct {
-	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
-	NetworkMagic             uint32                           `json:"testnetMagic"`
-	OgmiosURL                string                           `json:"ogmiosUrl,omitempty"`
-	BlockfrostURL            string                           `json:"blockfrostUrl,omitempty"`
-	BlockfrostAPIKey         string                           `json:"blockfrostApiKey,omitempty"`
-	SocketPath               string                           `json:"socketPath,omitempty"`
-	PotentialFee             uint64                           `json:"potentialFee"`
-	TTLSlotNumberInc         uint64                           `json:"ttlSlotNumberIncrement"`
-	SlotRoundingThreshold    uint64                           `json:"slotRoundingThreshold"`
-	NoBatchPeriodPercent     float64                          `json:"noBatchPeriodPercent"`
-	UtxoMinAmount            uint64                           `json:"minUtxoAmount"`
-	MaxFeeUtxoCount          uint                             `json:"maxFeeUtxoCount"`
-	MaxUtxoCount             uint                             `json:"maxUtxoCount"`
-	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
-	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
-	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	DestinationChains        map[string]common.TokenPairs     `json:"destChains"`
-	Tokens                   map[uint16]common.Token          `json:"tokens"`
-	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
-	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
-	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
+	NetworkID                             cardanowallet.CardanoNetworkType `json:"networkID"`
+	NetworkMagic                          uint32                           `json:"testnetMagic"`
+	OgmiosURL                             string                           `json:"ogmiosUrl,omitempty"`
+	BlockfrostURL                         string                           `json:"blockfrostUrl,omitempty"`
+	BlockfrostAPIKey                      string                           `json:"blockfrostApiKey,omitempty"`
+	SocketPath                            string                           `json:"socketPath,omitempty"`
+	PotentialFee                          uint64                           `json:"potentialFee"`
+	TTLSlotNumberInc                      uint64                           `json:"ttlSlotNumberIncrement"`
+	SlotRoundingThreshold                 uint64                           `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent                  float64                          `json:"noBatchPeriodPercent"`
+	UtxoMinAmount                         uint64                           `json:"minUtxoAmount"`
+	MaxFeeUtxoCount                       uint                             `json:"maxFeeUtxoCount"`
+	MaxUtxoCount                          uint                             `json:"maxUtxoCount"`
+	DefaultMinFeeForBridging              uint64                           `json:"defaultMinFeeForBridging"`
+	MinFeeForBridgingTokens               uint64                           `json:"minFeeForBridgingTokens"`
+	TakeAtLeastUtxoCount                  uint                             `json:"takeAtLeastUtxoCount"`
+	DestinationChains                     map[string]common.TokenPairs     `json:"destChains"`
+	Tokens                                map[uint16]common.Token          `json:"tokens"`
+	AlwaysTrackCurrencyAndWrappedCurrency bool                             `json:"alwaysTrackCurrencyAndWrappedCurrency"`
+	MintingScriptTxInput                  *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
+	CustodialNft                          *cardanowallet.Token             `json:"custodialNft,omitempty"`
+	RelayerAddress                        string                           `json:"relayerAddress,omitempty"`
 }
 
 // GetChainType implements ChainSpecificConfig.

@@ -110,7 +110,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 
 	currencyTokenPair, err := cUtils.GetTokenPair(
 		chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, currencyID)
-	trackCurrency := err == nil && currencyTokenPair.TrackSourceToken
+	trackCurrency := err == nil &&
+		(chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || currencyTokenPair.TrackSourceToken)
 
 	wrappedTokenID, wrappedExists := chainConfig.GetWrappedTokenID()
 
@@ -132,7 +133,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 					tokenPair, err := cUtils.GetTokenPair(
 						chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, tokenID)
 
-					if err == nil && tokenPair.TrackSourceToken {
+					if err == nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 						wrappedTokenAmountToTrack.Add(wrappedTokenAmountToTrack, new(big.Int).SetUint64(token.Amount))
 					}
 				}
