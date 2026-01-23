@@ -131,7 +131,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					MinOperationFee:   minOperationFee,
 					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrNexus: []common.TokenPair{
-							{SourceTokenID: polygonWrappedTokenID, DestinationTokenID: nexusCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+							{SourceTokenID: polygonWrappedTokenID, DestinationTokenID: nexusCurrencyID, TrackSourceToken: false, TrackDestinationToken: false},
 						},
 					},
 					Tokens: map[uint16]common.Token{
@@ -1277,7 +1277,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim valid - currency on destination", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
@@ -1395,7 +1394,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim valid - evm receiver and usdt", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPolygon
 
@@ -1454,7 +1452,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim valid - evm receiver and currency on destination", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrNexus
 
@@ -1482,6 +1479,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
+
+		valueDfm := new(big.Int).SetUint64(minFeeForBridging + 100)
 
 		ethTx := &core.EthTx{
 			Hash:          txHash,
@@ -1511,5 +1510,78 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, receivers[0].Address,
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+
+		require.Equal(t, valueDfm, claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
+		require.Equal(t, big.NewInt(int64(feeAddrBridgingAmountEvm)), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
+	})
+
+	t.Run("ValidateAndAddClaim valid - evm receiver and currency on destination - always track", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrNexus
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []core.BridgingRequestEthMetadataTransaction{
+			{
+				Address: evmZeroAddr,
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging)),
+				TokenID: polygonCurrencyID,
+			},
+			{
+				Address: validEvmAddress,
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(utxoMinValue)),
+				TokenID: polygonWrappedTokenID,
+			},
+		}
+
+		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         "addr1",
+			Transactions:       receivers,
+			BridgingFee:        common.DfmToWei(new(big.Int).SetUint64(100)),
+			OperationFee:       common.DfmToWei(new(big.Int).SetUint64(minOperationFee)),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		valueDfm := new(big.Int).SetUint64(minFeeForBridging + 100)
+
+		ethTx := &core.EthTx{
+			Hash:          txHash,
+			Metadata:      validMetadata,
+			OriginChainID: common.ChainIDStrPolygon,
+			Value:         common.DfmToWei(valueDfm),
+		}
+
+		appConfig := getAppConfig(false)
+		appConfig.EthChains[common.ChainIDStrPolygon].AlwaysTrackCurrencyAndWrappedCurrency = true
+		appConfig.EthChains[common.ChainIDStrNexus].AlwaysTrackCurrencyAndWrappedCurrency = true
+
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessorSkyline(refundRequestProcessorMock, hclog.NewNullLogger(), getChainInfos())
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, receivers[1].Address,
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, common.WeiToDfm(receivers[1].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
+		require.Equal(t, receivers[0].Address,
+			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
+		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+
+		require.Equal(t, valueDfm, claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, big.NewInt(utxoMinValue), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
+		require.Equal(t, big.NewInt(int64(feeAddrBridgingAmountEvm)+utxoMinValue), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
 	})
 }

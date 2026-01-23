@@ -591,7 +591,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 		// currency on destination
 		receiverCurrency = receiver.Amount
 
-		if tokenPair.TrackDestinationToken {
+		if cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			trackDestTokenAmount(totalTokensAmount, receiverCurrency, 0)
 		}
 	} else {
@@ -615,12 +615,12 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 			wrappedTokensDest = receiver.Amount
 		}
 
-		if tokenPair.TrackDestinationToken {
+		if cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			trackDestTokenAmount(totalTokensAmount, 0, wrappedTokensDest)
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if cardanoSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		trackSourceTokenAmount(
 			tokenPair.SourceTokenID,
 			currencySrcID,
@@ -661,7 +661,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	if tokenPair.DestinationTokenID == currencyDestID {
 		amount = receiver.Amount
 
-		if tokenPair.TrackDestinationToken {
+		if ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			trackDestTokenAmount(
 				totalTokensAmount, receiver.Amount, 0,
 			)
@@ -670,14 +670,15 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		amountWrapped = receiver.Amount
 
 		// wrapped token on destination
-		if tokenPair.TrackDestinationToken && ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+		if (ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
 			trackDestTokenAmount(
 				totalTokensAmount, 0, receiver.Amount,
 			)
 		}
 	}
 
-	if tokenPair.TrackSourceToken {
+	if cardanoSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		trackSourceTokenAmount(
 			tokenPair.SourceTokenID,
 			currencySrcID,

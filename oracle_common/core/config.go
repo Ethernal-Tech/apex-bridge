@@ -37,24 +37,25 @@ type CardanoChainConfigUtxo struct {
 } // @name CardanoChainConfigUtxo
 
 type EthChainConfig struct {
-	ChainID                 string                       `json:"-"`
-	BridgingAddresses       EthBridgingAddresses         `json:"-"`
-	NodeURL                 string                       `json:"nodeUrl"`
-	SyncBatchSize           uint64                       `json:"syncBatchSize"`
-	NumBlockConfirmations   uint64                       `json:"numBlockConfirmations"`
-	StartBlockNumber        uint64                       `json:"startBlockNumber"`
-	PoolIntervalMiliseconds time.Duration                `json:"poolIntervalMs"`
-	TTLBlockNumberInc       uint64                       `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold  uint64                       `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent    float64                      `json:"noBatchPeriodPercent"`
-	DynamicTx               bool                         `json:"dynamicTx"`
-	TestMode                uint8                        `json:"testMode"`
-	MinFeeForBridging       uint64                       `json:"minFeeForBridging"`
-	MinOperationFee         uint64                       `json:"minOperationFee"`
-	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
-	DestinationChains       map[string]common.TokenPairs `json:"destChain"`
-	Tokens                  map[uint16]common.Token      `json:"tokens"`
+	ChainID                               string                       `json:"-"`
+	BridgingAddresses                     EthBridgingAddresses         `json:"-"`
+	NodeURL                               string                       `json:"nodeUrl"`
+	SyncBatchSize                         uint64                       `json:"syncBatchSize"`
+	NumBlockConfirmations                 uint64                       `json:"numBlockConfirmations"`
+	StartBlockNumber                      uint64                       `json:"startBlockNumber"`
+	PoolIntervalMiliseconds               time.Duration                `json:"poolIntervalMs"`
+	TTLBlockNumberInc                     uint64                       `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold                uint64                       `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`
+	DynamicTx                             bool                         `json:"dynamicTx"`
+	TestMode                              uint8                        `json:"testMode"`
+	MinFeeForBridging                     uint64                       `json:"minFeeForBridging"`
+	MinOperationFee                       uint64                       `json:"minOperationFee"`
+	RestartTrackerPullCheck               time.Duration                `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount                 uint64                       `json:"feeAddressBridgingAmount"`
+	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
+	Tokens                                map[uint16]common.Token      `json:"tokens"`
+	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
 }
 
 type CardanoChainConfig struct {

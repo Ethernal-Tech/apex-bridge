@@ -162,7 +162,7 @@ func buildRefundTokenAmounts(
 
 		// handle currency
 		if receiver.TokenID == currencyID {
-			if tokenPair != nil && tokenPair.TrackSourceToken {
+			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalCurrency.Add(totalCurrency, receiver.Amount)
 			}
 
@@ -181,7 +181,7 @@ func buildRefundTokenAmounts(
 
 		// handle wrapped token
 		if chainConfig.Tokens[receiver.TokenID].IsWrappedCurrency {
-			if tokenPair != nil && tokenPair.TrackSourceToken {
+			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalWrapped.Add(totalWrapped, receiver.Amount)
 			}
 		}
