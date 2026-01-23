@@ -3288,7 +3288,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 
-		require.Equal(t, big.NewInt(minOperationFee+minFeeForBridgingTokens*3), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, big.NewInt(minFeeForBridgingTokens*3), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
@@ -3317,11 +3317,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrCardano
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: cardanoBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*3,
+				Amount:  minFeeForBridgingTokens * 3,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -3329,6 +3333,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -3340,10 +3348,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrCardano,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		appConfig.CardanoChains[common.ChainIDStrPrime].AlwaysTrackCurrencyAndWrappedCurrency = true
 		appConfig.CardanoChains[common.ChainIDStrCardano].AlwaysTrackCurrencyAndWrappedCurrency = true
 
@@ -3374,7 +3381,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 
-		require.Equal(t, big.NewInt(minOperationFee+minFeeForBridgingTokens*3), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, big.NewInt(minFeeForBridgingTokens*3), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
 		require.Equal(t, big.NewInt(utxoMinValue), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
 		require.Equal(t, big.NewInt(utxoMinValue), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
