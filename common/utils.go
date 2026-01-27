@@ -257,8 +257,8 @@ func WaitForAmount(
 	)
 }
 
-func IsValidAddress(chainID string, addr string, chainIDConverter *ChainIDConverter) bool {
-	if chainIDConverter.IsEVMChainID(chainID) {
+func IsValidAddress(addr string, isEVMChain bool) bool {
+	if isEVMChain {
 		return ethcommon.IsHexAddress(addr)
 	}
 

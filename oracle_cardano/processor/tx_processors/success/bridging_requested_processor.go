@@ -157,7 +157,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
+	multisigUtxo, _, err := utils.ValidateTxOutputs(tx, appConfig, false, false)
 	if err != nil {
 		return err
 	}

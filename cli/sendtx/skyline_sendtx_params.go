@@ -62,6 +62,7 @@ type sendSkylineTxParams struct {
 	networkIDSrc    uint
 	testnetMagicSrc uint
 	multisigAddrSrc string
+	treasuryAddrSrc string
 	ogmiosURLDst    string
 
 	// evm
@@ -149,22 +150,22 @@ func (p *sendSkylineTxParams) validateFlags() error {
 	}
 
 	if p.gatewayAddress != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.gatewayAddress, p.chainIDConverter) {
+		!common.IsValidAddress(p.gatewayAddress, true) {
 		return fmt.Errorf("invalid address for flag --%s", gatewayAddressFlag)
 	}
 
 	if p.tokenContractAddrSrc != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrSrc, p.chainIDConverter) {
+		!common.IsValidAddress(p.tokenContractAddrSrc, true) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
 	if p.tokenContractAddrDst != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrDst, p.chainIDConverter) {
+		!common.IsValidAddress(p.tokenContractAddrDst, true) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
 	if p.nativeTokenWalletContractAddress != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.nativeTokenWalletContractAddress, p.chainIDConverter) {
+		!common.IsValidAddress(p.nativeTokenWalletContractAddress, true) {
 		return fmt.Errorf("invalid address for flag --%s", nativeTokenWalletContractAddrFlag)
 	}
 
@@ -238,6 +239,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
+		if p.treasuryAddrSrc == "" {
+			return fmt.Errorf("--%s not specified", treasuryAddrSrcFlag)
+		}
+
 		if p.rpcURL == "" && p.ogmiosURLDst == "" {
 			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
@@ -251,6 +256,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		}
 	}
 
+	isDestEvmChain := p.chainIDConverter.IsEVMChainID(p.chainIDDst)
 	receivers := make([]*receiverAmount, 0, len(p.receivers))
 
 	for i, x := range p.receivers {
@@ -264,7 +270,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(p.chainIDDst, vals[0], p.chainIDConverter) {
+		if !common.IsValidAddress(vals[0], isDestEvmChain) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
@@ -386,6 +392,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.treasuryAddrSrc,
+		treasuryAddrSrcFlag,
+		"",
+		treasuryAddrSrcFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.ogmiosURLDst,
 		ogmiosURLDstFlag,
 		"",
@@ -490,6 +503,7 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 				MinUtxoValue:               srcConfig.MinUtxoAmount,
 				MinColCoinsAllowedToBridge: srcConfig.MinColCoinsAllowedToBridge,
 				Tokens:                     srcTokens,
+				TreasuryAddress:            p.treasuryAddrSrc,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,

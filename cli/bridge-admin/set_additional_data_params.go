@@ -61,13 +61,15 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if ip.bridgingAddr == "" || !common.IsValidAddress(ip.chainID, ip.bridgingAddr, ip.chainIDConverter) {
+	isEvmChain := ip.chainIDConverter.IsEVMChainID(ip.chainID)
+
+	if ip.bridgingAddr == "" || !common.IsValidAddress(ip.bridgingAddr, isEvmChain) {
 		return fmt.Errorf("invalid --%s flag", bridgingAddrFlag)
 	}
 
-	if ip.chainIDConverter.IsEVMChainID(ip.chainID) {
+	if isEvmChain {
 		ip.feeAddr = ""
-	} else if ip.feeAddr == "" || !common.IsValidAddress(ip.chainID, ip.feeAddr, ip.chainIDConverter) {
+	} else if ip.feeAddr == "" || !common.IsValidAddress(ip.feeAddr, isEvmChain) {
 		return fmt.Errorf("invalid --%s flag", feeAddrFlag)
 	}
 

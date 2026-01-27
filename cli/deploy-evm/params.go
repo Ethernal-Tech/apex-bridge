@@ -48,6 +48,8 @@ const (
 	currencyTokIDFlag          = "currency-token-id"
 	chainIDsConfigFlag         = "chain-ids-config"
 
+	treasuryAddressFlag = "treasury-addr"
+
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
 	evmPrivateKeyFlagDesc   = "private key for smart contract admin"
@@ -72,6 +74,8 @@ const (
 	currencyTokIDFlagDesc          = "token ID of the currency of the chain"
 	chainIDsConfigFlagDesc         = "path to the chain IDs config file"
 
+	treasuryAddressFlagDesc = "evm treasury address"
+
 	defaultEVMChainID = common.ChainIDStrNexus
 
 	evmGatewayRepositoryName  = "apex-evm-gateway"
@@ -90,7 +94,7 @@ const (
 	MyTokenTestName   = "Test Token"
 	MyTokenTestSymbol = "TTK"
 
-	defaultEvmBranch       = "feat/skyline"
+	defaultEvmBranch       = "feat/AD-941_operation-fee"
 	defaultCurrencyTokenID = 1
 )
 
@@ -115,10 +119,14 @@ type deployEVMParams struct {
 	minTokenBridgingAmountString string
 	minOperationFeeString        string
 
+	treasuryAddressStr string
+
 	minFeeAmount           *big.Int
 	minBridgingAmount      *big.Int
 	minTokenBridgingAmount *big.Int
 	minOperationFee        *big.Int
+
+	treasuryAddress ethcommon.Address
 
 	currencyTokenID uint16
 
@@ -171,6 +179,12 @@ func (ip *deployEVMParams) validateFlags() error {
 	} else if len(ip.evmBlsKeys) == 0 {
 		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
 	}
+
+	if !common.IsValidAddress(ip.treasuryAddressStr, true) {
+		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
+	}
+
+	ip.treasuryAddress = ethcommon.HexToAddress(ip.treasuryAddressStr)
 
 	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
 	if !ok {
@@ -282,6 +296,13 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddrFlag,
 		"",
 		bridgeSCAddrFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.treasuryAddressStr,
+		treasuryAddressFlag,
+		"",
+		treasuryAddressFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -501,8 +522,19 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
+	setTreasuryAddress, err := ethContractUtils.ExecuteMethod(
+		ctx, artifacts[Gateway], addresses[Gateway], "setTreasuryAddress", ip.treasuryAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write(
+		[]byte("Treasury address initialization transaction has been sent. Waiting for the receipts..."))
+
+	outputter.WriteOutput()
+
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper,
-		append(additionalTxHashes, setValidatorsChainDataTx.Hash().String())...)
+		append(additionalTxHashes, setValidatorsChainDataTx.Hash().String(), setTreasuryAddress.Hash().String())...)
 	if err != nil {
 		return nil, err
 	}

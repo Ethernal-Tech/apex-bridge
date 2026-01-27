@@ -170,6 +170,7 @@ $ apex-bridge generate-configs cardano-chain \
         --utxo-min-amount <minimal UTXO value for the chain> \
         --min-fee-for-bridging <minimal bridging fee> \
         --block-confirmation-count <block confirmation count> \
+        --treasury-address <treasury address for the chain> \
         --min-operation-fee <minimal operation fee> \
         --chain-id <chain id> \
         --native-token-destination-chain-id <wrapped token destination chain id> \
@@ -197,6 +198,7 @@ $ apex-bridge generate-configs cardano-chain \
         --ogmios-url https://prime.ogmios.com \
         --ttl-slot-inc 6 \
         --min-fee-for-bridging 10000000 \
+        --treasury-address "addr_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf" \
         --min-operation-fee 1999999 \
         --block-confirmation-count 10 \
         --chain-id "prime" \
@@ -320,11 +322,13 @@ $ apex-bridge sendtx skyline \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
         --src-token-id 1 \
         --fee 1_100_000 \
+        --operation-fee 1_100_000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
@@ -341,12 +345,14 @@ $ apex-bridge sendtx skyline \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
         --src-token-id 1 \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
         --fee 1_100_000 \
+        --operation-fee 1_100_000 \
         --chain-dst nexus \
         --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --receiver 0x1111:1_234_567 \
@@ -515,6 +521,22 @@ $ apex-bridge bridge-admin set-min-amounts \
 - all amounts should be entered in wei decimals
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
+```shell
+$ apex-bridge bridge-admin treasury-addr set \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --gateway-addr 0xeefcd00000000000000000000000000000000013 \
+        --treasury-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin treasury-addr get \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --gateway-addr 0xeefcd00000000000000000000000000000000013
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin defund \
@@ -648,7 +670,6 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 
 ```shell
 $ apex-bridge bridge-admin register-gateway-token \
-        --chain-ids-config ./chainIDsConfig.json \
         --node-url http://localhost:12001 \
         --gateway-address 0x020202 \
         --gas-limit 10_000_000 \

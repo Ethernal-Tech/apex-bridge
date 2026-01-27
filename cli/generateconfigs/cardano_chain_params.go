@@ -32,6 +32,7 @@ const (
 	minFeeForBridgingFlag       = "min-fee-for-bridging"
 	minFeeForBridgingTokensFlag = "min-fee-for-bridging-tokens" //nolint:gosec
 	minOperationFeeFlag         = "min-operation-fee"
+	treasuryAddressFlag         = "treasury-address"
 	blockConfirmationCountFlag  = "block-confirmation-count"
 
 	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
@@ -56,6 +57,7 @@ const (
 	minFeeForBridgingFlagDesc       = "minimal bridging fee for the chain"
 	minFeeForBridgingTokensFlagDesc = "minimal bridging fee for bridging tokens for the chain" //nolint:gosec
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
+	treasuryAddressFlagDesc         = "treasury address for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
 
 	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
@@ -89,6 +91,7 @@ type cardanoChainGenerateConfigsParams struct {
 	minFeeForBridging       uint64
 	minFeeForBridgingTokens uint64
 	minOperationFee         uint64
+	treasuryAddress         string
 	blockConfirmationCount  uint
 
 	mintingScriptTxInputHash  string
@@ -116,6 +119,10 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 
 	if !common.IsValidNetworkAddress(p.networkAddress) {
 		return fmt.Errorf("invalid %s: %s", networkAddressFlag, p.networkAddress)
+	}
+
+	if !common.IsValidAddress(p.treasuryAddress, false) {
+		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
 	}
 
 	if p.blockfrostURL == "" && p.socketPath == "" && p.ogmiosURL == "" {
@@ -261,6 +268,12 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		minOperationFeeFlag,
 		common.ChainMinConfig["default"].MinOperationFee,
 		minOperationFeeFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.treasuryAddress,
+		treasuryAddressFlag,
+		"",
+		treasuryAddressFlagDesc,
 	)
 	cmd.Flags().UintVar(
 		&p.blockConfirmationCount,
@@ -428,6 +441,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		ConfirmationBlockCount:   p.blockConfirmationCount,
 		OtherAddressesOfInterest: []string{},
 		MinOperationFee:          p.minOperationFee,
+		TreasuryAddress:          p.treasuryAddress,
 		FeeAddrBridgingAmount:    p.utxoMinAmount,
 	}
 
