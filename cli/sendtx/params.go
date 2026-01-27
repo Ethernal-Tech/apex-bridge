@@ -524,7 +524,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	if ip.ogmiosURLDst != "" {
