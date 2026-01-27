@@ -302,7 +302,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &CmdResult{
