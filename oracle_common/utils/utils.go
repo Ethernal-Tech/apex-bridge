@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -63,4 +65,61 @@ func GetTokenPair(
 
 	return nil, fmt.Errorf("no bridging path from source chain %s to destination chain %s with token ID %d",
 		srcChainID, destChainID, tokenID)
+}
+
+type DestChainInfo struct {
+	FeeAddress                 string
+	FeeAddrBridgingWei         *big.Int
+	CurrencyTokenID            uint16
+	MinColCoinsAllowedToBridge *big.Int
+}
+
+func GetDestChainInfo(
+	destChainID string,
+	appConfig *core.AppConfig,
+	cardanoDestConfig *core.CardanoChainConfig,
+	ethDestConfig *core.EthChainConfig,
+) (*DestChainInfo, error) {
+	switch {
+	case cardanoDestConfig != nil:
+		currencyDestID, err := cardanoDestConfig.GetCurrencyID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", destChainID, err)
+		}
+
+		return &DestChainInfo{
+			FeeAddress:                 appConfig.GetFeeMultisigAddress(destChainID),
+			FeeAddrBridgingWei:         common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)),
+			CurrencyTokenID:            currencyDestID,
+			MinColCoinsAllowedToBridge: common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.MinColCoinsAllowedToBridge)),
+		}, nil
+	case ethDestConfig != nil:
+		currencyDestID, err := ethDestConfig.GetCurrencyID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", destChainID, err)
+		}
+
+		return &DestChainInfo{
+			FeeAddress:                 common.EthZeroAddr,
+			FeeAddrBridgingWei:         ethDestConfig.FeeAddrBridgingAmount,
+			CurrencyTokenID:            currencyDestID,
+			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge,
+		}, nil
+	default:
+		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)
+	}
+}
+
+func NormalizeAddr(addr string) string {
+	addr = strings.ToLower(addr)
+
+	return strings.TrimPrefix(addr, "0x")
+}
+
+func MaxBigInt(a, b *big.Int) *big.Int {
+	if a.Cmp(b) >= 0 { // a >= b
+		return a
+	}
+
+	return b
 }

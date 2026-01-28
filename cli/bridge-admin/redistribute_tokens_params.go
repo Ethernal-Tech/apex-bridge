@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -19,6 +18,7 @@ type redistributeBridgingAddrsTokensParams struct {
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
+	chainIDsConfig   string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -35,6 +35,10 @@ func (params *redistributeBridgingAddrsTokensParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
+	if err := validateConfigFilePath(params.chainIDsConfig); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -43,7 +47,13 @@ func (params *redistributeBridgingAddrsTokensParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(params.chainID)
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
+	if err != nil {
+		return nil, err
+	}
+
+	chainIDInt := chainIDsConfig.ToChainIDConverter().ToChainIDNum(params.chainID)
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -94,7 +104,7 @@ func (params *redistributeBridgingAddrsTokensParams) Execute(
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &successResult{}, err
@@ -127,6 +137,13 @@ func (params *redistributeBridgingAddrsTokensParams) RegisterFlags(cmd *cobra.Co
 		privateKeyConfigFlag,
 		"",
 		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&params.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

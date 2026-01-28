@@ -82,6 +82,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	chainIDConverter := appConfig.ChainIDConverter
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	currencyAmountSum := big.NewInt(0)
@@ -89,7 +90,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	unknownTokenOutputIndexes := make([]common.TxOutputIndex, 0, unknownNativeTokensUtxoCntMax)
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		common.ToNumChainID(tx.OriginChainID), 0)
+		chainIDConverter.ToChainIDNum(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}
@@ -109,7 +110,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 
 	currencyTokenPair, err := cUtils.GetTokenPair(
 		chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, currencyID)
-	trackCurrency := err == nil && currencyTokenPair.TrackSourceToken
+	trackCurrency := err == nil &&
+		(chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || currencyTokenPair.TrackSourceToken)
 
 	wrappedTokenID, wrappedExists := chainConfig.GetWrappedTokenID()
 
@@ -131,7 +133,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 					tokenPair, err := cUtils.GetTokenPair(
 						chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, tokenID)
 
-					if err == nil && tokenPair.TrackSourceToken {
+					if err == nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 						wrappedTokenAmountToTrack.Add(wrappedTokenAmountToTrack, new(big.Int).SetUint64(token.Amount))
 					}
 				}
@@ -161,12 +163,12 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	}
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
-		OriginAmount:             currencyAmountToTrack,
-		OriginWrappedAmount:      wrappedTokenAmountToTrack,
+		OriginAmount:             common.DfmToWei(currencyAmountToTrack),
+		OriginWrappedAmount:      common.DfmToWei(wrappedTokenAmountToTrack),
 		OutputIndexes:            common.PackNumbersToBytes(unknownTokenOutputIndexes),
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
@@ -176,7 +178,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
 
 	p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
+		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim, chainIDConverter))
 
 	return nil
 }
@@ -184,6 +186,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 func (p *RefundRequestProcessorSkylineImpl) validate(
 	tx *core.CardanoTx, metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	chainIDConverter := appConfig.ChainIDConverter
+
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
 		return fmt.Errorf("try count exceeded. RefundTryCount: (current, max)=(%d, %d)",
 			tx.RefundTryCount, appConfig.TryCountLimits.MaxRefundTryCount)
@@ -200,7 +204,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		common.ToNumChainID(tx.OriginChainID), 0)
+		chainIDConverter.ToChainIDNum(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}
@@ -244,7 +248,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
-		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)),
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDConverter.ToChainIDNum(chainConfig.ChainID)),
 		p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
@@ -282,25 +286,25 @@ func buildRefundTokenAmounts(
 	currencyAdded := false
 
 	for tokenID, amount := range tokenAmounts {
-		amountCurrency := big.NewInt(0)
+		amountCurrencyWei := big.NewInt(0)
 
 		if !currencyAdded {
 			// First token gets the full currency sum
-			amountCurrency = currencyAmountSum
+			amountCurrencyWei = common.DfmToWei(currencyAmountSum)
 			currencyAdded = true
 		}
 
 		refundTokenAmounts = append(refundTokenAmounts, cCore.RefundTokenAmount{
 			TokenId:        tokenID,
-			AmountCurrency: amountCurrency,
-			AmountTokens:   amount,
+			AmountCurrency: amountCurrencyWei,
+			AmountTokens:   common.DfmToWei(amount),
 		})
 	}
 
 	if !currencyAdded {
 		refundTokenAmounts = append(refundTokenAmounts, cCore.RefundTokenAmount{
 			TokenId:        currencyID,
-			AmountCurrency: currencyAmountSum,
+			AmountCurrency: common.DfmToWei(currencyAmountSum),
 			AmountTokens:   big.NewInt(0),
 		})
 	}

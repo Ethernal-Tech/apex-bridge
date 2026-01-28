@@ -26,6 +26,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 				},
 			},
 		},
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 
@@ -62,7 +63,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		err := proc.PreValidate(&core.EthTx{
 			Address:       ethgo.HexToAddress("0xBadBadBad7776575425Ab185f6a9251aa00fEA25"),
 			Metadata:      []byte{},
-			OriginChainID: common.ToStrChainID(common.ChainIDIntNexus),
+			OriginChainID: common.ChainIDStrNexus,
 			Value:         new(big.Int).SetUint64(1),
 		}, appConfig)
 		require.Error(t, err)
@@ -94,5 +95,10 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.HotWalletIncrementClaims, 1)
+		require.Equal(t, common.ChainIDIntNexus, claims.HotWalletIncrementClaims[0].ChainId)
+		require.Equal(t, tx.Value, claims.HotWalletIncrementClaims[0].Amount)
+		require.Equal(t, big.NewInt(0), claims.HotWalletIncrementClaims[0].AmountWrapped)
 	})
 }

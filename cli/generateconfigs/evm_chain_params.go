@@ -3,7 +3,9 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"path/filepath"
+	"strings"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -36,9 +38,9 @@ const (
 	defaultEvmTTLBlockRoundingThreshold = 10
 	defaultEvmTTLBlockNumberInc         = 20
 	defaultEvmRelayerGasFeeMultiplier   = 140
-
-	defaultEvmFeeAddrBridgingAmount = 1_000_000
 )
+
+var defaultEvmFeeAddrBridgingAmount *big.Int = common.DfmToWei(big.NewInt(1_000_000))
 
 type evmChainGenerateConfigsParams struct {
 	chainIDString string
@@ -47,8 +49,10 @@ type evmChainGenerateConfigsParams struct {
 	evmChainTTLBlockNumberInc      uint64
 	evmChainBlockRoundingThreshold uint64
 	evmChainStartingBlock          uint64
-	evmChainMinFeeForBridging      uint64
-	minOperationFee                uint64
+	evmChainMinFeeForBridgingStr   string
+	evmChainMinFeeForBridging      *big.Int
+	minOperationFeeStr             string
+	minOperationFee                *big.Int
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
@@ -74,6 +78,23 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
+
+	p.evmChainMinFeeForBridgingStr = strings.TrimSpace(p.evmChainMinFeeForBridgingStr)
+
+	evmChainMinFeeForBridging, ok := new(big.Int).SetString(p.evmChainMinFeeForBridgingStr, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", evmChainMinFeeForBridgingFlag)
+	}
+
+	p.minOperationFeeStr = strings.TrimSpace(p.minOperationFeeStr)
+
+	minOperationFee, ok := new(big.Int).SetString(p.minOperationFeeStr, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minOperationFeeFlag)
+	}
+
+	p.evmChainMinFeeForBridging = evmChainMinFeeForBridging
+	p.minOperationFee = minOperationFee
 
 	return nil
 }
@@ -109,16 +130,16 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		0,
 		evmChainStartingBlockFlagDesc,
 	)
-	cmd.Flags().Uint64Var(
-		&p.evmChainMinFeeForBridging,
+	cmd.Flags().StringVar(
+		&p.evmChainMinFeeForBridgingStr,
 		evmChainMinFeeForBridgingFlag,
-		common.MinFeeForBridgingDefault,
+		common.MinFeeForBridgingDefault.String(),
 		evmChainMinFeeForBridgingFlagDesc,
 	)
-	cmd.Flags().Uint64Var(
-		&p.minOperationFee,
+	cmd.Flags().StringVar(
+		&p.minOperationFeeStr,
 		minOperationFeeFlag,
-		common.MinOperationFeeDefault,
+		common.MinOperationFeeDefault.String(),
 		minOperationFeeFlagDesc,
 	)
 
@@ -197,19 +218,20 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
-		NodeURL:                 p.evmChainNodeURL,
-		SyncBatchSize:           defaultEvmSyncBatchSize,
-		NumBlockConfirmations:   defaultEvmBlockConfirmationCount,
-		StartBlockNumber:        p.evmChainStartingBlock,
-		PoolIntervalMiliseconds: defaultEvmPoolIntervalMiliseconds,
-		TTLBlockNumberInc:       p.evmChainTTLBlockNumberInc,
-		BlockRoundingThreshold:  p.evmChainBlockRoundingThreshold,
-		NoBatchPeriodPercent:    defaultEvmNoBatchPeriodPercent,
-		DynamicTx:               true,
-		MinFeeForBridging:       p.evmChainMinFeeForBridging,
-		MinOperationFee:         p.minOperationFee,
-		RestartTrackerPullCheck: time.Second * 150,
-		FeeAddrBridgingAmount:   defaultEvmFeeAddrBridgingAmount,
+		NodeURL:                    p.evmChainNodeURL,
+		SyncBatchSize:              defaultEvmSyncBatchSize,
+		NumBlockConfirmations:      defaultEvmBlockConfirmationCount,
+		StartBlockNumber:           p.evmChainStartingBlock,
+		PoolIntervalMiliseconds:    defaultEvmPoolIntervalMiliseconds,
+		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
+		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
+		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
+		DynamicTx:                  true,
+		MinFeeForBridging:          p.evmChainMinFeeForBridging,
+		MinOperationFee:            p.minOperationFee,
+		MinColCoinsAllowedToBridge: common.MinAmountAllowedToBridgeEVM,
+		RestartTrackerPullCheck:    time.Second * 150,
+		FeeAddrBridgingAmount:      defaultEvmFeeAddrBridgingAmount,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {

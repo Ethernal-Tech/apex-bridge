@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -20,7 +19,7 @@ const (
 	nativeTokenAmountFlag = "native-token-amount"
 
 	defundAddressFlagDesc     = "address where defund amount goes"
-	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM"
+	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in Wei"
 	defundTokenAmountFlagDesc = "amount to withdraw from the hot wallet in native tokens"
 )
 
@@ -33,6 +32,9 @@ type defundParams struct {
 	bridgePrivateKey     string
 	privateKeyConfig     string
 	address              string
+	chainIDsConfig       string
+
+	chainIDConverter *common.ChainIDConverter
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -49,24 +51,39 @@ func (g *defundParams) ValidateFlags() error {
 
 	currencyAmount, ok := new(big.Int).SetString(g.currencyAmountStr, 0)
 	if !ok || currencyAmount.Sign() <= 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
+		return fmt.Errorf(
+			"--%s flag must specify a positive value (greater than 0) in wei", amountFlag,
+		)
 	}
 
 	g.nativeTokenAmountStr = strings.TrimSpace(g.nativeTokenAmountStr)
 
 	nativeTokenAmount, ok := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
 	if !ok || nativeTokenAmount.Sign() < 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater or equal than %d in dfm",
+		return fmt.Errorf(" --%s flag must specify a value greater or equal than %d in wei",
 			nativeTokenAmountFlag, 0)
 	}
 
-	if currencyAmount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+		return err
 	}
 
-	if !common.IsValidAddress(g.chainID, g.address) {
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
+	if err != nil {
+		return err
+	}
+
+	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
+	if g.chainIDConverter.IsCardanoChainID(g.chainID) {
+		minUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm))
+		if currencyAmount.Cmp(minUtxoAmountWei) < 0 {
+			return fmt.Errorf(" --%s flag must specify a value greater than %v in wei",
+				amountFlag, minUtxoAmountWei)
+		}
+	}
+
+	if !common.IsValidAddress(g.chainID, g.address, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
 	}
 
@@ -80,7 +97,8 @@ func (g *defundParams) ValidateFlags() error {
 // Execute implements common.CliCommandExecutor.
 func (g *defundParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(g.chainID)
+
+	chainIDInt := g.chainIDConverter.ToChainIDNum(g.chainID)
 
 	var (
 		amount             = big.NewInt(0)
@@ -153,7 +171,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &chainTokenQuantityResult{}, err
@@ -207,6 +225,12 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		addressFlag,
 		"0",
 		defundAddressFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

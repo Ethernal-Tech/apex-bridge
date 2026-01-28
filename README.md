@@ -91,6 +91,7 @@ $ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PA
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
+        --chain-ids-config ./chainIDsConfig.json \
         --chain prime \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
@@ -103,7 +104,8 @@ $ go run ./main.go register-chain \
 
 # How to create multisig address
 ```shell
-$ go run ./main.go create-address \
+$ go run ./main.go create-addresses \
+        --chain-ids-config ./chainIDsConfig.json \
         --network-id network_ID \
         --testnet-magic 3311 \
         --bridge-url http://127.0.0.1:12013 \
@@ -245,6 +247,7 @@ $ apex-bridge generate-configs evm-chain \
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
@@ -261,6 +264,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the vector to the prime
 ```shell
 $ apex-bridge sendtx \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type cardano \
         --key VECTOR_WALLET_PRIVATE_KEY \
         --testnet-src 1127 \
@@ -278,6 +282,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the prime to the nexus
 ```shell
 $ apex-bridge sendtx \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
@@ -287,16 +292,17 @@ $ apex-bridge sendtx \
         --chain-dst nexus \
         --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c
 ```
 - there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the nexus to the prime
 ```shell
 $ apex-bridge sendtx \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type evm \
         --key NEXUS_WALLET_PRIVATE_KEY \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
         --chain-src nexus \
         --fee 1000010000000000000 \
@@ -309,6 +315,7 @@ $ apex-bridge sendtx \
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
 $ apex-bridge sendtx skyline \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
@@ -329,6 +336,7 @@ $ apex-bridge sendtx skyline \
 # Example of sending a skyline transaction from the cardano to the nexus
 ```shell
 $ apex-bridge sendtx skyline \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
@@ -340,7 +348,7 @@ $ apex-bridge sendtx skyline \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
         --fee 1_100_000 \
         --chain-dst nexus \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --receiver 0x1111:1_234_567 \
         --dst-token-contract-addr 0x22222
 ```
@@ -349,9 +357,10 @@ $ apex-bridge sendtx skyline \
 # Example of sending a skyline transaction from the nexus to the cardano
 ```shell
 $ apex-bridge sendtx skyline \
+        --chain-ids-config ./chainIDsConfig.json \
         --tx-type evm \
         --key EVM_WALLET_PRIVATE_KEY \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr 0x3333 \
         --native-token-wallet-contract-addr 0x4444 \
         --chain-src nexus \
@@ -363,12 +372,14 @@ $ apex-bridge sendtx skyline \
         --receiver addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv:1_234_567 \
         --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
 ```
+- `--src-token-name` flag should be set to `lovelace` only when sending the native currency and omitted in all other cases.
 - there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
 ```shell
 $ apex-bridge deploy-evm \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -392,6 +403,7 @@ $ apex-bridge deploy-evm \
 Example with explicit bls keys:
 ```shell
 $ apex-bridge deploy-evm \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
         --dir /tmp \
@@ -443,6 +455,7 @@ $ apex-bridge deploy-evm deploy-contract \
 Default example (bls keys are retrieved from bridge):
 ```shell
 $ apex-bridge deploy-evm set-validators-chain-data \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -457,6 +470,7 @@ $ apex-bridge deploy-evm set-validators-chain-data \
 Example with explicit bls keys:
 ```shell
 $ apex-bridge deploy-evm set-validators-chain-data \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
         --dir /tmp \
@@ -473,12 +487,14 @@ $ apex-bridge deploy-evm set-validators-chain-data \
 # Bridge admin commands
 ```shell
 $ apex-bridge bridge-admin get-chain-token-quantity \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12013 \
         --chain prime --chain nexus --chain vector
 ```
 
 ```shell
 $ apex-bridge bridge-admin update-chain-token-quantity \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
@@ -502,6 +518,7 @@ $ apex-bridge bridge-admin set-min-amounts \
 
 ```shell
 $ apex-bridge bridge-admin defund \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12013 \
         --chain nexus \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
@@ -515,6 +532,7 @@ $ apex-bridge bridge-admin defund \
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12013 \
         --bridge-key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --chain nexus \
@@ -526,6 +544,7 @@ $ apex-bridge bridge-admin set-additional-data \
 To register stake address and delegate it to the stake pool use: 
 ```shell
 $ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -549,6 +568,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 For deregistration of stake address use:
 ```shell
 $ apex-bridge bridge-admin deregister-stake-address \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -558,6 +578,7 @@ $ apex-bridge bridge-admin deregister-stake-address \
 
 ```shell
 $ apex-bridge bridge-admin update-bridging-addrs-count \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12001 \
         --bridging-addresses-count 5 \
         --chain prime \
@@ -569,6 +590,7 @@ $ apex-bridge bridge-admin update-bridging-addrs-count \
 $ apex-bridge bridge-admin get-validators-data \
         --bridge-url http://localhost:12013 \
         --bridge-addr 0xeefcd00000000000000000000000000000000022 \
+        --chain-ids-config ./chainIDsConfig.json \
         --config ./config.json
 ```
 
@@ -598,6 +620,7 @@ $ apex-bridge bridge-admin deploy-cardano-script \
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --config ./config.json \
+        --chain-ids-config ./chainIDsConfig.json \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \
         --prime-wallet-addr addr_test1wrapsqy073nhdx7tz4j54q4aanhzqqgfpydftysvqyqw50cgz9hpl \
         --vector-wallet-addr addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
@@ -607,6 +630,7 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances skyline \
         --config ./config.json \
+        --chain-ids-config ./chainIDsConfig.json \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunSkylineBridge/validator_1/bridging-dbs/validatorcomponents \
         --prime-wallet-addr addr_test1wpg8ayttfkr2gvj47p2qkekhrx7w0ecjfdedh6ewrzjhnyg0t7rzg \
         --cardano-wallet-addr addr_test1wrzslpc4stfp78r774k96gxgv4nl2nluc84nv8xkdm0pv7cp4j05f
@@ -624,6 +648,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 
 ```shell
 $ apex-bridge bridge-admin register-gateway-token \
+        --chain-ids-config ./chainIDsConfig.json \
         --node-url http://localhost:12001 \
         --gateway-address 0x020202 \
         --gas-limit 10_000_000 \
@@ -638,6 +663,7 @@ $ apex-bridge bridge-admin register-gateway-token \
 
 ```shell
 $ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-url http://localhost:12001 \
         --chain prime \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d

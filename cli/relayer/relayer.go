@@ -46,6 +46,15 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](initParamsData.chainIDsConfig, "relayer")
+	if err != nil {
+		outputter.SetError(err)
+
+		return
+	}
+
+	config.SetupChainIDs(chainIDsConfig)
+
 	logger, err := logger.NewLogger(config.Logger)
 	if err != nil {
 		outputter.SetError(err)

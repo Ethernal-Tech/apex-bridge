@@ -10,12 +10,12 @@ import (
 type SettingsResponse struct {
 	// For each chain, the minimum fee required to cover the submission of the currency transaction
 	// on the destination chain
-	MinChainFeeForBridging map[string]uint64 `json:"minChainFeeForBridging"`
+	MinChainFeeForBridging map[string]string `json:"minChainFeeForBridging"`
 	// For each chain, the minimum fee required to cover the submission of the native token transaction
 	// on the destination chain
 	MinChainFeeForBridgingTokens map[string]uint64 `json:"minChainFeeForBridgingTokens"`
 	// For each chain, the minimum fee required to cover operational costs
-	MinOperationFee map[string]uint64 `json:"minOperationFee"`
+	MinOperationFee map[string]string `json:"minOperationFee"`
 	// For each chain, the minimum allowed UTXO value
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
 	// For each chain, the direction config
@@ -28,8 +28,8 @@ type SettingsResponse struct {
 	MaxAmountAllowedToBridge string `json:"maxAmountAllowedToBridge"`
 	// Maximum amount of native tokens allowed to be bridged
 	MaxTokenAmountAllowedToBridge string `json:"maxTokenAmountAllowedToBridge"`
-	// Minimum amount of colored tokens allowed to be bridged
-	MinColCoinsAllowedToBridge string `json:"minColCoinsAllowedToBridge"`
+	// Minimum amount of colored tokens allowed to be bridged for each chain
+	MinColCoinsAllowedToBridge map[string]string `json:"minColCoinsAllowedToBridge"`
 	// Maximum number of receivers allowed in a bridging request
 	MaxReceiversPerBridgingRequest int `json:"maxReceiversPerBridgingRequest"`
 } // @name SettingsResponse
@@ -38,17 +38,19 @@ func NewSettingsResponse(
 	appConfig *core.AppConfig,
 ) *SettingsResponse {
 	minUtxoMap := make(map[string]uint64)
-	minFeeForBridgingMap := make(map[string]uint64)
+	minFeeForBridgingMap := make(map[string]string)
 	minFeeForBridgingTokensMap := make(map[string]uint64)
-	minOperationFeeMap := make(map[string]uint64)
+	minOperationFeeMap := make(map[string]string)
+	minColCoinsAllowedToBridgeMap := make(map[string]string)
 
 	var maxUtxoValue uint64 = 0
 
 	for chainID, chainConfig := range appConfig.CardanoChains {
 		minUtxoMap[chainID] = chainConfig.UtxoMinAmount
-		minFeeForBridgingMap[chainID] = chainConfig.DefaultMinFeeForBridging
+		minFeeForBridgingMap[chainID] = fmt.Sprintf("%d", chainConfig.DefaultMinFeeForBridging)
 		minFeeForBridgingTokensMap[chainID] = chainConfig.MinFeeForBridgingTokens
-		minOperationFeeMap[chainID] = chainConfig.MinOperationFee
+		minOperationFeeMap[chainID] = fmt.Sprintf("%d", chainConfig.MinOperationFee)
+		minColCoinsAllowedToBridgeMap[chainID] = fmt.Sprintf("%d", chainConfig.MinColCoinsAllowedToBridge)
 
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount
@@ -56,8 +58,9 @@ func NewSettingsResponse(
 	}
 
 	for chainID, ethConfig := range appConfig.EthChains {
-		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging
-		minOperationFeeMap[chainID] = ethConfig.MinOperationFee
+		minFeeForBridgingMap[chainID] = fmt.Sprintf("%v", ethConfig.MinFeeForBridging)
+		minOperationFeeMap[chainID] = fmt.Sprintf("%v", ethConfig.MinOperationFee)
+		minColCoinsAllowedToBridgeMap[chainID] = fmt.Sprintf("%v", ethConfig.MinColCoinsAllowedToBridge)
 	}
 
 	return &SettingsResponse{
@@ -70,7 +73,7 @@ func NewSettingsResponse(
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
-		MinColCoinsAllowedToBridge:     fmt.Sprintf("%v", appConfig.BridgingSettings.MinColCoinsAllowedToBridge),
+		MinColCoinsAllowedToBridge:     minColCoinsAllowedToBridgeMap,
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
 	}
 }

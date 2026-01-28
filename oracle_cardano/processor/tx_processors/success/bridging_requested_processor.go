@@ -73,9 +73,10 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
 	var (
-		totalAmount    = big.NewInt(0)
-		feeCurrencyDst *big.Int
-		feeAddress     string
+		totalAmount       = big.NewInt(0)
+		feeCurrencyDstWei *big.Int
+		feeAddress        string
+		chainIDConverter  = appConfig.ChainIDConverter
 	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
@@ -83,10 +84,10 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	switch {
 	case cardanoDestConfig != nil:
 		feeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
-		feeCurrencyDst = new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
+		feeCurrencyDstWei = common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount))
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
-		feeCurrencyDst = new(big.Int).SetUint64(ethDestConfig.FeeAddrBridgingAmount)
+		feeCurrencyDstWei = ethDestConfig.FeeAddrBridgingAmount
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -103,29 +104,29 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 			continue
 		}
 
-		receiverAmount := new(big.Int).SetUint64(receiver.Amount)
+		receiverAmountWei := common.DfmToWei(new(big.Int).SetUint64(receiver.Amount))
 		receivers = append(receivers, cCore.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
-			Amount:             receiverAmount,
+			Amount:             receiverAmountWei,
 			AmountWrapped:      big.NewInt(0),
 		})
 
-		totalAmount.Add(totalAmount, receiverAmount)
+		totalAmount.Add(totalAmount, receiverAmountWei)
 	}
 
-	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, new(big.Int).SetUint64(metadata.BridgingFee))
-	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDst)
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, common.DfmToWei(new(big.Int).SetUint64(metadata.BridgingFee)))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDstWei)
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
-		Amount:             feeCurrencyDst,
+		Amount:             feeCurrencyDstWei,
 		AmountWrapped:      big.NewInt(0),
 	})
 
 	claim := cCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash,
-		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		SourceChainId:                   chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:              chainIDConverter.ToChainIDNum(metadata.DestinationChainID),
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
 		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
@@ -137,7 +138,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *BridgingRequestedProcessorImpl) validate(
@@ -249,9 +250,9 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		receiverAmountSum.Cmp(common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge)) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+			receiverAmountSum, common.WeiToDfm(appConfig.BridgingSettings.MaxAmountAllowedToBridge))
 	}
 
 	// update fee amount if needed with sum of fee address receivers

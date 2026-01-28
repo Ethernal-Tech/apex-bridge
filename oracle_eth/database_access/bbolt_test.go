@@ -15,10 +15,13 @@ import (
 )
 
 func TestBoltDatabase(t *testing.T) {
+	chainIDConverter := common.NewTestChainIDConverter()
+
 	appConfig := &cCore.AppConfig{
 		EthChains: map[string]*cCore.EthChainConfig{
 			common.ChainIDStrNexus: {},
 		},
+		ChainIDConverter: chainIDConverter,
 	}
 
 	appConfig.FillOut()
@@ -205,7 +208,7 @@ func TestBoltDatabase(t *testing.T) {
 			tx.SubmitTryCount++
 		}
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{UpdateUnprocessed: txs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{UpdateUnprocessed: txs}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
@@ -240,7 +243,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "couldn't get pending tx for entityID")
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: txs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: txs}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
@@ -275,10 +278,10 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedEthTx(false))
 		}
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: []*core.ProcessedEthTx{}})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: []*core.ProcessedEthTx{}}, chainIDConverter)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
@@ -310,7 +313,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		iExpectedTxs := make([]cCore.BaseTx, len(expectedTxs))
@@ -318,7 +321,7 @@ func TestBoltDatabase(t *testing.T) {
 			iExpectedTxs[i] = tx
 		}
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToUnprocessed: iExpectedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToUnprocessed: iExpectedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
@@ -348,7 +351,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		processedTxs := make([]*core.ProcessedEthTx, len(expectedTxs))
@@ -361,7 +364,7 @@ func TestBoltDatabase(t *testing.T) {
 			iProcessedTxs[i] = tx
 		}
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToProcessed: iProcessedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToProcessed: iProcessedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
@@ -398,7 +401,7 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedEthTx(false))
 		}
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs}, chainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetProcessedTx(cCore.DBTxID{ChainID: "", DBKey: []byte{}})
@@ -487,14 +490,14 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: []*core.BridgeExpectedEthTx{}})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: []*core.BridgeExpectedEthTx{}}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: txs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: txs}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
@@ -516,14 +519,14 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: []*core.BridgeExpectedEthTx{}})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: []*core.BridgeExpectedEthTx{}}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: txs})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: txs}, chainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)

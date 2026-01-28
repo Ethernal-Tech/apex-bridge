@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -33,6 +32,7 @@ type stakeDelParams struct {
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
+	chainIDsConfig   string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -59,13 +59,23 @@ func (params *stakeDelParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
+	if err := validateConfigFilePath(params.chainIDsConfig); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Execute implements common.CliCommandExecutor.
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(params.chainID)
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	chainIDInt := chainIDsConfig.ToChainIDConverter().ToChainIDNum(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
@@ -122,7 +132,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &successResult{}, nil
@@ -176,6 +186,13 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 		privateKeyConfigFlag,
 		"",
 		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&params.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

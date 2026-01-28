@@ -46,7 +46,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			OriginChainID: common.ChainIDStrNexus,
 			Metadata:      relevantButNotFullMetadata,
-		}, nil)
+		}, &oCore.AppConfig{
+			ChainIDConverter: common.NewTestChainIDConverter(),
+		})
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
@@ -69,7 +71,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Hash:          txHash,
 			OriginChainID: common.ChainIDStrNexus,
 			Metadata:      relevantFullMetadata,
-		}, nil)
+		}, &oCore.AppConfig{
+			ChainIDConverter: common.NewTestChainIDConverter(),
+		})
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)

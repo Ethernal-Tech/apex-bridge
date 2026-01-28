@@ -37,12 +37,13 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 func NewCardanoChainObserver(
 	ctx context.Context,
 	config *cCore.CardanoChainConfig,
+	chainIDConverter *common.ChainIDConverter,
 	txsReceiver core.CardanoTxsReceiver, oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
 	bridgingAddressesManager common.BridgingAddressesManager,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, syncerConfig := loadSyncerConfigs(config, bridgingAddressesManager)
+	indexerConfig, syncerConfig := loadSyncerConfigs(config, chainIDConverter, bridgingAddressesManager)
 
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
@@ -152,13 +153,14 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 
 func loadSyncerConfigs(
 	config *cCore.CardanoChainConfig,
+	chainIDConverter *common.ChainIDConverter,
 	bridgingAddressesManager common.BridgingAddressesManager,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
 
-	chainID := common.ToNumChainID(config.ChainID)
+	chainID := chainIDConverter.ToChainIDNum(config.ChainID)
 
 	addressesOfInterest := append(
 		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),

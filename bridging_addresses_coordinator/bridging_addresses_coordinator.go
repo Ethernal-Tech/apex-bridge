@@ -31,6 +31,7 @@ type BridgingAddressesCoordinatorImpl struct {
 	bridgingAddressesManager common.BridgingAddressesManager
 	dbs                      map[string]indexer.Database
 	cardanoChains            map[string]*oracleCore.CardanoChainConfig
+	chainIDConverter         *common.ChainIDConverter
 	logger                   hclog.Logger
 }
 
@@ -40,12 +41,14 @@ func NewBridgingAddressesCoordinator(
 	bridgingAddressesManager common.BridgingAddressesManager,
 	dbs map[string]indexer.Database,
 	cardanoChains map[string]*oracleCore.CardanoChainConfig,
+	chainIDConverter *common.ChainIDConverter,
 	logger hclog.Logger,
 ) common.BridgingAddressesCoordinator {
 	return &BridgingAddressesCoordinatorImpl{
 		bridgingAddressesManager: bridgingAddressesManager,
 		dbs:                      dbs,
 		cardanoChains:            cardanoChains,
+		chainIDConverter:         chainIDConverter,
 		logger:                   logger,
 	}
 }
@@ -72,7 +75,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	requiredTokenAmounts := cardanowallet.GetOutputsSum(txOutputs.Outputs)
 	requiredCurrencyAmount := requiredTokenAmounts[cardanowallet.AdaTokenName]
 
-	c.logger.Debug("GetAddressesAndAmountsForBatch", "chain", common.ToStrChainID(chainID),
+	c.logger.Debug("GetAddressesAndAmountsForBatch", "chain", c.chainIDConverter.ToChainIDStr(chainID),
 		"requiredTokenAmounts", requiredTokenAmounts, "Mint token amounts", mintTokens)
 
 	totalTokenAmounts, err := c.getTokensAmountByAddr(chainID)
@@ -115,7 +118,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return nil, isRedistribution, err
 	}
 
-	changeMinUtxo = max(changeMinUtxo, common.MinUtxoAmountDefault)
+	changeMinUtxo = max(changeMinUtxo, common.MinUtxoAmountDefaultDfm)
 
 	// Validate whether enough token funds exist
 	if err := validateTokenFunds(requiredTokenAmounts, totalTokenAmounts.sum, changeMinUtxo); err != nil {
@@ -187,7 +190,7 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 			continue
 		}
 
-		includeChange := common.MinUtxoAmountDefault
+		includeChange := common.MinUtxoAmountDefaultDfm
 
 		// Process native tokens only from frist address if there are any
 		if addrAmount.addressIndex == 0 && len(addrAmount.totalTokenAmounts) > 1 {
@@ -299,7 +302,7 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(
 func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 	chainID uint8,
 ) (*tokensAmountPerAddress, error) {
-	chainIDStr := common.ToStrChainID(chainID)
+	chainIDStr := c.chainIDConverter.ToChainIDStr(chainID)
 
 	db, ok := c.dbs[chainIDStr]
 	if !ok {
@@ -430,7 +433,7 @@ func (c *BridgingAddressesCoordinatorImpl) spendCurrencyFromAddress(
 		return changeMinUtxo
 	}
 
-	const defaultMinChange = common.MinUtxoAmountDefault
+	const defaultMinChange = common.MinUtxoAmountDefaultDfm
 
 	if availableCurrencyOnAddress <= requiredCurrencyAmount {
 		// Not enough currency on this address or exact amount
@@ -466,7 +469,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 ) (common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
-	db := c.dbs[common.ToStrChainID(chainID)]
+	db := c.dbs[c.chainIDConverter.ToChainIDStr(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
 	if containsNativeTokens {

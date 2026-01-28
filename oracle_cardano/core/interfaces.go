@@ -22,7 +22,7 @@ type CardanoTxsDB interface {
 	AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error
 	ClearAllTxs(chainID string) error
 	MoveProcessedExpectedTxs(chainID string) error
-	UpdateTxs(data *CardanoUpdateTxsData) error
+	UpdateTxs(data *CardanoUpdateTxsData, chainIDConverter *common.ChainIDConverter) error
 }
 
 type CardanoTxsProcessorDB interface {

@@ -24,20 +24,21 @@ import (
 
 func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	const (
-		utxoMinValue               = 1000000
-		defaultMinFeeForBridging   = 2000010
-		minFeeForBridgingTokens    = 1000010
-		minOperationFee            = 1000010
-		minColCoinsAllowedToBridge = 100000
-		primeBridgingAddr          = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-		primeBridgingAddr2         = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		primeBridgingFeeAddr       = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		cardanoBridgingAddr        = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		cardanoBridgingFeeAddr     = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
-		validTestAddress           = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		validPrimeTestAddress      = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-		nexusBridgingAddr          = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
-		validNexusAddr             = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
+		utxoMinValue             = 1000000
+		defaultMinFeeForBridging = 2000010
+		minFeeForBridgingTokens  = 1000010
+		minOperationFee          = 1000010
+		feeAddrBridgingAmount    = uint64(1000005)
+		primeBridgingAddr        = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingAddr2       = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		primeBridgingFeeAddr     = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		cardanoBridgingAddr      = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		cardanoBridgingFeeAddr   = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
+		validTestAddress         = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		validPrimeTestAddress    = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		nexusBridgingAddr        = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
+		validNexusAddr           = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
+		nexusBridgingFeeAddr     = common.EthZeroAddr
 
 		policyID    = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 		testChainID = "test"
@@ -45,9 +46,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	primeCurrencyID := uint16(1)
 	cardanoCurrencyID := uint16(2)
-	primeWrappedTokenID := uint16(3)
-	cardanoWrappedTokenID := uint16(4)
-	usdtTokenID := uint16(5)
+	nexusCurrencyID := uint16(3)
+	primeWrappedTokenID := uint16(4)
+	cardanoWrappedTokenID := uint16(5)
+	usdtTokenID := uint16(6)
 
 	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
 		fmt.Sprintf("%s.%s",
@@ -70,8 +72,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
-	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridgeDfm := uint64(100000000)
+	maxTokenAmountAllowedToBridgeDfm := uint64(100000000)
+	minColCoinsAllowedToBridgeDfm := uint64(100000)
+
+	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(1000006))
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr, primeBridgingAddr2}, nil)
@@ -109,7 +114,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
-					MinOperationFee: minOperationFee,
+					MinOperationFee:            minOperationFee,
+					FeeAddrBridgingAmount:      feeAddrBridgingAmount,
+					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeDfm,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -118,7 +125,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						DestinationChains: map[string]common.TokenPairs{
 							common.ChainIDStrPrime: []common.TokenPair{
 								{SourceTokenID: cardanoCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
-								{SourceTokenID: cardanoWrappedTokenID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+								{SourceTokenID: cardanoWrappedTokenID, DestinationTokenID: primeCurrencyID, TrackSourceToken: false, TrackDestinationToken: false},
 							},
 							common.ChainIDStrNexus: []common.TokenPair{
 								{SourceTokenID: cardanoCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: false},
@@ -132,7 +139,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
-					MinOperationFee: minOperationFee,
+					MinOperationFee:            minOperationFee,
+					FeeAddrBridgingAmount:      feeAddrBridgingAmount,
+					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeDfm,
 				},
 			},
 			EthChains: map[string]*cCore.EthChainConfig{
@@ -140,8 +149,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					BridgingAddresses: cCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridgingTokens,
+					MinFeeForBridging:          common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens)),
+					FeeAddrBridgingAmount:      feeAddrBridgingAmountEvm,
+					MinColCoinsAllowedToBridge: common.DfmToWei(new(big.Int).SetUint64(minColCoinsAllowedToBridgeDfm)),
 					Tokens: map[uint16]common.Token{
+						nexusCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						usdtTokenID:         {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
 						primeWrappedTokenID: {ChainSpecific: "0x22", LockUnlock: false, IsWrappedCurrency: false},
 					},
@@ -149,11 +161,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
-				MinColCoinsAllowedToBridge:     minColCoinsAllowedToBridge,
+				MaxAmountAllowedToBridge:       common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridgeDfm)),
+				MaxTokenAmountAllowedToBridge:  common.DfmToWei(new(big.Int).SetUint64(maxTokenAmountAllowedToBridgeDfm)),
 			},
-			RefundEnabled: refundEnabled,
+			RefundEnabled:    refundEnabled,
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		appConfig.FillOut()
 
@@ -1264,7 +1276,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Address: sendtx.AddrToMetaDataAddr(nexusBridgingFeeAddr),
 					Amount:  utxoMinValue,
 					TokenID: primeCurrencyID,
 				},
@@ -1322,7 +1334,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Address: sendtx.AddrToMetaDataAddr(nexusBridgingFeeAddr),
 					Amount:  utxoMinValue,
 					TokenID: primeWrappedTokenID,
 				},
@@ -1384,7 +1396,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Amount:  minColCoinsAllowedToBridge - 1,
+				Amount:  minColCoinsAllowedToBridgeDfm - 1,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -1447,13 +1459,13 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: common.SplitString(common.EthZeroAddr, 40),
+				Address: common.SplitString(nexusBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
-				Amount:  minColCoinsAllowedToBridge - 1,
+				Amount:  minColCoinsAllowedToBridgeDfm - 1,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -1522,7 +1534,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Amount:  minColCoinsAllowedToBridge,
+				Amount:  minColCoinsAllowedToBridgeDfm,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -1591,7 +1603,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Amount:  maxTokenAmountAllowedToBridge.Uint64() + 1,
+				Amount:  maxTokenAmountAllowedToBridgeDfm + 1,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -1615,7 +1627,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					{
 						PolicyID: policyID,
 						Name:     "USDT",
-						Amount:   maxTokenAmountAllowedToBridge.Uint64() + 1,
+						Amount:   maxTokenAmountAllowedToBridgeDfm + 1,
 					},
 				},
 			},
@@ -1902,7 +1914,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				TokenID: primeCurrencyID,
-				Amount:  maxAmountAllowedToBridge.Uint64() + 1,
+				Amount:  maxAmountAllowedToBridgeDfm + 1,
 			},
 		}
 
@@ -1920,7 +1932,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + defaultMinFeeForBridging*2 + maxAmountAllowedToBridge.Uint64() + 1,
+				Amount:  minOperationFee + defaultMinFeeForBridging*2 + maxAmountAllowedToBridgeDfm + 1,
 			},
 		}
 
@@ -1969,7 +1981,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				TokenID: primeWrappedTokenID,
-				Amount:  maxTokenAmountAllowedToBridge.Uint64() * 2,
+				Amount:  maxTokenAmountAllowedToBridgeDfm * 2,
 			},
 		}
 
@@ -1992,7 +2004,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					{
 						PolicyID: policyID,
 						Name:     wrappedTokenPrime.Name,
-						Amount:   maxTokenAmountAllowedToBridge.Uint64() * 2,
+						Amount:   maxTokenAmountAllowedToBridgeDfm * 2,
 					},
 				},
 			},
@@ -2107,7 +2119,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
+				Amount:  maxTokenAmountAllowedToBridgeDfm,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -2136,7 +2148,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					{
 						PolicyID: policyID,
 						Name:     "USDT",
-						Amount:   maxTokenAmountAllowedToBridge.Uint64(),
+						Amount:   maxTokenAmountAllowedToBridgeDfm,
 					},
 				},
 			},
@@ -2169,12 +2181,16 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(receivers[2].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].AmountWrapped))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[2].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[len(receivers)-1].DestinationAddress)
 	})
@@ -2247,12 +2263,16 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].AmountWrapped))
+		require.Equal(t, new(big.Int).SetUint64(receivers[2].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].AmountWrapped))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[2].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[len(receivers)-1].DestinationAddress)
 	})
@@ -2263,7 +2283,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: []string{common.EthZeroAddr},
+				Address: []string{nexusBridgingFeeAddr},
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: primeCurrencyID,
 			},
@@ -2274,7 +2294,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
-				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
+				Amount:  maxTokenAmountAllowedToBridgeDfm,
 				TokenID: usdtTokenID,
 			},
 		}
@@ -2303,7 +2323,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					{
 						PolicyID: policyID,
 						Name:     "USDT",
-						Amount:   maxTokenAmountAllowedToBridge.Uint64(),
+						Amount:   maxTokenAmountAllowedToBridgeDfm,
 					},
 				},
 			},
@@ -2336,12 +2356,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].AmountWrapped))
+		require.Equal(t, new(big.Int).SetUint64(receivers[2].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].AmountWrapped))
+		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[2].Amount)
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[2].DestinationAddress)
 	})
@@ -2352,7 +2375,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: []string{common.EthZeroAddr},
+				Address: []string{nexusBridgingFeeAddr},
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: cardanoCurrencyID,
 			},
@@ -2408,12 +2431,13 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].AmountWrapped))
+		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount)
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 	})
@@ -2557,12 +2581,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 	})
@@ -2637,12 +2663,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[1].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 	})
@@ -2712,13 +2740,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
 
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 	})
@@ -2859,11 +2889,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		bridgingAddrAmountDfm := uint64(minOperationFee + minFeeForBridgingTokens*3)
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: cardanoBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*3,
+				Amount:  bridgingAddrAmountDfm,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2903,14 +2934,113 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
 
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
-		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].Amount))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+
+		require.Equal(t, common.DfmToWei(big.NewInt(int64(bridgingAddrAmountDfm))),
+			claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
+		require.Equal(t, common.DfmToWei(big.NewInt(int64(feeAddrBridgingAmount))), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
+	})
+
+	t.Run("ValidateAndAddClaim - native token, always track - valid #5", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
+				TokenID: cardanoWrappedTokenID,
+				Amount:  utxoMinValue,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			BridgingFee:        minFeeForBridgingTokens * 3,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		bridgingAddrAmountDfm := uint64(minOperationFee + minFeeForBridgingTokens*3)
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: cardanoBridgingAddr,
+				Amount:  bridgingAddrAmountDfm,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenCardano.Name,
+						Amount:   utxoMinValue,
+					},
+				},
+			},
+		}
+
+		tx := indexer.Tx{
+			Hash:     txHash,
+			Metadata: validMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrCardano,
+		}
+
+		appConfig := getAppConfig(false)
+		appConfig.CardanoChains[common.ChainIDStrPrime].AlwaysTrackCurrencyAndWrappedCurrency = true
+		appConfig.CardanoChains[common.ChainIDStrCardano].AlwaysTrackCurrencyAndWrappedCurrency = true
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
+
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[0].Amount))
+		require.Equal(t, new(big.Int).SetUint64(feeAddrBridgingAmount),
+			common.WeiToDfm(claims.BridgingRequestClaims[0].Receivers[1].Amount))
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+
+		utxoMinValueWei := common.DfmToWei(big.NewInt(int64(utxoMinValue)))
+		require.Equal(t, common.DfmToWei(big.NewInt(int64(bridgingAddrAmountDfm))), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, utxoMinValueWei, claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
+		require.Equal(t, new(big.Int).Add(utxoMinValueWei, common.DfmToWei(big.NewInt(int64(feeAddrBridgingAmount)))),
+			claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
+		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
 	})
 }

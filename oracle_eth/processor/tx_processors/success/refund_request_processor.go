@@ -67,7 +67,7 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, metadata)
+	p.addRefundRequestClaim(claims, tx, metadata, appConfig.ChainIDConverter)
 
 	return nil
 }
@@ -75,28 +75,27 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
 	metadata *core.RefundBridgingRequestEthMetadata,
+	chainIDConverter *common.ChainIDConverter,
 ) {
-	amount := common.WeiToDfm(tx.Value)
-
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
-		OriginAmount:             amount,
+		OriginAmount:             tx.Value,
 		OriginWrappedAmount:      big.NewInt(0),
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
 		TokenAmounts: []cCore.RefundTokenAmount{
-			{TokenId: 0, AmountCurrency: amount, AmountTokens: big.NewInt(0)},
+			{TokenId: 0, AmountCurrency: tx.Value, AmountTokens: big.NewInt(0)},
 		},
 	}
 
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
 
 	p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
+		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *RefundRequestProcessorImpl) validate(
@@ -116,10 +115,11 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if tx.Value.Cmp(new(big.Int).SetUint64(chainConfig.MinFeeForBridging)) != 1 {
+	minFeeForBridging := chainConfig.MinFeeForBridging
+	if tx.Value.Cmp(minFeeForBridging) != 1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, chainConfig.MinFeeForBridging+1)
+			tx.Value, new(big.Int).Add(minFeeForBridging, big.NewInt(1)))
 	}
 
 	return nil

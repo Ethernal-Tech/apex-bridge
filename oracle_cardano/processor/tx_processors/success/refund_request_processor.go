@@ -87,6 +87,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	chainIDConverter := appConfig.ChainIDConverter
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
@@ -111,11 +112,13 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	// amounts are not used on batcher when unknown tokens are present
 	if len(unknownTokenOutputIndexes) > 0 {
 		amount = big.NewInt(0)
+	} else {
+		amount = common.DfmToWei(amount)
 	}
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             amount,
@@ -131,7 +134,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
 
 	p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
+		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim, chainIDConverter))
 
 	return nil
 }
@@ -178,8 +181,9 @@ func (p *RefundRequestProcessorImpl) validate(
 	}
 
 	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
-		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)),
-		p.chainInfos)
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(
+			appConfig.ChainIDConverter.ToChainIDNum(chainConfig.ChainID),
+		), p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}

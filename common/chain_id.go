@@ -2,80 +2,55 @@ package common
 
 import "slices"
 
-type chainIDNum = uint8
+type ChainIDNum = uint8
 
 const (
 	ChainTypeCardano = iota
 	ChainTypeEVM
 
-	ChainIDStrPrime   = "prime"
-	ChainIDStrVector  = "vector"
-	ChainIDStrNexus   = "nexus"
-	ChainIDStrCardano = "cardano"
-
-	ChainIDIntPrime   = chainIDNum(1)
-	ChainIDIntVector  = chainIDNum(2)
-	ChainIDIntNexus   = chainIDNum(3)
-	ChainIDIntCardano = chainIDNum(4)
-
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"
+
+	// Used for tests only
+	ChainIDStrPrime   = "prime"
+	ChainIDStrVector  = "vector"
+	ChainIDStrCardano = "cardano"
+	ChainIDStrNexus   = "nexus"
+	ChainIDStrPolygon = "polygon"
+
+	// Used for tests only
+	ChainIDIntPrime   = ChainIDNum(1)
+	ChainIDIntVector  = ChainIDNum(2)
+	ChainIDIntNexus   = ChainIDNum(3)
+	ChainIDIntCardano = ChainIDNum(4)
+	ChainIDIntPolygon = ChainIDNum(5)
 )
 
-var (
-	chainStrToInt = map[string]chainIDNum{
-		ChainIDStrPrime:   ChainIDIntPrime,
-		ChainIDStrVector:  ChainIDIntVector,
-		ChainIDStrNexus:   ChainIDIntNexus,
-		ChainIDStrCardano: ChainIDIntCardano,
-	}
-	chainIntToStr = map[chainIDNum]string{
-		ChainIDIntPrime:   ChainIDStrPrime,
-		ChainIDIntVector:  ChainIDStrVector,
-		ChainIDIntNexus:   ChainIDStrNexus,
-		ChainIDIntCardano: ChainIDStrCardano,
-	}
-
-	reactorChains = []string{
-		ChainIDStrPrime,
-		ChainIDStrVector,
-		ChainIDStrNexus,
-	}
-
-	skylineChains = []string{
-		ChainIDStrPrime,
-		ChainIDStrCardano,
-		ChainIDStrVector,
-		ChainIDStrNexus,
-	}
-)
-
-func ToNumChainID(chainIDStr string) chainIDNum {
-	return chainStrToInt[chainIDStr]
+type ChainIDConverter struct {
+	StrToInt      map[string]ChainIDNum
+	IntToStr      map[ChainIDNum]string
+	CardanoChains []string
+	EvmChains     []string
 }
 
-func ToStrChainID(chainIDNum chainIDNum) string {
-	return chainIntToStr[chainIDNum]
+func (c *ChainIDConverter) ToChainIDNum(chainIDStr string) ChainIDNum {
+	return c.StrToInt[chainIDStr]
 }
 
-func IsExistingChainID(chainIDStr string) bool {
-	return IsExistingReactorChainID(chainIDStr) || IsExistingSkylineChainID(chainIDStr)
+func (c *ChainIDConverter) ToChainIDStr(chainIDNum ChainIDNum) string {
+	return c.IntToStr[chainIDNum]
 }
 
-func IsExistingReactorChainID(chainIDStr string) bool {
-	return slices.Contains(reactorChains, chainIDStr)
+func (c *ChainIDConverter) IsExistingChainID(chainIDStr string) bool {
+	_, ok := c.StrToInt[chainIDStr]
+
+	return ok
 }
 
-func IsExistingSkylineChainID(chainIDStr string) bool {
-	return slices.Contains(skylineChains, chainIDStr)
+func (c *ChainIDConverter) IsCardanoChainID(chainIDStr string) bool {
+	return slices.Contains(c.CardanoChains, chainIDStr)
 }
 
-func IsEVMChainID(chainIDStr string) bool {
-	return chainIDStr == ChainIDStrNexus
-}
-
-func IsEqual(a, b, errorMargin float64) bool {
-	diff := a - b
-
-	return diff >= -1*errorMargin && diff <= errorMargin
+func (c *ChainIDConverter) IsEVMChainID(chainIDStr string) bool {
+	return slices.Contains(c.EvmChains, chainIDStr)
 }

@@ -30,9 +30,14 @@ type ChainConfig struct {
 }
 
 type RelayerManagerConfiguration struct {
-	RunMode       common.VCRunMode       `json:"runMode"`
-	Bridge        BridgeConfig           `json:"bridge"`
-	Chains        map[string]ChainConfig `json:"chains"`
-	PullTimeMilis uint64                 `json:"pullTime"`
-	Logger        logger.LoggerConfig    `json:"logger"`
+	RunMode          common.VCRunMode         `json:"runMode"`
+	Bridge           BridgeConfig             `json:"bridge"`
+	Chains           map[string]ChainConfig   `json:"chains"`
+	ChainIDConverter *common.ChainIDConverter `json:"-"`
+	PullTimeMilis    uint64                   `json:"pullTime"`
+	Logger           logger.LoggerConfig      `json:"logger"`
+}
+
+func (rmConfig *RelayerManagerConfiguration) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {
+	rmConfig.ChainIDConverter = chainIDsConfig.ToChainIDConverter()
 }

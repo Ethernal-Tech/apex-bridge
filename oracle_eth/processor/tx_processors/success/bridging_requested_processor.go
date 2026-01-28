@@ -72,6 +72,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	cardanoDestConfig, _ := oUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	chainIDConverter := appConfig.ChainIDConverter
 
 	receivers := make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
 
@@ -81,31 +82,29 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 			continue
 		}
 
-		receiverAmountDfm := common.WeiToDfm(receiver.Amount)
-
 		receivers = append(receivers, oCore.BridgingRequestReceiver{
 			DestinationAddress: receiver.Address,
-			Amount:             receiverAmountDfm,
+			Amount:             receiver.Amount,
 			AmountWrapped:      big.NewInt(0),
 		})
 
-		totalAmount.Add(totalAmount, receiverAmountDfm)
+		totalAmount.Add(totalAmount, receiver.Amount)
 	}
 
-	feeCurrencyDfmDst := new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
-	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, common.WeiToDfm(metadata.BridgingFee))
-	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDfmDst)
+	feeCurrencyDstWei := common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount))
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, metadata.BridgingFee)
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDstWei)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestChainFeeAddress,
-		Amount:             feeCurrencyDfmDst,
+		Amount:             feeCurrencyDstWei,
 		AmountWrapped:      big.NewInt(0),
 	})
 
 	claim := oCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash,
-		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		SourceChainId:                   chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:              chainIDConverter.ToChainIDNum(metadata.DestinationChainID),
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
 		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
@@ -117,7 +116,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *BridgingRequestedProcessorImpl) validate(
@@ -155,7 +154,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	_, err = oUtils.GetTokenPair(
-		ethSrcConfig.DestinationChain,
+		ethSrcConfig.DestinationChains,
 		ethSrcConfig.ChainID,
 		metadata.DestinationChainID,
 		currencySrcID,
@@ -195,17 +194,16 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(common.DfmToWei(appConfig.BridgingSettings.MaxAmountAllowedToBridge)) == 1 {
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, common.DfmToWei(appConfig.BridgingSettings.MaxAmountAllowedToBridge))
+			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
 	receiverAmountSum.Add(receiverAmountSum, metadata.BridgingFee)
 
-	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
-	if feeAmountDfm.Uint64() < ethSrcConfig.MinFeeForBridging {
+	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging) < 0 {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

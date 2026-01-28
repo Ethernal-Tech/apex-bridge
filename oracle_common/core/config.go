@@ -37,37 +37,40 @@ type CardanoChainConfigUtxo struct {
 } // @name CardanoChainConfigUtxo
 
 type EthChainConfig struct {
-	ChainID                 string                       `json:"-"`
-	BridgingAddresses       EthBridgingAddresses         `json:"-"`
-	NodeURL                 string                       `json:"nodeUrl"`
-	SyncBatchSize           uint64                       `json:"syncBatchSize"`
-	NumBlockConfirmations   uint64                       `json:"numBlockConfirmations"`
-	StartBlockNumber        uint64                       `json:"startBlockNumber"`
-	PoolIntervalMiliseconds time.Duration                `json:"poolIntervalMs"`
-	TTLBlockNumberInc       uint64                       `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold  uint64                       `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent    float64                      `json:"noBatchPeriodPercent"`
-	DynamicTx               bool                         `json:"dynamicTx"`
-	TestMode                uint8                        `json:"testMode"`
-	MinFeeForBridging       uint64                       `json:"minFeeForBridging"`
-	MinOperationFee         uint64                       `json:"minOperationFee"`
-	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
-	DestinationChain        map[string]common.TokenPairs `json:"destChain"`
-	Tokens                  map[uint16]common.Token      `json:"tokens"`
+	ChainID                               string                       `json:"-"`
+	BridgingAddresses                     EthBridgingAddresses         `json:"-"`
+	NodeURL                               string                       `json:"nodeUrl"`
+	SyncBatchSize                         uint64                       `json:"syncBatchSize"`
+	NumBlockConfirmations                 uint64                       `json:"numBlockConfirmations"`
+	StartBlockNumber                      uint64                       `json:"startBlockNumber"`
+	PoolIntervalMiliseconds               time.Duration                `json:"poolIntervalMs"`
+	TTLBlockNumberInc                     uint64                       `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold                uint64                       `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`
+	DynamicTx                             bool                         `json:"dynamicTx"`
+	TestMode                              uint8                        `json:"testMode"`
+	MinFeeForBridging                     *big.Int                     `json:"minFeeForBridging"`
+	MinOperationFee                       *big.Int                     `json:"minOperationFee"`
+	MinColCoinsAllowedToBridge            *big.Int                     `json:"minColCoinsAllowedToBridge"`
+	RestartTrackerPullCheck               time.Duration                `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount                 *big.Int                     `json:"feeAddressBridgingAmount"`
+	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
+	Tokens                                map[uint16]common.Token      `json:"tokens"`
+	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
 }
 
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
-	ChainID                  string                   `json:"-"`
-	NetworkAddress           string                   `json:"networkAddress"`
-	StartBlockHash           string                   `json:"startBlockHash"`
-	StartSlot                uint64                   `json:"startSlot"`
-	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
-	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
-	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
-	MinOperationFee          uint64                   `json:"minOperationFee"`
+	ChainID                    string                   `json:"-"`
+	NetworkAddress             string                   `json:"networkAddress"`
+	StartBlockHash             string                   `json:"startBlockHash"`
+	StartSlot                  uint64                   `json:"startSlot"`
+	ConfirmationBlockCount     uint                     `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest   []string                 `json:"otherAddressesOfInterest"`
+	InitialUtxos               []CardanoChainConfigUtxo `json:"initialUtxos"`
+	FeeAddrBridgingAmount      uint64                   `json:"feeAddressBridgingAmount"`
+	MinOperationFee            uint64                   `json:"minOperationFee"`
+	MinColCoinsAllowedToBridge uint64                   `json:"minColCoinsAllowedToBridge"`
 }
 
 type SubmitConfig struct {
@@ -94,7 +97,6 @@ type BridgingSettings struct {
 	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
-	MinColCoinsAllowedToBridge     uint64   `json:"minColCoinsAllowedToBridge"`
 }
 
 type RetryUnprocessedSettings struct {
@@ -114,6 +116,7 @@ type AppConfig struct {
 	RefundEnabled            bool                            `json:"refundEnabled"`
 	ValidatorDataDir         string                          `json:"validatorDataDir"`
 	ValidatorConfigPath      string                          `json:"validatorConfigPath"`
+	ChainIDConverter         *common.ChainIDConverter        `json:"chainIdConverter"`
 	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
 	Bridge                   BridgeConfig                    `json:"bridge"`
@@ -124,13 +127,13 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
 }
 
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
 }

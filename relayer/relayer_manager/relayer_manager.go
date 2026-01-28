@@ -39,7 +39,8 @@ func NewRelayerManager(
 			ethtxhelper.WithNodeURL(config.Bridge.NodeURL),
 			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 			ethtxhelper.WithDynamicTx(config.Bridge.DynamicTx))
-		bridgeSmartContract = eth.NewBridgeSmartContract(config.Bridge.SmartContractAddress, txHelper)
+		bridgeSmartContract = eth.NewBridgeSmartContract(
+			config.Bridge.SmartContractAddress, txHelper, config.ChainIDConverter)
 	)
 
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
@@ -65,7 +66,7 @@ func NewRelayerManager(
 			data, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
 
 			logger.Debug("Validators data per chain", "chain", chainID,
-				"data", eth.GetChainValidatorsDataInfoString(chainID, data), "err", err)
+				"data", eth.GetChainValidatorsDataInfoString(chainID, data, config.ChainIDConverter), "err", err)
 		}
 	}
 
@@ -121,7 +122,7 @@ func getRelayersAndConfigurations(
 	newChainsConfigs := make(map[string]core.ChainConfig, len(allRegisteredChains))
 
 	for _, chainData := range allRegisteredChains {
-		chainID := common.ToStrChainID(chainData.Id)
+		chainID := config.ChainIDConverter.ToChainIDStr(chainData.Id)
 
 		chainConfig, exists := config.Chains[chainID]
 		if !exists {

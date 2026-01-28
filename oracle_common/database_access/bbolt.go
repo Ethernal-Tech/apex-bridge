@@ -428,7 +428,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) SetBlocksSubmitterInfo(
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
-	data *core.UpdateTxsData[TTx, TProcessedTx, TExpectedTx],
+	data *core.UpdateTxsData[TTx, TProcessedTx, TExpectedTx], chainIDConverter *common.ChainIDConverter,
 ) error {
 	return bd.DB.Update(func(tx *bbolt.Tx) error {
 		err := bd.markAndMoveExpectedTxs(tx, data.ExpectedInvalid, func(expectedTx TExpectedTx) {
@@ -465,11 +465,11 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
 			return err
 		}
 
-		if err := bd.removeBatchInfoEvents(tx, data.RemoveBatchInfoEvents); err != nil {
+		if err := bd.removeBatchInfoEvents(tx, data.RemoveBatchInfoEvents, chainIDConverter); err != nil {
 			return err
 		}
 
-		if err := bd.addBatchInfoEvents(tx, data.AddBatchInfoEvents); err != nil {
+		if err := bd.addBatchInfoEvents(tx, data.AddBatchInfoEvents, chainIDConverter); err != nil {
 			return err
 		}
 
@@ -653,10 +653,10 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) movePendingToProcessed(
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) addBatchInfoEvents(
-	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
+	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent, chainIDConverter *common.ChainIDConverter,
 ) error {
 	for _, evt := range batchInfoEvents {
-		chainID := common.ToStrChainID(evt.DstChainID)
+		chainID := chainIDConverter.ToChainIDStr(evt.DstChainID)
 		if supported := bd.SupportedChains[chainID]; !supported {
 			return fmt.Errorf("unsupported chain: %s", chainID)
 		}
@@ -678,10 +678,10 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) addBatchInfoEvents(
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) removeBatchInfoEvents(
-	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
+	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent, chainIDConverter *common.ChainIDConverter,
 ) error {
 	for _, evt := range batchInfoEvents {
-		chainID := common.ToStrChainID(evt.DstChainID)
+		chainID := chainIDConverter.ToChainIDStr(evt.DstChainID)
 		if supported := bd.SupportedChains[chainID]; !supported {
 			return fmt.Errorf("unsupported chain: %s", chainID)
 		}

@@ -34,7 +34,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		validVectorTestAddress = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
 	)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridge := common.DfmToWei(big.NewInt(100000000))
 
 	token, _ := wallet.NewTokenWithFullNameTry("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e")
 	tokenAmount := wallet.NewTokenAmount(token, 2_000_000)
@@ -70,7 +70,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 			},
-			RefundEnabled: refundEnabled,
+			RefundEnabled:    refundEnabled,
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		appConfig.FillOut()
 
@@ -413,7 +414,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
@@ -503,7 +504,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, common.ChainIDIntVector, claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())

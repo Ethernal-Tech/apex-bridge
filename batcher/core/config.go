@@ -2,11 +2,14 @@ package core
 
 import (
 	"encoding/json"
+
+	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 type BatcherConfiguration struct {
-	Chain         ChainConfig `json:"chain"`
-	PullTimeMilis uint64      `json:"pullTime"`
+	Chain            ChainConfig              `json:"chain"`
+	ChainIDConverter *common.ChainIDConverter `json:"-"`
+	PullTimeMilis    uint64                   `json:"pullTime"`
 }
 
 type ChainConfig struct {
@@ -16,6 +19,7 @@ type ChainConfig struct {
 }
 
 type BatcherManagerConfiguration struct {
-	Chains        []ChainConfig `json:"chains"`
-	PullTimeMilis uint64        `json:"pullTime"`
+	Chains           []ChainConfig            `json:"chains"`
+	ChainIDConverter *common.ChainIDConverter `json:"-"`
+	PullTimeMilis    uint64                   `json:"pullTime"`
 }

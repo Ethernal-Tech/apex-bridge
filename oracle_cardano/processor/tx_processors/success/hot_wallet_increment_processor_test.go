@@ -3,6 +3,7 @@ package successtxprocessors
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
@@ -59,6 +60,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 			},
 			common.ChainIDStrVector: {},
 		},
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 
@@ -152,12 +154,13 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
+		amount := uint64(1)
 		claims := &cCore.BridgeClaims{}
 		tx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: []byte{},
 				Outputs: []*indexer.TxOutput{
-					{Address: primeBridgingAddr, Amount: 1},
+					{Address: primeBridgingAddr, Amount: amount},
 				},
 			},
 			OriginChainID: common.ChainIDStrPrime,
@@ -168,6 +171,13 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.HotWalletIncrementClaims, 1)
+		require.Equal(t, common.ChainIDIntPrime, claims.HotWalletIncrementClaims[0].ChainId)
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(amount)),
+			claims.HotWalletIncrementClaims[0].Amount)
+		require.Equal(t, common.DfmToWei(big.NewInt(0)),
+			claims.HotWalletIncrementClaims[0].AmountWrapped)
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos valid", func(t *testing.T) {
@@ -178,7 +188,8 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 				Outputs: []*indexer.TxOutput{
 					{Address: primeBridgingAddr, Amount: 1},
 					{Address: primeBridgingAddr, Amount: 2},
-					{Address: validTestAddress, Amount: 3},
+					{Address: primeBridgingAddr, Amount: 3},
+					{Address: validTestAddress, Amount: 4},
 				},
 			},
 			OriginChainID: common.ChainIDStrPrime,
@@ -189,5 +200,10 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.HotWalletIncrementClaims, 1)
+		require.Equal(t, common.ChainIDIntPrime, claims.HotWalletIncrementClaims[0].ChainId)
+		require.Equal(t, common.DfmToWei(big.NewInt(6)), claims.HotWalletIncrementClaims[0].Amount)
+		require.Equal(t, common.DfmToWei(big.NewInt(0)), claims.HotWalletIncrementClaims[0].AmountWrapped)
 	})
 }

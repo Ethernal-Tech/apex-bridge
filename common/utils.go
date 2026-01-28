@@ -257,24 +257,14 @@ func WaitForAmount(
 	)
 }
 
-func IsValidAddress(chainID string, addr string) bool {
-	switch chainID {
-	case ChainIDStrNexus:
+func IsValidAddress(chainID string, addr string, chainIDConverter *ChainIDConverter) bool {
+	if chainIDConverter.IsEVMChainID(chainID) {
 		return ethcommon.IsHexAddress(addr)
-	default:
-		addr, err := cardanowallet.NewCardanoAddressFromString(addr)
-
-		return err == nil && addr.GetInfo().AddressType != cardanowallet.RewardAddress
 	}
-}
 
-func GetDfmAmount(chainID string, amount *big.Int) *big.Int {
-	switch chainID {
-	case ChainIDStrNexus:
-		return WeiToDfm(amount)
-	default:
-		return amount
-	}
+	cardanoAddr, err := cardanowallet.NewCardanoAddressFromString(addr)
+
+	return err == nil && cardanoAddr.GetInfo().AddressType != cardanowallet.RewardAddress
 }
 
 func HTTPGet[T any](ctx context.Context, requestURL string) (t T, err error) {

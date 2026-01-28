@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -36,7 +37,8 @@ const (
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
-	nexusURLFlag        = "nexus-url"
+	rpcURLFlag          = "rpc-url"
+	chainIDsConfigFlag  = "chain-ids-config"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -51,7 +53,8 @@ const (
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
-	nexusURLFlagDesc        = "nexus chain URL"
+	rpcURLFlagDesc          = "evm chain rpc url"
+	chainIDsConfigFlagDesc  = "path to the chain IDs config file"
 
 	ttlSlotNumberInc = 500
 
@@ -81,6 +84,7 @@ type sendTxParams struct {
 	chainIDSrc         string
 	chainIDDst         string
 	feeString          string
+	chainIDsConfig     string
 
 	// apex
 	ogmiosURLSrc    string
@@ -93,9 +97,10 @@ type sendTxParams struct {
 	gatewayAddress string
 	nexusURL       string
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount        *big.Int
+	receiversParsed  []*receiverAmount
+	wallet           *cardanowallet.Wallet
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -111,11 +116,30 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
+	}
+
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDDst) {
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -136,10 +160,10 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
-		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
+		if ip.feeAmount.Cmp(common.MinFeeForBridgingDefault) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
@@ -167,7 +191,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
-			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
 		if ip.ogmiosURLDst != "" && !common.IsValidHTTPURL(ip.ogmiosURLDst) {
@@ -175,7 +199,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, ip.nexusURL)
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.nexusURL)
 		}
 	}
 
@@ -192,12 +216,12 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
+		if !common.IsValidAddress(ip.chainIDDst, vals[0], ip.chainIDConverter) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
 		if ip.chainIDDst != common.ChainIDStrNexus &&
-			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
+			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm)) < 0 {
 			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
@@ -306,9 +330,16 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.nexusURL,
-		nexusURLFlag,
+		rpcURLFlag,
 		"",
-		nexusURLFlagDesc,
+		rpcURLFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
@@ -341,9 +372,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 				TestNetMagic:             ip.testnetMagicSrc,
 				TTLSlotNumberInc:         ttlSlotNumberInc,
-				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
-				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
-				MinUtxoValue:             common.MinUtxoAmountDefault,
+				DefaultMinFeeForBridging: common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinFeeForBridgingTokens:  common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinUtxoValue:             common.MinUtxoAmountDefaultDfm,
 				PotentialFee:             potentialFee,
 				Tokens: map[uint16]sendtx.ApexToken{
 					0: {FullName: cardanowallet.AdaTokenName},
@@ -351,12 +382,12 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 			},
 			ip.chainIDDst: {
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
-				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
+				DefaultMinFeeForBridging: common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinFeeForBridgingTokens:  common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
 				PotentialFee:             potentialFee,
 			},
 		},
-		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefault),
+		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefaultDfm),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -433,11 +464,9 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
-	chainID := common.ToNumChainID(ip.chainIDDst)
+	chainID := ip.chainIDConverter.ToChainIDNum(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
-
-	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
@@ -464,7 +493,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount, minOperationFee)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +508,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount, minOperationFee,
+				txOpts, chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault,
 			)
 		})
 	if err != nil {
@@ -493,7 +522,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	if ip.ogmiosURLDst != "" {
@@ -569,9 +598,9 @@ func waitForTx(ctx context.Context, receivers []*receiverAmount,
 	return errors.Join(errs...)
 }
 
-func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
+func getTxHelper(rpcURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithNodeURL(rpcURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 }
 

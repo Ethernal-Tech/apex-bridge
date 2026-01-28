@@ -18,6 +18,7 @@ type AppConfig struct {
 	RefundEnabled                bool                                      `json:"refundEnabled"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
+	ChainIDConverter             *common.ChainIDConverter                  `json:"-"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
 	DirectionConfig              map[string]common.DirectionConfig         `json:"directionConfig"`
@@ -33,18 +34,23 @@ type AppConfig struct {
 	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
+func (appConfig *AppConfig) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {
+	appConfig.ChainIDConverter = chainIDsConfig.ToChainIDConverter()
+}
+
 func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.DirectionConfigFile) error {
 	appConfig.DirectionConfig = directionConfig.Directions
 	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
 
 	for chainID, directionConfig := range directionConfig.Directions {
-		if common.IsEVMChainID(chainID) {
+		if appConfig.ChainIDConverter.IsEVMChainID(chainID) {
 			if _, ok := appConfig.EthChains[chainID]; !ok {
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
 
 			data := appConfig.EthChains[chainID]
-			data.DestinationChain = directionConfig.DestinationChain
+			data.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
+			data.DestinationChains = directionConfig.DestinationChains
 			data.Tokens = directionConfig.Tokens
 			appConfig.EthChains[chainID] = data
 		} else {
@@ -53,8 +59,9 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			}
 
 			data := appConfig.CardanoChains[chainID]
-			data.CardanoChainConfig.DestinationChains = directionConfig.DestinationChain
+			data.CardanoChainConfig.DestinationChains = directionConfig.DestinationChains
 			data.CardanoChainConfig.Tokens = directionConfig.Tokens
+			data.CardanoChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			appConfig.CardanoChains[chainID] = data
 		}
 	}
@@ -90,7 +97,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
 			MinFeeForBridging:      ecConfig.MinFeeForBridging,
 			TestMode:               ecConfig.TestMode,
-			DestinationChains:      ecConfig.DestinationChain,
+			DestinationChains:      ecConfig.DestinationChains,
 			Tokens:                 ecConfig.Tokens,
 		}).Serialize()
 
@@ -113,11 +120,13 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
+		ChainIDConverter:         appConfig.ChainIDConverter,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
-		PullTimeMilis: appConfig.BatcherPullTimeMilis,
-		Chains:        batcherChains,
+		PullTimeMilis:    appConfig.BatcherPullTimeMilis,
+		Chains:           batcherChains,
+		ChainIDConverter: appConfig.ChainIDConverter,
 	}
 
 	return oracleConfig, batcherConfig
@@ -203,7 +212,7 @@ func (appConfig *AppConfig) ValidateDirectionConfig() error {
 	for _, srcChainID := range allChains {
 		srcDirConfig := appConfig.DirectionConfig[srcChainID]
 
-		for dstChainID, tokenPairs := range srcDirConfig.DestinationChain {
+		for dstChainID, tokenPairs := range srcDirConfig.DestinationChains {
 			dstDirConfig, ok := appConfig.DirectionConfig[dstChainID]
 			if !ok {
 				return fmt.Errorf("direction config not found for chain: %s", dstChainID)

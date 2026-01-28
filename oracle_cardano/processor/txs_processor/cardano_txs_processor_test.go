@@ -85,6 +85,8 @@ func newValidProcessor(
 }
 
 func TestCardanoTxsProcessor(t *testing.T) {
+	chainIDConverter := common.NewTestChainIDConverter()
+
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime:  {},
@@ -97,6 +99,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60,
 		},
+		ChainIDConverter: chainIDConverter,
 	}
 
 	appConfig.FillOut()
@@ -1366,7 +1369,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash,
-					SourceChainId:           common.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
@@ -1487,7 +1490,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		err = oracleDB.UpdateTxs(&core.CardanoUpdateTxsData{
 			UpdateUnprocessed: []*core.CardanoTx{newTx},
-		})
+		}, chainIDConverter)
 		require.NoError(t, err)
 
 		// reset ctx to run again, and confirm by TryCount that this tx was tried again because we simulated time passing
@@ -1552,7 +1555,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		err = oracleDB.UpdateTxs(&cCore.UpdateTxsData[*core.CardanoTx, *core.ProcessedCardanoTx, *core.BridgeExpectedCardanoTx]{
 			MoveUnprocessedToPending: []*core.CardanoTx{&cardanoTx1, &cardanoTx2},
-		})
+		}, chainIDConverter)
 		require.NoError(t, err)
 
 		pendingTx1, _ := oracleDB.GetPendingTx(cCore.DBTxID{ChainID: cardanoTx1.GetChainID(), DBKey: cardanoTx1.GetTxHash()})
@@ -1575,7 +1578,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
 					ObservedTransactionHash: tx1.Hash,
-					SourceChainId:           common.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
