@@ -90,8 +90,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
-		OriginAmount:             common.WeiToDfm(totalCurrency),
-		OriginWrappedAmount:      common.WeiToDfm(totalWrapped),
+		OriginAmount:             totalCurrency,
+		OriginWrappedAmount:      totalWrapped,
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
@@ -121,10 +121,12 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if tx.Value.Cmp(new(big.Int).SetUint64(chainConfig.MinFeeForBridging)) != 1 {
+	minFeeForBridging := chainConfig.MinFeeForBridging
+	if tx.Value.Cmp(minFeeForBridging) != 1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, chainConfig.MinFeeForBridging+1)
+			tx.Value, new(big.Int).Add(minFeeForBridging, big.NewInt(1)),
+		)
 	}
 
 	for _, receiver := range metadata.Transactions {
@@ -169,7 +171,7 @@ func buildRefundTokenAmounts(
 			if !currencyAdded {
 				tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
 					TokenId:        receiver.TokenID,
-					AmountCurrency: common.WeiToDfm(txValue),
+					AmountCurrency: txValue,
 					AmountTokens:   big.NewInt(0),
 				})
 
@@ -189,14 +191,14 @@ func buildRefundTokenAmounts(
 		// build RefundTokenAmount entry
 		currencyAmount := big.NewInt(0)
 		if !currencyAdded {
-			currencyAmount = common.WeiToDfm(txValue)
+			currencyAmount = txValue
 			currencyAdded = true
 		}
 
 		tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
 			TokenId:        receiver.TokenID,
 			AmountCurrency: currencyAmount,
-			AmountTokens:   common.WeiToDfm(receiver.Amount),
+			AmountTokens:   receiver.Amount,
 		})
 	}
 

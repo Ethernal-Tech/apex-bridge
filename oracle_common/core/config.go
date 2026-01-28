@@ -49,10 +49,11 @@ type EthChainConfig struct {
 	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`
 	DynamicTx                             bool                         `json:"dynamicTx"`
 	TestMode                              uint8                        `json:"testMode"`
-	MinFeeForBridging                     uint64                       `json:"minFeeForBridging"`
-	MinOperationFee                       uint64                       `json:"minOperationFee"`
+	MinFeeForBridging                     *big.Int                     `json:"minFeeForBridging"`
+	MinOperationFee                       *big.Int                     `json:"minOperationFee"`
+	MinColCoinsAllowedToBridge            *big.Int                     `json:"minColCoinsAllowedToBridge"`
 	RestartTrackerPullCheck               time.Duration                `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount                 uint64                       `json:"feeAddressBridgingAmount"`
+	FeeAddrBridgingAmount                 *big.Int                     `json:"feeAddressBridgingAmount"`
 	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
 	Tokens                                map[uint16]common.Token      `json:"tokens"`
 	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
@@ -60,15 +61,16 @@ type EthChainConfig struct {
 
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
-	ChainID                  string                   `json:"-"`
-	NetworkAddress           string                   `json:"networkAddress"`
-	StartBlockHash           string                   `json:"startBlockHash"`
-	StartSlot                uint64                   `json:"startSlot"`
-	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
-	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
-	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
-	MinOperationFee          uint64                   `json:"minOperationFee"`
+	ChainID                    string                   `json:"-"`
+	NetworkAddress             string                   `json:"networkAddress"`
+	StartBlockHash             string                   `json:"startBlockHash"`
+	StartSlot                  uint64                   `json:"startSlot"`
+	ConfirmationBlockCount     uint                     `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest   []string                 `json:"otherAddressesOfInterest"`
+	InitialUtxos               []CardanoChainConfigUtxo `json:"initialUtxos"`
+	FeeAddrBridgingAmount      uint64                   `json:"feeAddressBridgingAmount"`
+	MinOperationFee            uint64                   `json:"minOperationFee"`
+	MinColCoinsAllowedToBridge uint64                   `json:"minColCoinsAllowedToBridge"`
 }
 
 type SubmitConfig struct {
@@ -95,7 +97,6 @@ type BridgingSettings struct {
 	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
-	MinColCoinsAllowedToBridge     uint64   `json:"minColCoinsAllowedToBridge"`
 }
 
 type RetryUnprocessedSettings struct {

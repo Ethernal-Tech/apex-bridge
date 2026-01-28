@@ -81,7 +81,7 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		batchNonceID,
 		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
 		confirmedTransactions,
-		common.DfmToWei(new(big.Int).SetUint64(cco.config.MinFeeForBridging)))
+		cco.config.MinFeeForBridging)
 	if err != nil {
 		return nil, err
 	}
@@ -223,8 +223,8 @@ func newEVMSmartContractTransaction(
 
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
-			amount := common.DfmToWei(recv.Amount)
-			tokenAmount := common.DfmToWei(recv.AmountWrapped)
+			amount := new(big.Int).Set(recv.Amount)
+			tokenAmount := new(big.Int).Set(recv.AmountWrapped)
 
 			if recv.DestinationAddress == common.EthZeroAddr {
 				feeAmount.Add(feeAmount, amount)

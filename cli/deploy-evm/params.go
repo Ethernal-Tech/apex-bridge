@@ -287,28 +287,28 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault)).String(),
+		common.MinFeeForBridgingDefault.String(),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault)).String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minTokenBridgingAmountString,
 		minTokenBridgingAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinColCoinsAllowedToBridgeDefault)).String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minTokenBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minOperationFeeString,
 		minOperationFeeFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault)).String(),
+		common.MinOperationFeeDefault.String(),
 		minOperationFeeFlagDesc,
 	)
 

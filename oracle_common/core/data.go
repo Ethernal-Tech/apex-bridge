@@ -146,11 +146,53 @@ type ReceiverValidationContext struct {
 	CardanoDestConfig *CardanoChainConfig
 	EthDestConfig     *EthChainConfig
 
-	BridgingSettings *BridgingSettings
-	DestFeeAddress   string
+	BridgingSettings           *BridgingSettings
+	MinColCoinsAllowedToBridge *big.Int
+	DestFeeAddress             string
 
 	CurrencySrcID  uint16
 	CurrencyDestID uint16
 
 	AmountsSums map[uint16]*big.Int
+}
+
+type TotalTokensAmount struct {
+	TotalAmountCurrencySrc *big.Int
+	TotalAmountWrappedSrc  *big.Int
+	TotalAmountCurrencyDst *big.Int
+	TotalAmountWrappedDst  *big.Int
+}
+
+func NewTotalTokensAmount() *TotalTokensAmount {
+	return &TotalTokensAmount{
+		TotalAmountCurrencySrc: big.NewInt(0),
+		TotalAmountWrappedSrc:  big.NewInt(0),
+		TotalAmountCurrencyDst: big.NewInt(0),
+		TotalAmountWrappedDst:  big.NewInt(0),
+	}
+}
+
+func (totalTokensAmount *TotalTokensAmount) TrackSourceTokenAmount(
+	sourceTokenID uint16,
+	currencySrcID uint16,
+	receiverAmountWei *big.Int,
+	tokens map[uint16]common.Token,
+) {
+	if sourceTokenID == currencySrcID {
+		// currency on source
+		totalTokensAmount.TotalAmountCurrencySrc.Add(totalTokensAmount.TotalAmountCurrencySrc, receiverAmountWei)
+	} else if tokens[sourceTokenID].IsWrappedCurrency {
+		// source token is wrapped currency
+		totalTokensAmount.TotalAmountWrappedSrc.Add(totalTokensAmount.TotalAmountWrappedSrc, receiverAmountWei)
+	}
+}
+
+func (totalTokensAmount *TotalTokensAmount) TrackDestTokenAmount(
+	receiverCurrencyWei *big.Int, receiverTokensWei *big.Int,
+) {
+	totalTokensAmount.TotalAmountCurrencyDst.Add(
+		totalTokensAmount.TotalAmountCurrencyDst, receiverCurrencyWei)
+
+	totalTokensAmount.TotalAmountWrappedDst.Add(
+		totalTokensAmount.TotalAmountWrappedDst, receiverTokensWei)
 }

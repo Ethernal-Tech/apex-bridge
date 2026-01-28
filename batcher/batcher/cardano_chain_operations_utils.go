@@ -106,17 +106,18 @@ func getOutputs(
 
 		for i, receiver := range transaction.Receivers {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
+			amount := common.WeiToDfm(receiver.Amount).Uint64()
 
 			data := receiversMap[receiver.DestinationAddress]
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
-				data.Amount += receiver.Amount.Uint64()
+				data.Amount += amount
 			} else if i == 0 {
 				// when refunding, we take the bridgingFee, and refund the rest to the user
 				// currency will always be contained within the first receiver (oracle implementation detail)
 				// @see RefundRequestProcessorSkylineImpl
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
-				data.Amount += receiver.Amount.Uint64() - minBridgingFee
+				data.Amount += amount - minBridgingFee
 
 				feeData := receiversMap[feeAddress]
 				feeData.Amount += minBridgingFee
@@ -133,6 +134,7 @@ func getOutputs(
 				}
 
 				tokenName := token.String()
+				amountWrapped := common.WeiToDfm(receiver.AmountWrapped).Uint64()
 
 				if shouldMint {
 					indx := slices.IndexFunc(mintTokens, func(x cardanowallet.MintTokenAmount) bool {
@@ -141,10 +143,10 @@ func getOutputs(
 					if indx == -1 {
 						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
 							Token:  token,
-							Amount: receiver.AmountWrapped.Uint64(),
+							Amount: amountWrapped,
 						})
 					} else {
-						mintTokens[indx].Amount += receiver.AmountWrapped.Uint64()
+						mintTokens[indx].Amount += amountWrapped
 					}
 				}
 
@@ -153,9 +155,9 @@ func getOutputs(
 					return x.Token.String() == tokenName
 				})
 				if indx == -1 {
-					data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
+					data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, amountWrapped))
 				} else {
-					data.Tokens[indx].Amount += receiver.AmountWrapped.Uint64()
+					data.Tokens[indx].Amount += amountWrapped
 				}
 			}
 

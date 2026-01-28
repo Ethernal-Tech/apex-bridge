@@ -24,7 +24,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		validTestAddress     = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridge := common.DfmToWei(big.NewInt(100000000))
+	minFeeForBridgingWei := common.DfmToWei(big.NewInt(minFeeForBridging))
 
 	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
 		appConfig := &oCore.AppConfig{
@@ -43,7 +44,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
+					MinFeeForBridging: minFeeForBridgingWei,
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
@@ -153,7 +154,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         "invalid_address",
 			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
-			BridgingFee:        common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging - 1)),
+			BridgingFee:        common.DfmToWei(big.NewInt(minFeeForBridging - 1)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -177,7 +178,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
 				{Address: validTestAddress, Amount: new(big.Int).SetUint64(utxoMinValue - 1)},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging - 1)),
+			BridgingFee: common.DfmToWei(big.NewInt(minFeeForBridging - 1)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -200,10 +201,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			DestinationChainID: "",
 			SenderAddr:         nexusBridgingAddr,
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(minFeeForBridging))},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(100)),
+			BridgingFee: common.DfmToWei(big.NewInt(100)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -215,16 +216,18 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 		}, appConfig)
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, common.DfmToWei(big.NewInt(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, common.DfmToWei(big.NewInt(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})
@@ -236,10 +239,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         nexusBridgingAddr,
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(minFeeForBridging))},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(100)),
+			BridgingFee: common.DfmToWei(big.NewInt(100)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -251,7 +254,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:       metadata,
 			OriginChainID:  common.ChainIDStrNexus,
-			Value:          common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
+			Value:          common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 			RefundTryCount: 5,
 		}, appConfig)
 		require.ErrorContains(t, err, "try count exceeded")
@@ -263,10 +266,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         nexusBridgingAddr,
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
-				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
-				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+				{Address: validTestAddress, Amount: common.DfmToWei(big.NewInt(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(big.NewInt(minFeeForBridging))},
 			},
-			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(100)),
+			BridgingFee: common.DfmToWei(big.NewInt(100)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -278,17 +281,19 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 		}, appConfig)
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, common.ChainIDIntPrime, claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, common.DfmToWei(big.NewInt(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, common.DfmToWei(big.NewInt(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})

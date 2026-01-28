@@ -163,7 +163,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
-		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
+		if ip.feeAmount.Cmp(common.MinFeeForBridgingDefault) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
@@ -221,7 +221,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.chainIDDst != common.ChainIDStrNexus &&
-			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
+			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm)) < 0 {
 			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
@@ -372,9 +372,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 				TestNetMagic:             ip.testnetMagicSrc,
 				TTLSlotNumberInc:         ttlSlotNumberInc,
-				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
-				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
-				MinUtxoValue:             common.MinUtxoAmountDefault,
+				DefaultMinFeeForBridging: common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinFeeForBridgingTokens:  common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinUtxoValue:             common.MinUtxoAmountDefaultDfm,
 				PotentialFee:             potentialFee,
 				Tokens: map[uint16]sendtx.ApexToken{
 					0: {FullName: cardanowallet.AdaTokenName},
@@ -382,12 +382,12 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 			},
 			ip.chainIDDst: {
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
-				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
+				DefaultMinFeeForBridging: common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
+				MinFeeForBridgingTokens:  common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
 				PotentialFee:             potentialFee,
 			},
 		},
-		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefault),
+		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefaultDfm),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -468,8 +468,6 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 
-	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
-
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
 		return nil, err
@@ -495,7 +493,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount, minOperationFee)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault)
 	if err != nil {
 		return nil, err
 	}
@@ -510,7 +508,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount, minOperationFee,
+				txOpts, chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault,
 			)
 		})
 	if err != nil {

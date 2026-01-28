@@ -112,6 +112,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	// amounts are not used on batcher when unknown tokens are present
 	if len(unknownTokenOutputIndexes) > 0 {
 		amount = big.NewInt(0)
+	} else {
+		amount = common.DfmToWei(amount)
 	}
 
 	claim := cCore.RefundRequestClaim{

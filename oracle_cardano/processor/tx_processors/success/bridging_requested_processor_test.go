@@ -38,6 +38,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	feeAddrBridgingAmountEvm := common.DfmToWei(big.NewInt(1000006))
 	testChainID := "test"
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
@@ -91,12 +92,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					Tokens: map[uint16]common.Token{
 						nexusCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 					},
-					FeeAddrBridgingAmount: feeAddrBridgingAmount,
+					FeeAddrBridgingAmount: feeAddrBridgingAmountEvm,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				MaxAmountAllowedToBridge:       common.DfmToWei(maxAmountAllowedToBridge),
 			},
 
 			RefundEnabled:    refundEnabled,
@@ -1163,10 +1164,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(receivers[1].Amount)), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(feeAddrBridgingAmount)), claims.BridgingRequestClaims[0].Receivers[1].Amount)
 	})
 
 	t.Run("ValidateAndAddClaim valid - eth destination", func(t *testing.T) {
@@ -1219,9 +1220,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(receivers[1].Amount)), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, feeAddrBridgingAmountEvm, claims.BridgingRequestClaims[0].Receivers[1].Amount)
 	})
 }

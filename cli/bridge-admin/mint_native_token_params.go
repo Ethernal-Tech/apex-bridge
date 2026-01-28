@@ -290,7 +290,7 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	desiredLovelaceAmount := common.PotentialFeeDefault + max(potentialMinUtxo, common.MinUtxoAmountDefault)
+	desiredLovelaceAmount := common.PotentialFeeDefault + max(potentialMinUtxo, common.MinUtxoAmountDefaultDfm)
 
 	inputs, err := cardanowallet.GetUTXOsForAmount(
 		txCtx.AllUtxos, cardanowallet.AdaTokenName, desiredLovelaceAmount, maxInputs)
