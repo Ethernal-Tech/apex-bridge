@@ -11,6 +11,11 @@ import (
 	solanago "github.com/gagliardetto/solana-go"
 )
 
+// Event emitted when a bridge request is created.
+//
+// This event is emitted when a user initiates a cross-chain token transfer.
+// The event contains all the information needed for validators to process
+// the request and execute the corresponding transaction on the destination chain.
 type BridgeRequestEvent struct {
 	// Public key of the user who initiated the bridge request
 	Sender solanago.PublicKey `json:"sender"`
@@ -18,7 +23,7 @@ type BridgeRequestEvent struct {
 	// Amount of tokens to be bridged to the destination chain
 	Amount uint64 `json:"amount"`
 
-	// Receiver's address on the destination chain (fixed 57-byte array)
+	// Receiver's address on the destination chain (variable length byte vector)
 	// This format accommodates various address formats across different blockchains
 	Receiver []byte `json:"receiver"`
 
@@ -127,26 +132,42 @@ func UnmarshalBridgeRequestEvent(buf []byte) (*BridgeRequestEvent, error) {
 	return obj, nil
 }
 
+// Represents a bridging transaction that transfers tokens to a recipient.
+//
+// The `BridgingTransaction` account tracks a pending token transfer that requires
+// validator consensus. Once enough validators have approved the transaction (meeting
+// the threshold), the tokens are automatically transferred or minted to the recipient,
+// and the account is closed.
+//
+// # Fields
+//
+// * `id` - Unique identifier for the transaction (same as the account's key)
+// * `amount` - The amount of tokens to transfer to the recipient
+// * `receiver` - The public key of the recipient on the destination chain
+// * `mint_token` - The public key of the token mint being bridged
+// * `signers` - List of validator public keys that have approved this transaction
+// * `bump` - Bump seed for the PDA derivation
+// * `batch_id` - The batch ID of this transaction (must be greater than last_batch_id)
 type BridgingTransaction struct {
-	// The ID of the transaction
+	// Unique identifier for the transaction
 	Id solanago.PublicKey `json:"id"`
 
-	// The amount of tokens that were bridged
+	// The amount of tokens to transfer to the recipient
 	Amount uint64 `json:"amount"`
 
-	// The receiver's address
+	// The public key of the recipient on the destination chain
 	Receiver solanago.PublicKey `json:"receiver"`
 
 	// The public key of the token mint being bridged
 	MintToken solanago.PublicKey `json:"mintToken"`
 
-	// Signers that have approved the transaction
+	// List of validator public keys that have approved this transaction
 	Signers []solanago.PublicKey `json:"signers"`
 
-	// Bump
+	// Bump seed for the Program Derived Address (PDA)
 	Bump uint8 `json:"bump"`
 
-	// Batch ID
+	// The batch ID of this transaction (must be greater than last_batch_id)
 	BatchId uint64 `json:"batchId"`
 }
 
@@ -255,11 +276,15 @@ func UnmarshalBridgingTransaction(buf []byte) (*BridgingTransaction, error) {
 	return obj, nil
 }
 
+// Event emitted when a bridging transaction is successfully executed.
+//
+// This event is emitted after a bridging transaction has received sufficient
+// validator approvals and the tokens have been transferred or minted to the recipient.
 type TransactionExecutedEvent struct {
-	// The ID of the transaction that was executed
+	// The unique identifier of the transaction that was executed
 	TransactionId solanago.PublicKey `json:"transactionId"`
 
-	// The amount of tokens that were executed
+	// The batch ID of the executed transaction
 	BatchId uint64 `json:"batchId"`
 }
 
@@ -318,21 +343,42 @@ func UnmarshalTransactionExecutedEvent(buf []byte) (*TransactionExecutedEvent, e
 	return obj, nil
 }
 
+// Represents a pending validator set update that requires consensus.
+//
+// The `ValidatorDelta` account tracks a proposed change to the validator set that
+// requires approval from the current validators. Once enough validators have approved
+// the proposal (meeting the threshold), the changes are applied to the validator set,
+// and the account is closed.
+//
+// # Fields
+//
+// * `id` - Unique identifier for the validator set change (same as the account's key)
+// * `added` - List of new validator public keys to add to the validator set
+// * `removed` - List of validator indices to remove from the validator set
+// * `bump` - Bump seed for the PDA derivation
+// * `batch_id` - The batch ID of this validator set change (must be greater than last_batch_id)
+// * `signers` - List of validator public keys that have approved this change
+// * `proposal_hash` - Hash of the proposal to ensure all validators approve the same change
 type ValidatorDelta struct {
-	Id      solanago.PublicKey   `json:"id"`
-	Added   []solanago.PublicKey `json:"added"`
-	Removed []uint64             `json:"removed"`
+	// Unique identifier for the validator set change
+	Id solanago.PublicKey `json:"id"`
 
-	// Bump
+	// List of new validator public keys to add (max 10 per change)
+	Added []solanago.PublicKey `json:"added"`
+
+	// List of validator indices to remove (max 10 per change)
+	Removed []uint64 `json:"removed"`
+
+	// Bump seed for the Program Derived Address (PDA)
 	Bump uint8 `json:"bump"`
 
-	// Batch ID
+	// The batch ID of this validator set change (must be greater than last_batch_id)
 	BatchId uint64 `json:"batchId"`
 
-	// Signers that have approved the validator set change
+	// List of validator public keys that have approved this change
 	Signers []solanago.PublicKey `json:"signers"`
 
-	// Proposal hash
+	// Hash of the proposal to ensure all validators approve the same change
 	ProposalHash [32]uint8 `json:"proposalHash"`
 }
 
@@ -450,25 +496,27 @@ func UnmarshalValidatorDelta(buf []byte) (*ValidatorDelta, error) {
 //
 // # Fields
 //
-// * `signers` - Vector of validator public keys (max 10 validators)
-// * `threshold` - Number of signatures required for consensus (automatically set to 2/3)
+// * `signers` - Vector of validator public keys (max 128 validators)
+// * `threshold` - Number of signatures required for consensus (automatically calculated)
 // * `bump` - Bump seed for the PDA derivation
+// * `last_batch_id` - The last processed batch ID to prevent replay attacks
+// * `bridge_request_count` - Total count of bridge requests processed
 type ValidatorSet struct {
 	// List of validator public keys that can sign bridge operations
 	// Maximum length is constrained by `MAX_VALIDATORS` constant
 	Signers []solanago.PublicKey `json:"signers"`
 
 	// Consensus threshold - number of validator signatures required
-	// Automatically calculated as 2/3 of validator count, rounded up
+	// Automatically calculated using the formula: num_signers - floor((num_signers - 1) / 3)
 	Threshold uint8 `json:"threshold"`
 
 	// Bump seed for the Program Derived Address (PDA)
 	Bump uint8 `json:"bump"`
 
-	// Last batch id
+	// Last batch ID processed to prevent replay attacks and ensure sequential processing
 	LastBatchId uint64 `json:"lastBatchId"`
 
-	// Count of bridge requests processed
+	// Total count of bridge requests processed since initialization
 	BridgeRequestCount uint64 `json:"bridgeRequestCount"`
 }
 
@@ -557,14 +605,18 @@ func UnmarshalValidatorSet(buf []byte) (*ValidatorSet, error) {
 	return obj, nil
 }
 
+// Event emitted when the validator set is successfully updated.
+//
+// This event is emitted after a validator set change proposal has received
+// sufficient validator approvals and the changes have been applied to the validator set.
 type ValidatorSetUpdatedEvent struct {
-	// The new list of validator signers
+	// The new list of validator signers after the update
 	NewSigners []solanago.PublicKey `json:"newSigners"`
 
-	// The new threshold for the validator set
+	// The new consensus threshold for the validator set
 	NewThreshold uint8 `json:"newThreshold"`
 
-	// The batch ID associated with the update
+	// The batch ID associated with the validator set update
 	BatchId uint64 `json:"batchId"`
 }
 
@@ -633,20 +685,23 @@ func UnmarshalValidatorSetUpdatedEvent(buf []byte) (*ValidatorSetUpdatedEvent, e
 	return obj, nil
 }
 
+// Represents the vault account that holds bridged tokens.
+//
+// The `Vault` account is a Program Derived Address (PDA) that serves as the authority
+// for token operations. It can be set as the mint authority for tokens, allowing it to
+// mint tokens on the destination chain, or it can hold tokens in an associated token
+// account for transfer operations.
+//
+// # Fields
+//
+// * `address` - The public key of the vault account (same as the account's key)
+// * `bump` - Bump seed for the PDA derivation
 type Vault struct {
-	// Vault address
-	Address solanago.PublicKey `json:"address"`
-
-	// Vault bump
+	// Bump seed for the Program Derived Address (PDA)
 	Bump uint8 `json:"bump"`
 }
 
 func (obj Vault) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
-	// Serialize `Address`:
-	err = encoder.Encode(obj.Address)
-	if err != nil {
-		return errors.NewField("Address", err)
-	}
 	// Serialize `Bump`:
 	err = encoder.Encode(obj.Bump)
 	if err != nil {
@@ -666,11 +721,6 @@ func (obj Vault) Marshal() ([]byte, error) {
 }
 
 func (obj *Vault) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
-	// Deserialize `Address`:
-	err = decoder.Decode(&obj.Address)
-	if err != nil {
-		return errors.NewField("Address", err)
-	}
 	// Deserialize `Bump`:
 	err = decoder.Decode(&obj.Bump)
 	if err != nil {

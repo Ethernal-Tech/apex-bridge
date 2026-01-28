@@ -21,6 +21,12 @@ var BRIDGING_TRANSACTION_SEED = []byte{98, 114, 105, 100, 103, 105, 110, 103, 95
 // The discriminator is an 8-byte prefix used by Anchor to identify
 // account types and prevent account substitution attacks.
 const DISC = uint32(0x8)
+
+// Maximum number of validators allowed in the validator set.
+//
+// This constant defines the upper limit for the number of validators that can be
+// included in the validator set. The limit is set to 128 to balance security,
+// decentralization, and practical constraints.
 const MAX_VALIDATORS = uint32(0x80)
 
 // Maximum number of validators allowed to be added or removed in a single validator set change.

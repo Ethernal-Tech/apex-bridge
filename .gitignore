@@ -29,3 +29,7 @@ contractbuild
 
 */keys
 /blade-dir
+# Solana keypairs (private keys)
+**/*-keypair.json
+**/test.json
+**/test-ledger/

@@ -6,14 +6,13 @@ package skyline_program
 import (
 	"bytes"
 	"fmt"
-
 	errors "github.com/gagliardetto/anchor-go/errors"
 	binary "github.com/gagliardetto/binary"
 	solanago "github.com/gagliardetto/solana-go"
 )
 
 // Builds a "bridge_request" instruction.
-// Create a cross-chain bridging request and transfer source tokens to vault. //  // This instruction creates a bridging request for transferring tokens to another chain. // The source tokens are transferred to the vault account immediately, and a request is created // that can be processed by validators to transfer equivalent tokens on the destination chain. //  // # Arguments // * `ctx` - The context containing accounts for the bridge request // * `amount` - The amount of tokens to bridge // * `receiver` - The receiver's address on the destination chain (57 bytes) // * `destination_chain` - The chain ID of the destination blockchain //  // # Errors // * `InsufficientFunds` - If the sender doesn't have enough tokens
+// Create a cross-chain bridging request and transfer source tokens to vault. //  // This instruction creates a bridging request for transferring tokens to another chain. // The source tokens are either burned (if the vault is the mint authority) or transferred // to the vault account, and a request event is emitted that can be processed by validators // to mint/transfer equivalent tokens on the destination chain. //  // # Arguments // * `ctx` - The context containing accounts for the bridge request // * `amount` - The amount of tokens to bridge // * `receiver` - The receiver's address on the destination chain (variable length byte vector) // * `destination_chain` - The chain ID of the destination blockchain //  // # Errors // * `InsufficientFunds` - If the sender doesn't have enough tokens
 func NewBridgeRequestInstruction(
 	// Params:
 	amountParam uint64,
@@ -73,13 +72,16 @@ func NewBridgeRequestInstruction(
 		// The vault account
 		accounts__.Append(solanago.NewAccountMeta(vaultAccount, true, false))
 		// Account 4 "vault_ata": Writable, Non-signer, Required
-		// The vault associated token account for the tokens being bridged
+		// The vault associated token account for the tokens being bridged.
+		// Only created if transfer branch is taken (not burn).
+		// Manual creation is used instead of init_if_needed because the burn branch doesn't
+		// need this account, avoiding unnecessary rent costs.
 		accounts__.Append(solanago.NewAccountMeta(vaultAtaAccount, true, false))
 		// Account 5 "mint": Writable, Non-signer, Required
 		// The token mint for the tokens being bridged
 		accounts__.Append(solanago.NewAccountMeta(mintAccount, true, false))
 		// Account 6 "token_program": Read-only, Non-signer, Required, Address: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
-		// The token program for burning operations
+		// The token program for token operations (burn/transfer)
 		accounts__.Append(solanago.NewAccountMeta(tokenProgramAccount, false, false))
 		// Account 7 "system_program": Read-only, Non-signer, Required
 		// The system program for account creation
@@ -98,7 +100,7 @@ func NewBridgeRequestInstruction(
 }
 
 // Builds a "bridge_transaction" instruction.
-// Create or approve a bridging transaction. //  // This instruction creates or approves a bridging transaction for transferring tokens from the vault // to a recipient. The first call creates the transaction, and subsequent calls from validators approve it. // Once the consensus threshold is met, the tokens are automatically transferred from the vault to the // recipient's associated token account, and the transaction account is closed. //  // # Arguments // * `ctx` - The context containing accounts for the bridging transaction // * `amount` - The amount of tokens to transfer to the recipient // * `batch_id` - The batch ID of the transaction (must be greater than last_batch_id) //  // # Errors // * `InvalidBatchId` - If the batch_id is not greater than the last_batch_id // * `InvalidReceiver` - If the receiver is the same as the payer // * `NoSignersProvided` - If no validator signers are provided // * `SignerAlreadyApproved` - If a signer has already approved this transaction // * `NotEnoughSigners` - If insufficient validators have signed (checked when threshold is met) // * `InvalidSigner` - If a signer is not in the validator set
+// Create or approve a bridging transaction. //  // This instruction creates or approves a bridging transaction for transferring tokens from the vault // to a recipient. The first call creates the transaction, and subsequent calls from validators approve it. // Once the consensus threshold is met, the tokens are automatically minted (if vault is mint authority) // or transferred from the vault to the recipient's associated token account, and the transaction account is closed. //  // # Arguments // * `ctx` - The context containing accounts for the bridging transaction // * `amount` - The amount of tokens to transfer to the recipient // * `batch_id` - The batch ID of the transaction (must be greater than last_batch_id) //  // # Errors // * `InvalidBatchId` - If the batch_id is not greater than the last_batch_id // * `InvalidReceiver` - If the receiver is the same as the payer // * `NoSignersProvided` - If no validator signers are provided // * `SignerAlreadyApproved` - If a signer has already approved this transaction // * `NotEnoughSigners` - If insufficient validators have signed (checked when threshold is met) // * `InvalidSigner` - If a signer is not in the validator set
 func NewBridgeTransactionInstruction(
 	// Params:
 	amountParam uint64,
@@ -157,12 +159,14 @@ func NewBridgeTransactionInstruction(
 		accounts__.Append(solanago.NewAccountMeta(recipientAccount, false, false))
 		// Account 5 "recipient_ata": Writable, Non-signer, Required
 		// The recipient's associated token account for the mint
+		// Validated to be the canonical ATA address, created manually after threshold check
 		accounts__.Append(solanago.NewAccountMeta(recipientAtaAccount, true, false))
 		// Account 6 "vault": Writable, Non-signer, Required
 		// The vault account
 		accounts__.Append(solanago.NewAccountMeta(vaultAccount, true, false))
 		// Account 7 "vault_ata": Writable, Non-signer, Required
 		// The vault associated token account for the mint
+		// Validated to be the canonical ATA address
 		accounts__.Append(solanago.NewAccountMeta(vaultAtaAccount, true, false))
 		// Account 8 "token_program": Read-only, Non-signer, Required, Address: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 		// The token program for minting operations
@@ -249,7 +253,7 @@ func NewBridgeVsuInstruction(
 }
 
 // Builds a "initialize" instruction.
-// Initialize the validator set and vault for the bridge system. //  // This instruction sets up the initial validator set that will control all bridge operations // and creates the vault account that will hold bridged tokens. The validators must be unique // and meet the minimum/maximum requirements. The consensus threshold is automatically calculated // as 2/3 of the validator count (rounded up). //  // # Arguments // * `ctx` - The context containing accounts for initialization // * `validators` - Vector of validator public keys (4-10 validators required) // * `last_id` - Optional initial batch ID (defaults to 0 if not provided) //  // # Errors // * `MaxValidatorsExceeded` - If more than 10 validators are provided // * `MinValidatorsNotMet` - If fewer than 4 validators are provided // * `ValidatorsNotUnique` - If duplicate validators are provided
+// Initialize the validator set and vault for the bridge system. //  // This instruction sets up the initial validator set that will control all bridge operations // and creates the vault account that will hold bridged tokens. The validators must be unique // and meet the minimum/maximum requirements. The consensus threshold is automatically calculated // as 2/3 of the validator count (rounded up). //  // # Arguments // * `ctx` - The context containing accounts for initialization // * `validators` - Vector of validator public keys (4-128 validators required) // * `last_id` - Optional initial batch ID (defaults to 0 if not provided) //  // # Errors // * `MaxValidatorsExceeded` - If more than 10 validators are provided // * `MinValidatorsNotMet` - If fewer than 4 validators are provided // * `ValidatorsNotUnique` - If duplicate validators are provided
 func NewInitializeInstruction(
 	// Params:
 	validatorsParam []solanago.PublicKey,
