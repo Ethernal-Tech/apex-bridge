@@ -245,10 +245,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 				return err
 			}
 
-			if !expectedTx.GetIsInvalid() && !expectedTx.GetIsProcessed() {
-				if err := cursor.Bucket().Delete(expectedTx.DBKey()); err != nil {
-					return err
-				}
+			if err := cursor.Bucket().Delete(expectedTx.DBKey()); err != nil {
+				return err
 			}
 		}
 
@@ -482,40 +480,6 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
 
 		return nil
 	})
-}
-
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
-	tx *bbolt.Tx, expectedTxs []TExpectedTx, markFunc func(expectedTx TExpectedTx),
-) error {
-	for _, expectedTx := range expectedTxs {
-		if supported := bd.SupportedChains[expectedTx.GetChainID()]; !supported {
-			return fmt.Errorf("unsupported chain: %s", expectedTx.GetChainID())
-		}
-
-		bucket := tx.Bucket(ChainBucket(ExpectedTxsBucket, expectedTx.GetChainID()))
-		key := expectedTx.DBKey()
-
-		if data := bucket.Get(key); len(data) > 0 {
-			var dbExpectedTx TExpectedTx
-
-			if err := json.Unmarshal(data, &dbExpectedTx); err != nil {
-				return err
-			}
-
-			markFunc(dbExpectedTx)
-
-			bytes, err := json.Marshal(dbExpectedTx)
-			if err != nil {
-				return fmt.Errorf("could not marshal db expected tx: %w", err)
-			}
-
-			if err := bucket.Put(key, bytes); err != nil {
-				return fmt.Errorf("db expected tx write error: %w", err)
-			}
-		}
-	}
-
-	return nil
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markAndMoveExpectedTxs(
@@ -781,7 +745,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) MoveProcessedExpectedTxs(
 
 	var txsToMove []TExpectedTx
 
-	err := bd.DB.View(func(tx *bbolt.Tx) error {
+	return bd.DB.Update(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(ChainBucket(ExpectedTxsBucket, chainID)).Cursor()
 
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
@@ -796,14 +760,6 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) MoveProcessedExpectedTxs(
 			}
 		}
 
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return bd.DB.Update(func(tx *bbolt.Tx) error {
 		return bd.moveExpectedTxs(tx, txsToMove)
 	})
 }
