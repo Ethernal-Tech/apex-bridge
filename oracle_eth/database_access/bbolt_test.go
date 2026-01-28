@@ -473,6 +473,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[0], txs[0])
 	})
 
+	//nolint:dupl
 	t.Run("MarkAndMoveExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -501,6 +502,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Nil(t, txs)
 	})
 
+	//nolint:dupl
 	t.Run("MarkAndMoveExpectedTxsAsInvalid", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -555,62 +557,6 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
-	})
-
-	t.Run("MoveProcessedExpectedTxs - invalid tx", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db, err := createDB(filePath)
-		require.NoError(t, err)
-
-		expectedTxs := []*core.BridgeExpectedEthTx{
-			{
-				ChainID:   common.ChainIDStrNexus,
-				IsInvalid: true,
-			},
-		}
-
-		err = db.AddExpectedTxs(expectedTxs)
-		require.NoError(t, err)
-
-		txs, err := db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-
-		err = db.MoveProcessedExpectedTxs(common.ChainIDStrNexus)
-		require.NoError(t, err)
-
-		txs, err = db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
-		require.NoError(t, err)
-		require.Nil(t, txs)
-	})
-
-	t.Run("MoveProcessedExpectedTxs - processed tx", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db, err := createDB(filePath)
-		require.NoError(t, err)
-
-		expectedTxs := []*core.BridgeExpectedEthTx{
-			{
-				ChainID:     common.ChainIDStrNexus,
-				IsProcessed: true,
-			},
-		}
-
-		err = db.AddExpectedTxs(expectedTxs)
-		require.NoError(t, err)
-
-		txs, err := db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-
-		err = db.MoveProcessedExpectedTxs(common.ChainIDStrNexus)
-		require.NoError(t, err)
-
-		txs, err = db.GetAllExpectedTxs(common.ChainIDStrNexus, 0)
-		require.NoError(t, err)
-		require.Nil(t, txs)
 	})
 
 	t.Run("MoveProcessedExpectedTxs - invalid and processed txs", func(t *testing.T) {
