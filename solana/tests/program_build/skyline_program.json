@@ -479,7 +479,7 @@
         {
           "name": "removed",
           "type": {
-            "vec": "u64"
+            "vec": "pubkey"
           }
         },
         {
@@ -799,6 +799,16 @@
     },
     {
       "code": 6020,
+      "name": "DuplicateValidatorsInRemoved",
+      "msg": "Duplicate validators found in removed list"
+    },
+    {
+      "code": 6021,
+      "name": "AddingAndRemovingSameSigner",
+      "msg": "Cannot add and remove the same signer"
+    },
+    {
+      "code": 6022,
       "name": "TooManyValidatorsRemoved",
       "msg": "Cannot remove more validators than will exist after additions"
     }
@@ -1009,10 +1019,10 @@
           {
             "name": "removed",
             "docs": [
-              "List of validator indices to remove (max 10 per change)"
+              "List of validator public keys to remove (max 10 per change)"
             ],
             "type": {
-              "vec": "u64"
+              "vec": "pubkey"
             }
           },
           {

@@ -192,7 +192,7 @@ func NewBridgeTransactionInstruction(
 func NewBridgeVsuInstruction(
 	// Params:
 	addedParam []solanago.PublicKey,
-	removedParam []uint64,
+	removedParam []solanago.PublicKey,
 	batchIdParam uint64,
 
 	// Accounts:

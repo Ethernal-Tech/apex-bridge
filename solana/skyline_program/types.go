@@ -366,8 +366,8 @@ type ValidatorDelta struct {
 	// List of new validator public keys to add (max 10 per change)
 	Added []solanago.PublicKey `json:"added"`
 
-	// List of validator indices to remove (max 10 per change)
-	Removed []uint64 `json:"removed"`
+	// List of validator public keys to remove (max 10 per change)
+	Removed []solanago.PublicKey `json:"removed"`
 
 	// Bump seed for the Program Derived Address (PDA)
 	Bump uint8 `json:"bump"`
