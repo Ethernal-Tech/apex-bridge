@@ -179,6 +179,10 @@ func initOracleState(
 	db eventTrackerStore.EventTrackerStore, oracleDB ethOracleCore.EthTxsProcessorDB, blockNumber uint64,
 	chainID string, logger hclog.Logger,
 ) error {
+	if err := oracleDB.MoveProcessedExpectedTxs(chainID); err != nil {
+		return err
+	}
+
 	currentBlockNumber, err := db.GetLastProcessedBlock()
 	if err != nil {
 		return fmt.Errorf("could not retrieve latest block point while initializing utxos: %w", err)

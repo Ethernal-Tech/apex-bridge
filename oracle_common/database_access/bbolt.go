@@ -245,10 +245,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 				return err
 			}
 
-			if !expectedTx.GetIsInvalid() && !expectedTx.GetIsProcessed() {
-				if err := cursor.Bucket().Delete(expectedTx.DBKey()); err != nil {
-					return err
-				}
+			if err := cursor.Bucket().Delete(expectedTx.DBKey()); err != nil {
+				return err
 			}
 		}
 
@@ -264,9 +262,10 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddExpectedTxs(expectedTx
 			}
 
 			bucket := tx.Bucket(ChainBucket(ExpectedTxsBucket, expectedTx.GetChainID()))
+			processedBucket := tx.Bucket(ChainBucket(ProcessedExpectedTxsBucket, expectedTx.GetChainID()))
 			key := expectedTx.DBKey()
 
-			if data := bucket.Get(key); len(data) == 0 {
+			if len(bucket.Get(key)) == 0 && len(processedBucket.Get(key)) == 0 {
 				bytes, err := json.Marshal(expectedTx)
 				if err != nil {
 					return fmt.Errorf("could not marshal expected tx: %w", err)
@@ -301,8 +300,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetExpectedTxs(
 				return err
 			}
 
-			if expectedTx.GetPriority() == priority &&
-				!expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
+			if expectedTx.GetPriority() == priority {
 				result = append(result, expectedTx)
 				if threshold > 0 && len(result) == threshold {
 					break
@@ -338,11 +336,9 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetAllExpectedTxs(
 				return err
 			}
 
-			if !expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
-				result = append(result, expectedTx)
-				if threshold > 0 && len(result) == threshold {
-					break
-				}
+			result = append(result, expectedTx)
+			if threshold > 0 && len(result) == threshold {
+				break
 			}
 		}
 
@@ -435,14 +431,14 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
 	data *core.UpdateTxsData[TTx, TProcessedTx, TExpectedTx],
 ) error {
 	return bd.DB.Update(func(tx *bbolt.Tx) error {
-		err := bd.markExpectedTxs(tx, data.ExpectedInvalid, func(expectedTx TExpectedTx) {
+		err := bd.markAndMoveExpectedTxs(tx, data.ExpectedInvalid, func(expectedTx TExpectedTx) {
 			expectedTx.SetInvalid()
 		})
 		if err != nil {
 			return err
 		}
 
-		err = bd.markExpectedTxs(tx, data.ExpectedProcessed, func(expectedTx TExpectedTx) {
+		err = bd.markAndMoveExpectedTxs(tx, data.ExpectedProcessed, func(expectedTx TExpectedTx) {
 			expectedTx.SetProcessed()
 		})
 		if err != nil {
@@ -486,7 +482,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
 	})
 }
 
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markAndMoveExpectedTxs(
 	tx *bbolt.Tx, expectedTxs []TExpectedTx, markFunc func(expectedTx TExpectedTx),
 ) error {
 	for _, expectedTx := range expectedTxs {
@@ -495,6 +491,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
 		}
 
 		bucket := tx.Bucket(ChainBucket(ExpectedTxsBucket, expectedTx.GetChainID()))
+		processedBucket := tx.Bucket(ChainBucket(ProcessedExpectedTxsBucket, expectedTx.GetChainID()))
 		key := expectedTx.DBKey()
 
 		if data := bucket.Get(key); len(data) > 0 {
@@ -511,13 +508,21 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
 				return fmt.Errorf("could not marshal db expected tx: %w", err)
 			}
 
-			if err := bucket.Put(key, bytes); err != nil {
-				return fmt.Errorf("db expected tx write error: %w", err)
+			if err := processedBucket.Put(key, bytes); err != nil {
+				return fmt.Errorf("db processed expected tx write error: %w", err)
+			}
+
+			if err := bucket.Delete(key); err != nil {
+				return fmt.Errorf("could not remove from expected txs: %w", err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) moveExpectedTxs(tx *bbolt.Tx, expectedTxs []TExpectedTx) error {
+	return bd.markAndMoveExpectedTxs(tx, expectedTxs, func(expectedTx TExpectedTx) {})
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) updateUnprocessed(
@@ -731,4 +736,30 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 	}
 
 	return nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) MoveProcessedExpectedTxs(chainID string) error {
+	if supported := bd.SupportedChains[chainID]; !supported {
+		return fmt.Errorf("unsupported chain: %s", chainID)
+	}
+
+	var txsToMove []TExpectedTx
+
+	return bd.DB.Update(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(ChainBucket(ExpectedTxsBucket, chainID)).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var expectedTx TExpectedTx
+
+			if err := json.Unmarshal(v, &expectedTx); err != nil {
+				return err
+			}
+
+			if expectedTx.GetIsProcessed() || expectedTx.GetIsInvalid() {
+				txsToMove = append(txsToMove, expectedTx)
+			}
+		}
+
+		return bd.moveExpectedTxs(tx, txsToMove)
+	})
 }
