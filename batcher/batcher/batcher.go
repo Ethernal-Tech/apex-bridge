@@ -27,13 +27,6 @@ type validatorSetChange struct {
 	sync.RWMutex
 }
 
-func (v *validatorSetChange) isValidatorPending() bool {
-	v.RLock()
-	defer v.RUnlock()
-
-	return v.validators != nil
-}
-
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	operations                  core.ChainOperations
@@ -121,7 +114,7 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 
 func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	b.newValidatorSet.RLock()
-	validators := b.newValidatorSet.validators
+	pendingValidators := b.newValidatorSet.validators
 	finalized := b.newValidatorSet.finalized
 	b.newValidatorSet.RUnlock()
 
@@ -155,9 +148,9 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		confirmedTransactions []eth.ConfirmedTransaction
 	)
 
-	if b.newValidatorSet.isValidatorPending() {
+	if pendingValidators != nil {
 		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators)
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *pendingValidators)
 	} else {
 		// Get confirmed transactions from smart contract
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
