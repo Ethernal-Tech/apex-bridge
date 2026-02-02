@@ -116,20 +116,20 @@ func (ti *TelemetryWorker) execute() {
 
 	for chainID := range ti.cardanoDBs {
 		if val := ti.getHotWalletState(contract, chainID); val != nil {
-			telemetry.UpdateHotWalletState(chainID, multisigMetricName, val.Uint64())
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToDfm(val).Uint64())
 		}
 	}
 
 	for chainID := range ti.ethDBs {
 		if val := ti.getHotWalletState(contract, chainID); val != nil {
-			telemetry.UpdateHotWalletState(chainID, multisigMetricName, val.Uint64())
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToDfm(val).Uint64())
 		}
 	}
 
 	if ti.config.RunMode == common.SkylineMode {
 		for chainID := range ti.cardanoDBs {
 			if val := ti.getHotWalletStateForNativeToken(contract, chainID); val != nil {
-				telemetry.UpdateHotWalletState(chainID, nativeTokenMetricName, val.Uint64())
+				telemetry.UpdateHotWalletState(chainID, nativeTokenMetricName, common.WeiToDfm(val).Uint64())
 			}
 		}
 	}
