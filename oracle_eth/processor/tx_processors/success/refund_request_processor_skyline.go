@@ -122,7 +122,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	minFeeForBridging := chainConfig.MinFeeForBridging
-	if tx.Value.Cmp(minFeeForBridging) != 1 {
+	if tx.Value.Cmp(minFeeForBridging) == -1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
 			tx.Value, new(big.Int).Add(minFeeForBridging, big.NewInt(1)),
