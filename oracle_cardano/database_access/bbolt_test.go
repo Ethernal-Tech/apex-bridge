@@ -561,7 +561,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[1], txs[0])
 	})
 
-	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
+	t.Run("MarkAndMoveExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db, err := createDB(filePath)
@@ -601,7 +601,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Nil(t, txs)
 	})
 
-	t.Run("MarkExpectedTxsAsInvalid", func(t *testing.T) {
+	t.Run("MarkAndMoveExpectedTxsAsInvalid", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db, err := createDB(filePath)
@@ -644,5 +644,169 @@ func TestBoltDatabase(t *testing.T) {
 		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
+	})
+
+	t.Run("MoveProcessedExpectedTxs - no processed expected tx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db, err := createDB(filePath)
+		require.NoError(t, err)
+
+		const (
+			primeChainID  = common.ChainIDStrPrime
+			vectorChainID = common.ChainIDStrVector
+		)
+
+		expectedTxs := []*core.BridgeExpectedCardanoTx{
+			{ChainID: primeChainID},
+			{ChainID: vectorChainID},
+		}
+
+		err = db.AddExpectedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		txs, err := db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(primeChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(vectorChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+	})
+
+	t.Run("MoveProcessedExpectedTxs - invalid and processed txs", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db, err := createDB(filePath)
+		require.NoError(t, err)
+
+		const (
+			primeChainID  = common.ChainIDStrPrime
+			vectorChainID = common.ChainIDStrVector
+		)
+
+		expectedTxs := []*core.BridgeExpectedCardanoTx{
+			{
+				ChainID:   primeChainID,
+				IsInvalid: true,
+			},
+			{
+				ChainID:   vectorChainID,
+				IsInvalid: true,
+			},
+			{
+				ChainID:     primeChainID,
+				IsProcessed: true,
+			},
+			{
+				ChainID:     vectorChainID,
+				IsProcessed: true,
+			},
+		}
+
+		err = db.AddExpectedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		txs, err := db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(primeChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(vectorChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+	})
+
+	t.Run("MoveProcessedExpectedTxs - all txs", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db, err := createDB(filePath)
+		require.NoError(t, err)
+
+		const (
+			primeChainID  = common.ChainIDStrPrime
+			vectorChainID = common.ChainIDStrVector
+		)
+
+		expectedTxs := []*core.BridgeExpectedCardanoTx{
+			{
+				ChainID: primeChainID,
+			},
+			{
+				ChainID: vectorChainID,
+			},
+			{
+				ChainID:   primeChainID,
+				IsInvalid: true,
+			},
+			{
+				ChainID:   vectorChainID,
+				IsInvalid: true,
+			},
+			{
+				ChainID:     primeChainID,
+				IsProcessed: true,
+			},
+			{
+				ChainID:     vectorChainID,
+				IsProcessed: true,
+			},
+		}
+
+		err = db.AddExpectedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		txs, err := db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(primeChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(primeChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MoveProcessedExpectedTxs(vectorChainID)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
 	})
 }
