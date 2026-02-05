@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -111,17 +110,21 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 		contractAddressFlagDesc,
 	)
 
+	defaultMinFeeWei := common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault))
+
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
+		defaultMinFeeWei.String(),
 		minFeeAmountFlagDesc,
 	)
+
+	defaultMinUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault))
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
+		defaultMinUtxoAmountWei.String(),
 		minBridgingAmountFlagDesc,
 	)
 

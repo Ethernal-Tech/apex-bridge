@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -212,17 +211,21 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddrFlagDesc,
 	)
 
+	defaultMinFeeWei := common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault))
+
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
+		defaultMinFeeWei.String(),
 		minFeeAmountFlagDesc,
 	)
+
+	defaultMinUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault))
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
+		defaultMinUtxoAmountWei.String(),
 		minBridgingAmountFlagDesc,
 	)
 
