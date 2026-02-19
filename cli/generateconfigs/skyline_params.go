@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var defaultMaxTokenAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
+var defaultMaxTokenAmountAllowedToBridge = common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000))
 
 type skylineGenerateConfigsParams struct {
 	bridgeNodeURL   string
@@ -195,7 +195,6 @@ func (p *skylineGenerateConfigsParams) Execute(
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
-			MinColCoinsAllowedToBridge:     common.MinColCoinsAllowedToBridgeDefault,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},

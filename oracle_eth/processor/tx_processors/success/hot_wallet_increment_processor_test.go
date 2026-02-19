@@ -95,5 +95,10 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.HotWalletIncrementClaims, 1)
+		require.Equal(t, common.ChainIDIntNexus, claims.HotWalletIncrementClaims[0].ChainId)
+		require.Equal(t, tx.Value, claims.HotWalletIncrementClaims[0].Amount)
+		require.Equal(t, big.NewInt(0), claims.HotWalletIncrementClaims[0].AmountWrapped)
 	})
 }

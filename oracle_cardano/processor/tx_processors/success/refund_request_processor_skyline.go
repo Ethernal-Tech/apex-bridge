@@ -167,8 +167,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
-		OriginAmount:             currencyAmountToTrack,
-		OriginWrappedAmount:      wrappedTokenAmountToTrack,
+		OriginAmount:             common.DfmToWei(currencyAmountToTrack),
+		OriginWrappedAmount:      common.DfmToWei(wrappedTokenAmountToTrack),
 		OutputIndexes:            common.PackNumbersToBytes(unknownTokenOutputIndexes),
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
@@ -286,25 +286,25 @@ func buildRefundTokenAmounts(
 	currencyAdded := false
 
 	for tokenID, amount := range tokenAmounts {
-		amountCurrency := big.NewInt(0)
+		amountCurrencyWei := big.NewInt(0)
 
 		if !currencyAdded {
 			// First token gets the full currency sum
-			amountCurrency = currencyAmountSum
+			amountCurrencyWei = common.DfmToWei(currencyAmountSum)
 			currencyAdded = true
 		}
 
 		refundTokenAmounts = append(refundTokenAmounts, cCore.RefundTokenAmount{
 			TokenId:        tokenID,
-			AmountCurrency: amountCurrency,
-			AmountTokens:   amount,
+			AmountCurrency: amountCurrencyWei,
+			AmountTokens:   common.DfmToWei(amount),
 		})
 	}
 
 	if !currencyAdded {
 		refundTokenAmounts = append(refundTokenAmounts, cCore.RefundTokenAmount{
 			TokenId:        currencyID,
-			AmountCurrency: currencyAmountSum,
+			AmountCurrency: common.DfmToWei(currencyAmountSum),
 			AmountTokens:   big.NewInt(0),
 		})
 	}

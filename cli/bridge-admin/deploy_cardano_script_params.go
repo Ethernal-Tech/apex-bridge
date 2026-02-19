@@ -236,7 +236,7 @@ func createDeployCardanoScriptTx(
 		return nil, err
 	}
 
-	minUtxo := max(potentialMinUtxo, common.MinUtxoAmountDefault)
+	minUtxo := max(potentialMinUtxo, common.MinUtxoAmountDefaultDfm)
 	desiredLovelaceAmount := common.PotentialFeeDefault + minUtxo
 
 	inputs, err := cardanowallet.GetUTXOsForAmount(

@@ -118,7 +118,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return nil, isRedistribution, err
 	}
 
-	changeMinUtxo = max(changeMinUtxo, common.MinUtxoAmountDefault)
+	changeMinUtxo = max(changeMinUtxo, common.MinUtxoAmountDefaultDfm)
 
 	// Validate whether enough token funds exist
 	if err := validateTokenFunds(requiredTokenAmounts, totalTokenAmounts.sum, changeMinUtxo); err != nil {
@@ -190,7 +190,7 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 			continue
 		}
 
-		includeChange := common.MinUtxoAmountDefault
+		includeChange := common.MinUtxoAmountDefaultDfm
 
 		// Process native tokens only from frist address if there are any
 		if addrAmount.addressIndex == 0 && len(addrAmount.totalTokenAmounts) > 1 {
@@ -433,7 +433,7 @@ func (c *BridgingAddressesCoordinatorImpl) spendCurrencyFromAddress(
 		return changeMinUtxo
 	}
 
-	const defaultMinChange = common.MinUtxoAmountDefault
+	const defaultMinChange = common.MinUtxoAmountDefaultDfm
 
 	if availableCurrencyOnAddress <= requiredCurrencyAmount {
 		// Not enough currency on this address or exact amount

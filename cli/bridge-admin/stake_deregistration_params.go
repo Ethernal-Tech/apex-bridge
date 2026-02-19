@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -115,7 +114,7 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &chainTokenQuantityResult{}, err

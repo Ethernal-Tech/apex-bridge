@@ -82,24 +82,22 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 			continue
 		}
 
-		receiverAmountDfm := common.WeiToDfm(receiver.Amount)
-
 		receivers = append(receivers, oCore.BridgingRequestReceiver{
 			DestinationAddress: receiver.Address,
-			Amount:             receiverAmountDfm,
+			Amount:             receiver.Amount,
 			AmountWrapped:      big.NewInt(0),
 		})
 
-		totalAmount.Add(totalAmount, receiverAmountDfm)
+		totalAmount.Add(totalAmount, receiver.Amount)
 	}
 
-	feeCurrencyDfmDst := new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
-	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, common.WeiToDfm(metadata.BridgingFee))
-	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDfmDst)
+	feeCurrencyDstWei := common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount))
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, metadata.BridgingFee)
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDstWei)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestChainFeeAddress,
-		Amount:             feeCurrencyDfmDst,
+		Amount:             feeCurrencyDstWei,
 		AmountWrapped:      big.NewInt(0),
 	})
 
@@ -196,17 +194,16 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(common.DfmToWei(appConfig.BridgingSettings.MaxAmountAllowedToBridge)) == 1 {
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, common.DfmToWei(appConfig.BridgingSettings.MaxAmountAllowedToBridge))
+			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
 	receiverAmountSum.Add(receiverAmountSum, metadata.BridgingFee)
 
-	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
-	if feeAmountDfm.Uint64() < ethSrcConfig.MinFeeForBridging {
+	if metadata.BridgingFee.Cmp(ethSrcConfig.MinFeeForBridging) < 0 {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

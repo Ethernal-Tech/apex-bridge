@@ -112,7 +112,7 @@ func CreateTx(
 
 			// add multisig output if change is not zero
 			if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
-				if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefault {
+				if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefaultDfm {
 					if multiSigIndex == -1 {
 						builder.AddOutputs(multisigChangeTxOutput)
 					} else {
@@ -253,10 +253,10 @@ func calculatePlutusParams(
 	}
 
 	collateralOutput := txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] - totalCollateral
-	if collateralOutput < common.MinUtxoAmountDefault {
+	if collateralOutput < common.MinUtxoAmountDefaultDfm {
 		return nil, fmt.Errorf(
 			"collateral output is less than min utxo amount: %d < %d",
-			collateralOutput, common.MinUtxoAmountDefault,
+			collateralOutput, common.MinUtxoAmountDefaultDfm,
 		)
 	}
 

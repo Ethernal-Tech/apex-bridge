@@ -2,7 +2,6 @@ package clisendtx
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -648,7 +647,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 		if err != nil {
 			return nil, err
 		} else if receipt.Status != types.ReceiptStatusSuccessful {
-			return nil, errors.New("approve transaction receipt status is unsuccessful")
+			return nil, fmt.Errorf("approve transaction receipt status is unsuccessful, receipt: %+v", receipt)
 		}
 	}
 
@@ -696,7 +695,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	if p.ogmiosURLDst != "" {

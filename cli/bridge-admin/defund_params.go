@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -20,7 +19,7 @@ const (
 	nativeTokenAmountFlag = "native-token-amount"
 
 	defundAddressFlagDesc     = "address where defund amount goes"
-	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM"
+	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in Wei"
 	defundTokenAmountFlagDesc = "amount to withdraw from the hot wallet in native tokens"
 )
 
@@ -52,21 +51,17 @@ func (g *defundParams) ValidateFlags() error {
 
 	currencyAmount, ok := new(big.Int).SetString(g.currencyAmountStr, 0)
 	if !ok || currencyAmount.Sign() <= 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
+		return fmt.Errorf(
+			"--%s flag must specify a positive value (greater than 0) in wei", amountFlag,
+		)
 	}
 
 	g.nativeTokenAmountStr = strings.TrimSpace(g.nativeTokenAmountStr)
 
 	nativeTokenAmount, ok := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
 	if !ok || nativeTokenAmount.Sign() < 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater or equal than %d in dfm",
+		return fmt.Errorf(" --%s flag must specify a value greater or equal than %d in wei",
 			nativeTokenAmountFlag, 0)
-	}
-
-	if currencyAmount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
 	}
 
 	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
@@ -79,6 +74,22 @@ func (g *defundParams) ValidateFlags() error {
 	}
 
 	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
+	if g.chainIDConverter.IsCardanoChainID(g.chainID) {
+		minUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm))
+		if currencyAmount.Cmp(minUtxoAmountWei) < 0 {
+			return fmt.Errorf(" --%s flag must specify a value greater than %v in wei",
+				amountFlag, minUtxoAmountWei)
+		}
+	}
+
+	if g.chainIDConverter.IsCardanoChainID(g.chainID) {
+		minUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm))
+		if currencyAmount.Cmp(minUtxoAmountWei) < 0 {
+			return fmt.Errorf(" --%s flag must specify a value greater than %v in wei",
+				amountFlag, minUtxoAmountWei)
+		}
+	}
 
 	if !common.IsValidAddress(g.address, g.chainIDConverter.IsEVMChainID(g.chainID)) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
@@ -168,7 +179,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &chainTokenQuantityResult{}, err

@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -141,28 +140,28 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault)).String(),
+		common.MinFeeForBridgingDefault.String(),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault)).String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minTokenBridgingAmountString,
 		minTokenBridgingAmountFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinColCoinsAllowedToBridgeDefault)).String(),
+		common.MinAmountAllowedToBridgeEVM.String(),
 		minTokenBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minOperationFeeString,
 		minOperationFeeFlag,
-		common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault)).String(),
+		common.MinOperationFeeDefault.String(),
 		minOperationFeeFlagDesc,
 	)
 
@@ -240,7 +239,7 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, errors.New("transaction receipt status is unsuccessful")
+		return nil, fmt.Errorf("transaction receipt status is unsuccessful, receipt: %+v", receipt)
 	}
 
 	return &successResult{}, err

@@ -1,5 +1,9 @@
 package common
 
+import (
+	"math/big"
+)
+
 type EcosystemToken struct {
 	ID   uint16 `json:"id"`
 	Name string `json:"name"`
@@ -75,10 +79,15 @@ type MinConfig struct {
 }
 
 const (
-	MinOperationFeeDefault            = uint64(0)
-	MinFeeForBridgingDefault          = uint64(1_000_010)
-	MinUtxoAmountDefault              = uint64(1_000_000)
-	MinColCoinsAllowedToBridgeDefault = uint64(1)
+	MinUtxoAmountDefaultDfm              = uint64(1_000_000)
+	MinColCoinsAllowedToBridgeDfmCardano = uint64(1) // 1 DFM
+)
+
+// vaules in wei
+var (
+	MinOperationFeeDefault      *big.Int = big.NewInt(0)
+	MinFeeForBridgingDefault    *big.Int = DfmToWei(big.NewInt(1_000_010))
+	MinAmountAllowedToBridgeEVM *big.Int = big.NewInt(1) // 1 wei
 )
 
 var (
@@ -102,10 +111,10 @@ var (
 			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		"default": {
-			MinOperationFee:            MinOperationFeeDefault,
-			MinFeeForBridging:          MinFeeForBridgingDefault,
-			MinUtxoAmount:              MinUtxoAmountDefault,
-			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDefault,
+			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
+			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDfmCardano,
 		},
 	}
 )
