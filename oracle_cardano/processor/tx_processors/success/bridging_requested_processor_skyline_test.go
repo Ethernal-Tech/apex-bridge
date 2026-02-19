@@ -3317,7 +3317,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 
-		require.Equal(t, bridgingAddrAmountDfm, claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
+		require.Equal(t, common.DfmToWei(big.NewInt(int64(bridgingAddrAmountDfm))), claims.BridgingRequestClaims[0].NativeCurrencyAmountSource)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountSource)
 		require.Equal(t, common.DfmToWei(big.NewInt(int64(feeAddrBridgingAmount))), claims.BridgingRequestClaims[0].NativeCurrencyAmountDestination)
 		require.Equal(t, big.NewInt(0), claims.BridgingRequestClaims[0].WrappedTokenAmountDestination)
