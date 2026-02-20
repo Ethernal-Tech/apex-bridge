@@ -87,6 +87,7 @@ type sendTxParams struct {
 	chainIDDst         string
 	feeString          string
 	chainIDsConfig     string
+	operationFeeString string
 
 	// apex
 	ogmiosURLSrc    string
@@ -99,10 +100,11 @@ type sendTxParams struct {
 	gatewayAddress string
 	nexusURL       string
 
-	feeAmount        *big.Int
-	receiversParsed  []*receiverAmount
-	wallet           *cardanowallet.Wallet
-	chainIDConverter *common.ChainIDConverter
+	feeAmount          *big.Int
+	operationFeeAmount *big.Int
+	receiversParsed    []*receiverAmount
+	wallet             *cardanowallet.Wallet
+	chainIDConverter   *common.ChainIDConverter
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -152,6 +154,13 @@ func (ip *sendTxParams) validateFlags() error {
 
 	ip.feeAmount = feeAmount
 
+	operationFeeAmount, ok := new(big.Int).SetString(ip.operationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, ip.operationFeeString)
+	}
+
+	ip.operationFeeAmount = operationFeeAmount
+
 	if ip.txType == common.ChainTypeEVMStr {
 		if ip.feeAmount.Cmp(minNexusBridgingFee) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
@@ -167,6 +176,15 @@ func (ip *sendTxParams) validateFlags() error {
 	} else {
 		if ip.feeAmount.Cmp(common.MinFeeForBridgingDefault) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
+		}
+
+		// could be 0 but if not it must be greater than minUtxoValue
+		if ip.operationFeeAmount.Cmp(big.NewInt(0)) == -1 {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, ip.operationFeeAmount)
+		}
+
+		if ip.operationFeeAmount.Cmp(big.NewInt(0)) == 1 && ip.operationFeeAmount.Cmp(common.MinOperationFeeDefault) < 0 {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, ip.operationFeeAmount)
 		}
 
 		bytes, err := cardanotx.GetCardanoPrivateKeyBytes(ip.privateKeyRaw)
@@ -205,7 +223,6 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 	}
 
-	isDestEvmChain := ip.chainIDConverter.IsEVMChainID(ip.chainIDDst)
 	receivers := make([]*receiverAmount, 0, len(ip.receivers))
 
 	for i, x := range ip.receivers {
@@ -219,7 +236,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(vals[0], isDestEvmChain) {
+		if !common.IsValidAddress(ip.chainIDDst, vals[0], ip.chainIDConverter) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
@@ -496,7 +513,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, ip.operationFeeAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -511,7 +528,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault,
+				txOpts, chainID, receivers, ip.feeAmount, ip.operationFeeAmount,
 			)
 		})
 	if err != nil {

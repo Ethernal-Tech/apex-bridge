@@ -43,12 +43,26 @@ type registerGatewayTokenParams struct {
 	tokenID           uint16
 	tokenName         string
 	tokenSymbol       string
+	chainID           string
+	chainIDsConfig    string
 
-	tokenSCAddress ethcommon.Address
+	tokenSCAddress   ethcommon.Address
+	chainIDConverter *common.ChainIDConverter
 }
 
 // ValidateFlags implements common.CliCommandValidator.
 func (g *registerGatewayTokenParams) ValidateFlags() error {
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+		return err
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
 	if !common.IsValidHTTPURL(g.nodeURL) {
 		return fmt.Errorf("invalid --%s flag", nodeURLFlag)
 	}
@@ -57,11 +71,11 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(g.gatewayAddress, true) {
+	if !common.IsValidAddress(g.chainID, g.gatewayAddress, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
-	if !common.IsValidAddress(g.tokenSCAddressStr, true) {
+	if !common.IsValidAddress(g.chainID, g.tokenSCAddressStr, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", tokenSCAddressFlag)
 	}
 
@@ -118,6 +132,18 @@ func (g *registerGatewayTokenParams) Execute(outputter common.OutputFormatter) (
 }
 
 func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(
+		&g.chainID,
+		chainIDFlag,
+		"",
+		chainIDFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
 	cmd.Flags().StringVar(
 		&g.nodeURL,
 		nodeURLFlag,

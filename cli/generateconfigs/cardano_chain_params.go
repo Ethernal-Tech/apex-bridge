@@ -121,7 +121,7 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", networkAddressFlag, p.networkAddress)
 	}
 
-	if !common.IsValidAddress(p.treasuryAddress, false) {
+	if _, err := wallet.NewCardanoAddressFromString(p.treasuryAddress); err != nil {
 		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
 	}
 

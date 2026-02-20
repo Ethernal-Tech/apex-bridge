@@ -62,11 +62,11 @@ func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
 		}
 	}
 
-	if !common.IsValidAddress(b.primeWalletAddress, false) {
+	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress, b.appConfig.ChainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
 	}
 
-	if !common.IsValidAddress(b.cardanoWalletAddress, false) {
+	if !common.IsValidAddress(common.ChainIDStrCardano, b.cardanoWalletAddress, b.appConfig.ChainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", cardanoWalletAddressFlag)
 	}
 

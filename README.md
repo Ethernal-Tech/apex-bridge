@@ -525,6 +525,8 @@ $ apex-bridge bridge-admin set-min-amounts \
 $ apex-bridge bridge-admin treasury-addr set \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --chain-ids-config ./chainIDsConfig.json \
+        --chain nexus \
         --gateway-addr 0xeefcd00000000000000000000000000000000013 \
         --treasury-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4
 ```
@@ -671,6 +673,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 ```shell
 $ apex-bridge bridge-admin register-gateway-token \
         --node-url http://localhost:12001 \
+        --chain-ids-config ./chainIDsConfig.json \
         --gateway-address 0x020202 \
         --gas-limit 10_000_000 \
         --token-sc-address 0x03030300 \

@@ -27,6 +27,8 @@ type treasuryBaseParams struct {
 	privateKey       string
 	privateKeyConfig string
 	gatewayAddress   string
+	chainID          string
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (bp *treasuryBaseParams) ValidateBaseFlags() error {
@@ -38,7 +40,7 @@ func (bp *treasuryBaseParams) ValidateBaseFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(bp.gatewayAddress, true) {
+	if !common.IsValidAddress(bp.chainID, bp.gatewayAddress, bp.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
@@ -81,14 +83,27 @@ type setTreasuryAddressParams struct {
 	treasuryBaseParams
 	treasuryAddressStr string
 	treasuryAddress    ethcommon.Address
+	chainIDsConfig     string
+	chainIDConverter   *common.ChainIDConverter
 }
 
 func (sp *setTreasuryAddressParams) ValidateFlags() error {
+	if err := validateConfigFilePath(sp.chainIDsConfig); err != nil {
+		return err
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](sp.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	sp.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
 	if err := sp.ValidateBaseFlags(); err != nil {
 		return err
 	}
 
-	if !common.IsValidAddress(sp.treasuryAddressStr, true) {
+	if !common.IsValidAddress(sp.chainID, sp.treasuryAddressStr, sp.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
 	}
 
@@ -99,6 +114,13 @@ func (sp *setTreasuryAddressParams) ValidateFlags() error {
 
 func (sp *setTreasuryAddressParams) RegisterFlags(cmd *cobra.Command) {
 	sp.RegisterBaseFlags(cmd)
+
+	cmd.Flags().StringVar(
+		&sp.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&sp.treasuryAddressStr,
