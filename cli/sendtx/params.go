@@ -307,6 +307,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&ip.operationFeeString,
+		operationFeeFlag,
+		"0",
+		operationFeeFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&ip.ogmiosURLSrc,
 		ogmiosURLSrcFlag,
 		"",
