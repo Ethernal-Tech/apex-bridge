@@ -80,6 +80,7 @@ func Test_SolanaTransactions(t *testing.T) {
 	// Configure event tracking for bridge program events
 	spec := tracker.ProgramEventSpecs{}
 	spec.AddEventSpec(skyline_program.TransactionExecutedEvent{}, "TransactionExecutedEvent")
+	spec.AddEventSpec(skyline_program.BridgeRequestEvent{}, "BridgeRequestEvent")
 
 	// Initialize event storage for tracking program events
 	storage := storagehelper.NewStorage()
@@ -264,5 +265,15 @@ func Test_SolanaTransactions(t *testing.T) {
 		// Execute the bridge request (only requires fee payer signature)
 		_, err = cli.ExecuteInstruction(&bridgeRequestIx, map[solana.PublicKey]*solana.PrivateKey{}, feePayer)
 		require.NoError(t, err)
+		// Wait for and verify the BridgeRequestEvent was emitted
+		require.NoError(t, helper.WaitFor(t, 60*time.Second, 1*time.Second, func() bool {
+			for _, event := range storage.Events {
+				if event.EventName == "BridgeRequestEvent" {
+					return true
+				}
+			}
+			return false
+		}))
 	})
+
 }
