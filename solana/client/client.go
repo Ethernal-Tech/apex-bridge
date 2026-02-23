@@ -214,12 +214,32 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 	}
 
 	signers[feePayer.PublicKey()] = &feePayer
-
-	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
-		return signers[key]
-	})
+	// Serialize message once — all signers sign the same bytes
+	msgBytes, err := tx.Message.MarshalBinary()
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign transaction: %w", err)
+		return nil, fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	// Initialize exactly N signature slots (one per required signer)
+	numSigs := int(tx.Message.Header.NumRequiredSignatures)
+	tx.Signatures = make([]solana.Signature, numSigs)
+
+	// Sign in correct order — matching tx.Message.AccountKeys index
+	for i := 0; i < numSigs; i++ {
+		accountKey := tx.Message.AccountKeys[i]
+
+		pk, ok := signers[accountKey]
+		if !ok {
+			return nil, fmt.Errorf("missing signer for account: %s", accountKey)
+		}
+
+		// Each signer independently signs the same message bytes
+		sig, err := pk.Sign(msgBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign for account %s: %w", accountKey, err)
+		}
+
+		tx.Signatures[i] = sig
 	}
 
 	sig, err := s.cli.SendTransaction(context.TODO(), tx)
