@@ -94,7 +94,7 @@ const (
 	MyTokenTestName   = "Test Token"
 	MyTokenTestSymbol = "TTK"
 
-	defaultEvmBranch       = "feat/AD-941_operation-fee"
+	defaultEvmBranch       = "feat/skyline"
 	defaultCurrencyTokenID = 1
 )
 
