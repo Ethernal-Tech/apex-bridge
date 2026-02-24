@@ -23,6 +23,7 @@ const (
 	evmChainStartingBlockFlag          = "evm-starting-block"
 	evmChainMinFeeForBridgingFlag      = "evm-min-fee-for-bridging"
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
+	evmChainFeeAddrBridgingFlag        = "evm-fee-addr-bridging"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
@@ -30,6 +31,7 @@ const (
 	evmChainStartingBlockFlagDesc          = "block from where to start evm chain oracle / evm chain block submitter"
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
+	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
@@ -40,7 +42,7 @@ const (
 	defaultEvmRelayerGasFeeMultiplier   = 140
 )
 
-var defaultEvmFeeAddrBridgingAmount *big.Int = common.DfmToWei(big.NewInt(1_000_000))
+var defaultEvmFeeAddrBridgingAmount string = common.DfmToWei(big.NewInt(1_000_000)).String()
 
 type evmChainGenerateConfigsParams struct {
 	chainIDString string
@@ -53,6 +55,8 @@ type evmChainGenerateConfigsParams struct {
 	evmChainMinFeeForBridging      *big.Int
 	minOperationFeeStr             string
 	minOperationFee                *big.Int
+	evmChainFeeAddrBridgingStr     string
+	evmChainFeeAddrBridging        *big.Int
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
@@ -93,8 +97,16 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount", minOperationFeeFlag)
 	}
 
+	p.evmChainFeeAddrBridgingStr = strings.TrimSpace(p.evmChainFeeAddrBridgingStr)
+
+	evmChainFeeAddrBridging, ok := new(big.Int).SetString(p.evmChainFeeAddrBridgingStr, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", evmChainFeeAddrBridgingFlag)
+	}
+
 	p.evmChainMinFeeForBridging = evmChainMinFeeForBridging
 	p.minOperationFee = minOperationFee
+	p.evmChainFeeAddrBridging = evmChainFeeAddrBridging
 
 	return nil
 }
@@ -155,6 +167,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlag,
 		defaultEmptyBlocksThreshold,
 		emptyBlocksThresholdFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.evmChainFeeAddrBridgingStr,
+		evmChainFeeAddrBridgingFlag,
+		defaultEvmFeeAddrBridgingAmount,
+		evmChainFeeAddrBridgingDesc,
 	)
 
 	// Output params
@@ -231,7 +250,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		MinOperationFee:            p.minOperationFee,
 		MinColCoinsAllowedToBridge: common.MinAmountAllowedToBridgeEVM,
 		RestartTrackerPullCheck:    time.Second * 150,
-		FeeAddrBridgingAmount:      defaultEvmFeeAddrBridgingAmount,
+		FeeAddrBridgingAmount:      p.evmChainFeeAddrBridging,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
