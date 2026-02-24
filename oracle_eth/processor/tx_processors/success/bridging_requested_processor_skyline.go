@@ -147,9 +147,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	totalTokensAmount.TotalAmountCurrencySrc = new(big.Int).Add(
 		totalTokensAmount.TotalAmountCurrencySrc, metadata.BridgingFee)
 
-	totalTokensAmount.TotalAmountCurrencySrc = new(big.Int).Add(
-		totalTokensAmount.TotalAmountCurrencySrc, metadata.OperationFee)
-
 	totalTokensAmount.TotalAmountCurrencyDst = new(big.Int).Add(
 		totalTokensAmount.TotalAmountCurrencyDst, destChainInfo.FeeAddrBridgingWei)
 
@@ -376,7 +373,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee.Add(metadata.BridgingFee, receiverCtx.feeSum)
 	nativeCurrencySum.Add(nativeCurrencySum, metadata.BridgingFee)
-	nativeCurrencySum.Add(nativeCurrencySum, metadata.OperationFee)
 
 	if metadata.BridgingFee.Cmp(receiverCtx.ethSrcConfig.MinFeeForBridging) < 0 {
 		return fmt.Errorf("bridging fee in metadata is less than minimum: %v", metadata)

@@ -33,6 +33,7 @@ const (
 	srcChainIDFlag      = "chain-src"
 	dstChainIDFlag      = "chain-dst"
 	multisigAddrSrcFlag = "addr-multisig-src"
+	treasuryAddrSrcFlag = "addr-treasury-src"
 	feeAmountFlag       = "fee"
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
@@ -49,6 +50,7 @@ const (
 	srcChainIDFlagDesc      = "source chain ID (prime, vector, etc)"
 	dstChainIDFlagDesc      = "destination chain ID (prime, vector, etc)"
 	multisigAddrSrcFlagDesc = "source multisig address"
+	treasuryAddrSrcFlagDesc = "source treasury address"
 	feeAmountFlagDesc       = "amount for multisig fee addr"
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
@@ -85,6 +87,7 @@ type sendTxParams struct {
 	chainIDDst         string
 	feeString          string
 	chainIDsConfig     string
+	operationFeeString string
 
 	// apex
 	ogmiosURLSrc    string
@@ -97,10 +100,11 @@ type sendTxParams struct {
 	gatewayAddress string
 	nexusURL       string
 
-	feeAmount        *big.Int
-	receiversParsed  []*receiverAmount
-	wallet           *cardanowallet.Wallet
-	chainIDConverter *common.ChainIDConverter
+	feeAmount          *big.Int
+	operationFeeAmount *big.Int
+	receiversParsed    []*receiverAmount
+	wallet             *cardanowallet.Wallet
+	chainIDConverter   *common.ChainIDConverter
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -150,6 +154,13 @@ func (ip *sendTxParams) validateFlags() error {
 
 	ip.feeAmount = feeAmount
 
+	operationFeeAmount, ok := new(big.Int).SetString(ip.operationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, ip.operationFeeString)
+	}
+
+	ip.operationFeeAmount = operationFeeAmount
+
 	if ip.txType == common.ChainTypeEVMStr {
 		if ip.feeAmount.Cmp(minNexusBridgingFee) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
@@ -165,6 +176,15 @@ func (ip *sendTxParams) validateFlags() error {
 	} else {
 		if ip.feeAmount.Cmp(common.MinFeeForBridgingDefault) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
+		}
+
+		// could be 0 but if not it must be greater than minUtxoValue
+		if ip.operationFeeAmount.Cmp(big.NewInt(0)) == -1 {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, ip.operationFeeAmount)
+		}
+
+		if ip.operationFeeAmount.Cmp(big.NewInt(0)) == 1 && ip.operationFeeAmount.Cmp(common.MinOperationFeeDefault) < 0 {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, ip.operationFeeAmount)
 		}
 
 		bytes, err := cardanotx.GetCardanoPrivateKeyBytes(ip.privateKeyRaw)
@@ -284,6 +304,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		feeAmountFlag,
 		"0",
 		feeAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.operationFeeString,
+		operationFeeFlag,
+		"0",
+		operationFeeFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -493,7 +520,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, ip.operationFeeAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +535,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount, common.MinOperationFeeDefault,
+				txOpts, chainID, receivers, ip.feeAmount, ip.operationFeeAmount,
 			)
 		})
 	if err != nil {

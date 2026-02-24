@@ -83,6 +83,14 @@ func (g *defundParams) ValidateFlags() error {
 		}
 	}
 
+	if g.chainIDConverter.IsCardanoChainID(g.chainID) {
+		minUtxoAmountWei := common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefaultDfm))
+		if currencyAmount.Cmp(minUtxoAmountWei) < 0 {
+			return fmt.Errorf(" --%s flag must specify a value greater than %v in wei",
+				amountFlag, minUtxoAmountWei)
+		}
+	}
+
 	if !common.IsValidAddress(g.chainID, g.address, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
 	}

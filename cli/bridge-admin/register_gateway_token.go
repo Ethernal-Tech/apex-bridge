@@ -43,21 +43,15 @@ type registerGatewayTokenParams struct {
 	tokenID           uint16
 	tokenName         string
 	tokenSymbol       string
+	chainID           string
+	chainIDsConfig    string
 
-	tokenSCAddress ethcommon.Address
-	chainIDsConfig string
+	tokenSCAddress   ethcommon.Address
+	chainIDConverter *common.ChainIDConverter
 }
 
 // ValidateFlags implements common.CliCommandValidator.
 func (g *registerGatewayTokenParams) ValidateFlags() error {
-	if !common.IsValidHTTPURL(g.nodeURL) {
-		return fmt.Errorf("invalid --%s flag", nodeURLFlag)
-	}
-
-	if g.privateKey == "" && g.privateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
-	}
-
 	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
 		return err
 	}
@@ -67,13 +61,21 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	chainIDConverter := chainIDsConfig.ToChainIDConverter()
+	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, chainIDConverter) {
+	if !common.IsValidHTTPURL(g.nodeURL) {
+		return fmt.Errorf("invalid --%s flag", nodeURLFlag)
+	}
+
+	if g.privateKey == "" && g.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
+	}
+
+	if !common.IsValidAddress(g.chainID, g.gatewayAddress, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr, chainIDConverter) {
+	if !common.IsValidAddress(g.chainID, g.tokenSCAddressStr, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", tokenSCAddressFlag)
 	}
 
@@ -131,6 +133,18 @@ func (g *registerGatewayTokenParams) Execute(outputter common.OutputFormatter) (
 
 func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
+		&g.chainID,
+		chainIDFlag,
+		"",
+		chainIDFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&g.nodeURL,
 		nodeURLFlag,
 		"",
@@ -183,12 +197,6 @@ func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 		tokSymbolFlag,
 		"",
 		tokSymbolFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&g.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

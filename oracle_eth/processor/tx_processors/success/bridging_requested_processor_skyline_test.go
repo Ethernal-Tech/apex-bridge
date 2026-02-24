@@ -654,7 +654,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		ethTx := &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100 + minOperationFee)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -1257,7 +1257,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100 + minOperationFee)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -1316,7 +1316,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(big.NewInt(minFeeForBridging + 100 + minOperationFee)),
+			Value:         common.DfmToWei(big.NewInt(minFeeForBridging + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -1375,7 +1375,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100 + minOperationFee)),
+			Value:         common.DfmToWei(big.NewInt(utxoMinValue + minFeeForBridging + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -1433,7 +1433,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(big.NewInt(minFeeForBridging + 100 + minOperationFee)),
+			Value:         common.DfmToWei(big.NewInt(minFeeForBridging + 100)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -1487,7 +1487,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
-		txValue := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging + 100 + minOperationFee))
+		txValue := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging + 100))
 
 		ethTx := &core.EthTx{
 			Hash:          txHash,
@@ -1552,7 +1552,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
-		txValue := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging + 100 + minOperationFee))
+		txValue := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging + 100))
 
 		ethTx := &core.EthTx{
 			Hash:          txHash,

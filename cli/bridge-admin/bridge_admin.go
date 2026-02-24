@@ -23,6 +23,8 @@ var (
 	stakeDeregistrationParamsData        = &stakeDeregParams{}
 	deployCardanoScriptParamsData        = &deployCardanoScriptParams{}
 	registerGatewayTokenParamsData       = &registerGatewayTokenParams{}
+	getTreasuryAddressParamsData         = &getTreasuryAddressParams{}
+	setTreasuryAddressParamsData         = &setTreasuryAddressParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -147,6 +149,8 @@ func GetBridgeAdminCommand() *cobra.Command {
 		Run: common.GetCliRunCommand(registerGatewayTokenParamsData),
 	}
 
+	treasuryAddressCmd := NewTreasuryAddressCommand()
+
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
@@ -185,6 +189,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		deregisterStakeCmd,
 		deployCardanoScriptCmd,
 		registerGatewayTokenCmd,
+		treasuryAddressCmd,
 	)
 
 	return cmd
