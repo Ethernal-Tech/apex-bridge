@@ -7,6 +7,7 @@ import (
 	clibridgeadmin "github.com/Ethernal-Tech/apex-bridge/cli/bridge-admin"
 	clicreateaddress "github.com/Ethernal-Tech/apex-bridge/cli/create-address"
 	clideployevm "github.com/Ethernal-Tech/apex-bridge/cli/deploy-evm"
+	clideploysolana "github.com/Ethernal-Tech/apex-bridge/cli/deploy-solana"
 	cligenerateconfigs "github.com/Ethernal-Tech/apex-bridge/cli/generateconfigs"
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
@@ -44,6 +45,7 @@ func (rc *RootCommand) registerSubCommands() {
 		cligenerateconfigs.GetGenerateConfigsCommand(),
 		clisendtx.GetSendTxCommand(),
 		clideployevm.GetDeployEVMCommand(),
+		clideploysolana.GetDeploySolanaCommand(),
 		clibridgeadmin.GetBridgeAdminCommand(),
 		cliversion.GetVersionCommand(),
 		cliscversion.GetScVersionCommand(),
