@@ -706,3 +706,14 @@ apex-bridge sc-version \
         --addr 0xaBef000000000000000000000000000000000005:Validators \
         --addr 0xaBef000000000000000000000000000000000006:Admin \
 ```
+## Solana commands
+
+# How to deploy solana program
+```shell
+apex-bridge deploy-solana deploy-program \
+        --url http://127.0.0.1:8899 \
+        --fee-payer ./fee-payer-key.json \
+        --key ./solana-program-key.json \
+        --build-path ./solana-program.so \
+        --commitment confirmed
+```
