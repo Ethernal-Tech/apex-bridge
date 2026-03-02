@@ -535,8 +535,9 @@ $ apex-bridge bridge-admin treasury-addr set \
 ```shell
 $ apex-bridge bridge-admin treasury-addr get \
         --url http://127.0.0.1:12001 \
-        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
-        --gateway-addr 0xeefcd00000000000000000000000000000000013
+        --gateway-addr 0xeefcd00000000000000000000000000000000013 \
+        --chain-ids-config ./chainIDsConfig.json \
+        --chain nexus
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
