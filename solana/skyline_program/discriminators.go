@@ -6,6 +6,9 @@ package skyline_program
 // Account discriminators
 var (
 	Account_BridgingTransaction = [8]byte{199, 172, 160, 246, 169, 105, 182, 43}
+	Account_FeeConfig           = [8]byte{143, 52, 146, 187, 219, 123, 76, 155}
+	Account_TokenIdGuard        = [8]byte{176, 49, 94, 91, 195, 131, 192, 192}
+	Account_TokenRegistry       = [8]byte{227, 255, 152, 118, 84, 200, 145, 120}
 	Account_ValidatorDelta      = [8]byte{78, 60, 235, 203, 202, 134, 2, 124}
 	Account_ValidatorSet        = [8]byte{35, 206, 97, 202, 43, 11, 11, 127}
 	Account_Vault               = [8]byte{211, 8, 232, 43, 2, 152, 117, 119}
@@ -13,15 +16,21 @@ var (
 
 // Event discriminators
 var (
-	Event_BridgeRequestEvent       = [8]byte{162, 122, 193, 76, 126, 59, 162, 143}
-	Event_TransactionExecutedEvent = [8]byte{138, 185, 121, 218, 65, 145, 254, 24}
-	Event_ValidatorSetUpdatedEvent = [8]byte{92, 126, 111, 2, 195, 25, 244, 136}
+	Event_BridgeRequestEvent             = [8]byte{162, 122, 193, 76, 126, 59, 162, 143}
+	Event_FeeConfigUpdatedEvent          = [8]byte{139, 188, 235, 116, 222, 55, 95, 201}
+	Event_LockUnlockTokenRegisteredEvent = [8]byte{190, 93, 87, 189, 153, 86, 187, 120}
+	Event_MintBurnTokenRegisteredEvent   = [8]byte{45, 109, 50, 56, 70, 204, 25, 113}
+	Event_TransactionExecutedEvent       = [8]byte{138, 185, 121, 218, 65, 145, 254, 24}
+	Event_ValidatorSetUpdatedEvent       = [8]byte{92, 126, 111, 2, 195, 25, 244, 136}
 )
 
 // Instruction discriminators
 var (
-	Instruction_BridgeRequest     = [8]byte{174, 128, 16, 189, 59, 127, 134, 232}
-	Instruction_BridgeTransaction = [8]byte{73, 26, 119, 117, 56, 168, 209, 98}
-	Instruction_BridgeVsu         = [8]byte{251, 55, 181, 69, 163, 28, 202, 10}
-	Instruction_Initialize        = [8]byte{175, 175, 109, 31, 13, 152, 155, 237}
+	Instruction_BridgeRequest           = [8]byte{174, 128, 16, 189, 59, 127, 134, 232}
+	Instruction_BridgeTransaction       = [8]byte{73, 26, 119, 117, 56, 168, 209, 98}
+	Instruction_BridgeVsu               = [8]byte{251, 55, 181, 69, 163, 28, 202, 10}
+	Instruction_Initialize              = [8]byte{175, 175, 109, 31, 13, 152, 155, 237}
+	Instruction_RegisterLockUnlockToken = [8]byte{102, 136, 172, 174, 201, 166, 219, 233}
+	Instruction_RegisterMintBurnToken   = [8]byte{20, 106, 92, 113, 59, 41, 253, 128}
+	Instruction_UpdateFeeConfig         = [8]byte{104, 184, 103, 242, 88, 151, 107, 20}
 )

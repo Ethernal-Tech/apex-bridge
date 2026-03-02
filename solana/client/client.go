@@ -29,6 +29,7 @@ type solanaClientOption func(*SolanaClient) error
 func WithCommitment(commitment rpc.CommitmentType) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.commitment = commitment
+
 		return nil
 	}
 }
@@ -36,6 +37,7 @@ func WithCommitment(commitment rpc.CommitmentType) solanaClientOption {
 func WithWSClient(wsCli *ws.Client) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.wsCli = wsCli
+
 		return nil
 	}
 }
@@ -43,52 +45,60 @@ func WithWSClient(wsCli *ws.Client) solanaClientOption {
 func WithRPCClient(cli *rpc.Client) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.cli = cli
+
 		return nil
 	}
 }
 
-func WithDevnet() solanaClientOption {
+func WithDevnet(ctx context.Context) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.cli = rpc.New(rpc.DevNet_RPC)
-		wsCli, err := ws.Connect(context.Background(), rpc.DevNet_WS)
+
+		wsCli, err := ws.Connect(ctx, rpc.DevNet_WS)
 		if err != nil {
 			return fmt.Errorf("failed to connect to devnet: %w", err)
 		}
 
 		s.wsCli = wsCli
+
 		return nil
 	}
 }
 
-func WithLocalnet() solanaClientOption {
+func WithLocalnet(ctx context.Context) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.cli = rpc.New(rpc.LocalNet_RPC)
-		wsCli, err := ws.Connect(context.Background(), rpc.LocalNet_WS)
+
+		wsCli, err := ws.Connect(ctx, rpc.LocalNet_WS)
 		if err != nil {
 			return fmt.Errorf("failed to connect to localnet: %w", err)
 		}
 
 		s.wsCli = wsCli
+
 		return nil
 	}
 }
 
-func WithMainnet() solanaClientOption {
+func WithMainnet(ctx context.Context) solanaClientOption {
 	return func(s *SolanaClient) error {
 		s.cli = rpc.New(rpc.MainNetBetaSerum_RPC)
-		wsCli, err := ws.Connect(context.Background(), rpc.MainNetBetaSerum_WS)
+
+		wsCli, err := ws.Connect(ctx, rpc.MainNetBetaSerum_WS)
 		if err != nil {
 			return fmt.Errorf("failed to connect to mainnet: %w", err)
 		}
 
 		s.wsCli = wsCli
+
 		return nil
 	}
 }
 
-func WithCustomRPC(rpcUrl string) solanaClientOption {
+func WithCustomRPC(rpcURL string) solanaClientOption {
 	return func(s *SolanaClient) error {
-		s.cli = rpc.New(rpcUrl)
+		s.cli = rpc.New(rpcURL)
+
 		return nil
 	}
 }
@@ -107,7 +117,7 @@ func NewSolanaClient(opts ...solanaClientOption) (*SolanaClient, error) {
 	return s, nil
 }
 
-func (s *SolanaClient) GetRpcClient() *rpc.Client {
+func (s *SolanaClient) GetRPCClient() *rpc.Client {
 	return s.cli
 }
 
@@ -119,6 +129,7 @@ func (s *SolanaClient) Close() {
 	if s.wsCli != nil {
 		s.wsCli.Close()
 	}
+
 	if s.cli != nil {
 		if err := s.cli.Close(); err != nil {
 			fmt.Println("Error while closing RPC", err)
@@ -136,11 +147,12 @@ func (s *SolanaClient) Close() {
 //
 // Returns the transaction signature on success, or an error if any step fails.
 func (s *SolanaClient) ExecuteInstruction(
+	ctx context.Context,
 	ix *solana.Instruction,
 	signers map[solana.PublicKey]*solana.PrivateKey,
 	feePayer solana.PrivateKey,
 ) (*solana.Signature, error) {
-	blockhash, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
+	blockhash, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest blockhash: %w", err)
 	}
@@ -163,7 +175,7 @@ func (s *SolanaClient) ExecuteInstruction(
 		return nil, fmt.Errorf("failed to sign transaction: %w", err)
 	}
 
-	sig, err := s.cli.SendTransaction(context.TODO(), tx)
+	sig, err := s.cli.SendTransaction(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
@@ -187,12 +199,13 @@ func (s *SolanaClient) ExecuteInstruction(
 //
 // Returns the transaction signature on success, or an error if any step fails.
 func (s *SolanaClient) ExecuteInstructionWithAccounts(
+	ctx context.Context,
 	ix solana.Instruction,
 	accounts []*solana.AccountMeta,
 	signers map[solana.PublicKey]*solana.PrivateKey,
 	feePayer solana.PrivateKey,
 ) (*solana.Signature, error) {
-	blockhash, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
+	blockhash, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest blockhash: %w", err)
 	}
@@ -242,7 +255,7 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 		tx.Signatures[i] = sig
 	}
 
-	sig, err := s.cli.SendTransaction(context.TODO(), tx)
+	sig, err := s.cli.SendTransaction(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
@@ -287,12 +300,13 @@ func (s *SolanaClient) CreateInstructionWithAccounts(
 //
 // Returns the transaction signature on success, or an error if any step fails.
 func (s *SolanaClient) ExecuteMultipleInstructions(
+	ctx context.Context,
 	ixs []solana.Instruction,
 	accounts []*solana.AccountMeta,
 	signers map[solana.PublicKey]*solana.PrivateKey,
 	feePayer solana.PrivateKey,
 ) (*solana.Signature, error) {
-	blockhash, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
+	blockhash, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest blockhash: %w", err)
 	}
@@ -319,7 +333,7 @@ func (s *SolanaClient) ExecuteMultipleInstructions(
 		return nil, fmt.Errorf("failed to sign transaction: %w", err)
 	}
 
-	sig, err := s.cli.SendTransaction(context.TODO(), tx)
+	sig, err := s.cli.SendTransaction(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
@@ -331,6 +345,69 @@ func (s *SolanaClient) ExecuteMultipleInstructions(
 	return &sig, nil
 }
 
+// CreateATAIfNotExists creates the associated token account for (owner, mint)
+// if it does not already exist. It returns the ATA address.
+func (s *SolanaClient) CreateATAIfNotExists(
+	ctx context.Context,
+	payer solana.PrivateKey,
+	owner solana.PublicKey,
+	mint solana.PublicKey,
+) (solana.PublicKey, error) {
+	ata, _, err := solana.FindAssociatedTokenAddress(owner, mint)
+	if err != nil {
+		return solana.PublicKey{}, fmt.Errorf("failed to derive ATA: %w", err)
+	}
+
+	// Check if ATA already exists
+	info, err := s.cli.GetAccountInfo(ctx, ata)
+	if err == nil && info.Value != nil {
+		return ata, nil
+	}
+
+	// Build create ATA instruction
+	ix := associatedtokenaccount.NewCreateInstruction(
+		payer.PublicKey(), // payer funds creation
+		owner,             // owner of token account
+		mint,              // token mint
+	).Build()
+
+	blockhash, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return solana.PublicKey{}, fmt.Errorf("failed to get blockhash: %w", err)
+	}
+
+	tx, err := solana.NewTransactionBuilder().
+		SetRecentBlockHash(blockhash.Value.Blockhash).
+		SetFeePayer(payer.PublicKey()).
+		AddInstruction(ix).
+		Build()
+	if err != nil {
+		return solana.PublicKey{}, fmt.Errorf("failed to build transaction: %w", err)
+	}
+
+	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
+		if key.Equals(payer.PublicKey()) {
+			return &payer
+		}
+
+		return nil
+	})
+	if err != nil {
+		return solana.PublicKey{}, fmt.Errorf("failed to sign tx: %w", err)
+	}
+
+	sig, err := s.cli.SendTransaction(ctx, tx)
+	if err != nil {
+		return solana.PublicKey{}, fmt.Errorf("failed to send tx: %w", err)
+	}
+
+	if err := s.waitForSignature(sig, rpc.CommitmentFinalized); err != nil {
+		return solana.PublicKey{}, err
+	}
+
+	return ata, nil
+}
+
 // Airdrop requests an airdrop of SOL tokens to the specified address.
 // This is typically used for testing and development on local networks.
 //
@@ -339,8 +416,8 @@ func (s *SolanaClient) ExecuteMultipleInstructions(
 //   - amount: The amount of lamports to airdrop (1 SOL = 1,000,000,000 lamports)
 //
 // Returns an error if the airdrop request fails.
-func (s *SolanaClient) Airdrop(addr solana.PublicKey, amount uint64) error {
-	sig, err := s.cli.RequestAirdrop(context.TODO(), addr, amount, rpc.CommitmentFinalized)
+func (s *SolanaClient) Airdrop(ctx context.Context, addr solana.PublicKey, amount uint64) error {
+	sig, err := s.cli.RequestAirdrop(ctx, addr, amount, rpc.CommitmentFinalized)
 	if err != nil {
 		return fmt.Errorf("failed to request airdrop: %w", err)
 	}
@@ -364,6 +441,7 @@ func (s *SolanaClient) Airdrop(addr solana.PublicKey, amount uint64) error {
 // Returns an error if the deployment command fails to start or complete.
 // Note: This method requires the solana CLI to be installed and available in PATH.
 func (s *SolanaClient) Deploy(feePayer string, programKey string, buildPath string) error {
+	//nolint:gosec
 	cmd := exec.Command("solana",
 		"program", "deploy",
 		"-u", "localhost",
@@ -384,6 +462,7 @@ func (s *SolanaClient) Deploy(feePayer string, programKey string, buildPath stri
 	}
 
 	time.Sleep(20 * time.Second)
+
 	return nil
 }
 
@@ -396,31 +475,39 @@ func (s *SolanaClient) Deploy(feePayer string, programKey string, buildPath stri
 //   - mintAuthority: The public key that will have authority over the mint (can mint tokens)
 //
 // Returns the public key of the newly created mint account, or an error if any step fails.
-func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority solana.PublicKey) (*solana.PublicKey, error) {
+func (s *SolanaClient) CreateTokenAccount(
+	ctx context.Context, pk solana.PrivateKey, mintAuthority solana.PublicKey) (*solana.PublicKey, error) {
 	tokenPk, err := solana.NewRandomPrivateKey()
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
-	block, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
+	block, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
-	rent, err := s.cli.GetMinimumBalanceForRentExemption(context.Background(), token.MINT_SIZE, rpc.CommitmentFinalized)
+	rent, err := s.cli.GetMinimumBalanceForRentExemption(ctx, token.MINT_SIZE, rpc.CommitmentFinalized)
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
-	caIx := system.NewCreateAccountInstruction(rent+1, uint64(token.MINT_SIZE), token.ProgramID, pk.PublicKey(), tokenPk.PublicKey()).Build()
+	caIx := system.NewCreateAccountInstruction(
+		rent+1, uint64(token.MINT_SIZE), token.ProgramID, pk.PublicKey(), tokenPk.PublicKey()).Build()
 
 	mintIx := token.NewInitializeMint2Instruction(9, mintAuthority, mintAuthority, tokenPk.PublicKey())
-	mintTx, err := solana.NewTransactionBuilder().AddInstruction(caIx).AddInstruction(mintIx.Build()).SetFeePayer(pk.PublicKey()).SetRecentBlockHash(block.Value.Blockhash).Build()
+
+	mintTx, err := solana.NewTransactionBuilder().AddInstruction(caIx).AddInstruction(mintIx.Build()).
+		SetFeePayer(pk.PublicKey()).SetRecentBlockHash(block.Value.Blockhash).Build()
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
@@ -428,19 +515,23 @@ func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority so
 		if key.Equals(pk.PublicKey()) {
 			return &pk
 		}
+
 		if key.Equals(tokenPk.PublicKey()) {
 			return &tokenPk
 		}
+
 		return nil
 	})
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
-	sigMint, err := s.cli.SendTransaction(context.TODO(), mintTx)
+	sigMint, err := s.cli.SendTransaction(ctx, mintTx)
 	if err != nil {
 		fmt.Println(err)
+
 		return nil, err
 	}
 
@@ -450,6 +541,7 @@ func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority so
 	}
 
 	ret := tokenPk.PublicKey()
+
 	return &ret, nil
 }
 
@@ -463,7 +555,9 @@ func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority so
 //   - mint: The public key of the token mint
 //
 // Returns the public key of the receiver's associated token account and an error if any step fails.
-func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.PublicKey, mint solana.PublicKey, amount uint64) (ata solana.PublicKey, err error) {
+func (s *SolanaClient) MintToAccount(
+	ctx context.Context, pk solana.PrivateKey, receiver solana.PublicKey,
+	mint solana.PublicKey, amount uint64) (ata solana.PublicKey, err error) {
 	ata, _, err = solana.FindAssociatedTokenAddress(receiver, mint)
 	if err != nil {
 		return
@@ -471,7 +565,7 @@ func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.Publi
 
 	var instructions []solana.Instruction
 
-	ataInfo, err := s.cli.GetAccountInfo(context.Background(), ata)
+	ataInfo, err := s.cli.GetAccountInfo(ctx, ata)
 	if err != nil || ataInfo.Value == nil {
 		ataIx := associatedtokenaccount.NewCreateInstruction(
 			pk.PublicKey(),
@@ -484,7 +578,7 @@ func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.Publi
 	mintToIx := token.NewMintToInstruction(amount, mint, ata, pk.PublicKey(), []solana.PublicKey{}).Build()
 	instructions = append(instructions, mintToIx)
 
-	blockhash, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
+	blockhash, err := s.cli.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		return
 	}
@@ -503,23 +597,24 @@ func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.Publi
 		if key.Equals(pk.PublicKey()) {
 			return &pk
 		}
+
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	sig, err := s.cli.SendTransaction(context.TODO(), tx)
+	sig, err := s.cli.SendTransaction(ctx, tx)
 	if err != nil {
 		return
 	}
 
 	err = s.waitForSignature(sig, rpc.CommitmentFinalized)
+
 	return
 }
 
 func (s *SolanaClient) waitForSignature(sig solana.Signature, commitment rpc.CommitmentType) error {
-
 	sub, err := s.wsCli.SignatureSubscribe(sig, commitment)
 	if err != nil {
 		return err

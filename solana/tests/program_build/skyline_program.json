@@ -139,6 +139,45 @@
             "The associated token program for creating token accounts"
           ],
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "Fee configuration PDA — read to get fee amounts & treasury"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "docs": [
+            "Treasury — receives operational fee immediately"
+          ],
+          "writable": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "Relayer — receives bridge_fee immediately"
+          ],
+          "writable": true
         }
       ],
       "args": [
@@ -153,6 +192,10 @@
         {
           "name": "destination_chain",
           "type": "u8"
+        },
+        {
+          "name": "fees",
+          "type": "u64"
         }
       ]
     },
@@ -491,22 +534,23 @@
     {
       "name": "initialize",
       "docs": [
-        "Initialize the validator set and vault for the bridge system.",
-        "",
-        "This instruction sets up the initial validator set that will control all bridge operations",
-        "and creates the vault account that will hold bridged tokens. The validators must be unique",
-        "and meet the minimum/maximum requirements. The consensus threshold is automatically calculated",
-        "as 2/3 of the validator count (rounded up).",
+        "Initializes the full bridge system:",
+        "1. ValidatorSet — validators, threshold, bump",
+        "2. Vault        — bump",
+        "3. FeeConfig    — operational fee, relayer fee estimate, treasury, authority",
         "",
         "# Arguments",
-        "* `ctx` - The context containing accounts for initialization",
-        "* `validators` - Vector of validator public keys (4-128 validators required)",
-        "* `last_id` - Optional initial batch ID (defaults to 0 if not provided)",
+        "* `ctx`                  - The instruction context",
+        "* `validators`           - Vector of validator public keys",
+        "* `last_id`              - Last known batch ID (for replay protection)",
+        "* `min_operational_fee`  - Minimum bridge tip sent to treasury (lamports)",
+        "* `bridge_fee`           - Estimated destination chain gas cost (lamports)",
+        "* `min_bridging_amount`  - Minimum amount of tokens that can be bridged (in smallest unit, e.g. lamports for SOL)",
         "",
         "# Errors",
-        "* `MaxValidatorsExceeded` - If more than 10 validators are provided",
-        "* `MinValidatorsNotMet` - If fewer than 4 validators are provided",
-        "* `ValidatorsNotUnique` - If duplicate validators are provided"
+        "* `ValidatorsNotUnique`    - Duplicate validators provided",
+        "* `MaxValidatorsExceeded`  - Too many validators",
+        "* `MinValidatorsNotMet`    - Too few validators"
       ],
       "discriminator": [
         175,
@@ -578,6 +622,44 @@
           }
         },
         {
+          "name": "fee_config",
+          "docs": [
+            "The fee config PDA — created here, one per program"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "docs": [
+            "The treasury account that will receive operational fees"
+          ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "Relayer account — receives bridge fees directly"
+          ]
+        },
+        {
           "name": "system_program",
           "docs": [
             "The system program for account creation"
@@ -597,6 +679,504 @@
           "type": {
             "option": "u64"
           }
+        },
+        {
+          "name": "min_operational_fee",
+          "type": "u64"
+        },
+        {
+          "name": "bridge_fee",
+          "type": "u64"
+        },
+        {
+          "name": "min_bridging_amount",
+          "type": "u64"
+        },
+        {
+          "name": "currency_token_id",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "register_lock_unlock_token",
+      "discriminator": [
+        102,
+        136,
+        172,
+        174,
+        201,
+        166,
+        219,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "docs": [
+            "The admin who owns the bridge.",
+            "Must match fee_config.authority — enforced by constraint below.",
+            "Pays rent for TokenRegistry and TokenIdGuard PDAs."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "Read-only. Used solely to validate that authority == fee_config.authority.",
+            "PDA: [FEE_CONFIG_SEED]"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pre-existing SPL mint being registered (e.g. USDC, WSOL).",
+            "NOT created here — must already exist on-chain.",
+            "Anchor validates this is a real, initialized SPL mint account."
+          ]
+        },
+        {
+          "name": "token_registry",
+          "docs": [
+            "One PDA per mint. Anchor init fails if it already exists.",
+            "That failure surfaces as MintAlreadyRegistered (via init constraint).",
+            "PDA: [TOKEN_REGISTRY_SEED, mint.key()]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_id_guard",
+          "docs": [
+            "One PDA per token_id. Anchor init fails if it already exists.",
+            "That failure prevents two mints sharing the same token_id,",
+            "which would corrupt destination-chain routing.",
+            "PDA: [TOKEN_ID_GUARD_SEED, token_id.to_le_bytes()]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  105,
+                  100,
+                  95,
+                  103,
+                  117,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "token_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "The system program for account creation"
+          ],
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_id",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "register_mint_burn_token",
+      "docs": [
+        "Register a new SPL mint as a MintBurn bridgeable token.",
+        "",
+        "Creates the mint, assigns vault as mint_authority, attaches Metaplex",
+        "metadata, and writes TokenRegistry + TokenIdGuard PDAs.",
+        "",
+        "Only callable by the bridge authority.",
+        "",
+        "# Arguments",
+        "* `ctx`      - Instruction context",
+        "* `token_id` - Unique gateway-compatible uint16 identifier",
+        "* `decimals` - Decimal precision of the new mint (e.g. 6 or 9)",
+        "* `name`     - Token name for Metaplex metadata",
+        "* `symbol`   - Token symbol for Metaplex metadata",
+        "* `uri`      - Metadata URI (IPFS / Arweave JSON)",
+        "",
+        "# Errors",
+        "* `CustomError::Unauthorized`    - Signer is not the bridge authority",
+        "* `CustomError::CurrencyTokenId` - token_id is reserved for native currency"
+      ],
+      "discriminator": [
+        20,
+        106,
+        92,
+        113,
+        59,
+        41,
+        253,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "docs": [
+            "Bridge authority — must match fee_config.authority.",
+            "Pays rent for: new Mint, Metadata, TokenRegistry, TokenIdGuard."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "fee_config"
+          ]
+        },
+        {
+          "name": "fee_config",
+          "docs": [
+            "Read-only. Validates authority and provides currency_token_id guard value.",
+            "PDA: [FEE_CONFIG_SEED]"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault PDA — will be set as mint_authority + freeze_authority for the new mint.",
+            "This is what gives the bridge exclusive minting rights.",
+            "PDA: [VAULT_SEED]",
+            "",
+            "it is only used as an authority pubkey in CPI calls."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The brand-new SPL mint created by this instruction.",
+            "Client generates the keypair off-chain and passes it as a signer.",
+            "mint_authority and freeze_authority → vault PDA.",
+            "decimals → provided by caller (typically 6 or 9)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "metadata",
+          "docs": [
+            "Metaplex metadata account for the new mint.",
+            "Derived by Metaplex program — seeds are managed by the metadata CPI.",
+            "",
+            "inside the Metaplex create_metadata_accounts_v3 CPI call."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_registry",
+          "docs": [
+            "One PDA per mint — enforces mint uniqueness across the registry.",
+            "Anchor init fails with AlreadyInUse if this mint was already registered.",
+            "PDA: [TOKEN_REGISTRY_SEED, mint.key()]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_id_guard",
+          "docs": [
+            "One PDA per token_id — enforces token_id uniqueness across the registry.",
+            "Anchor init fails with AlreadyInUse if this token_id is already taken.",
+            "PDA: [TOKEN_ID_GUARD_SEED, token_id.to_le_bytes()]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  105,
+                  100,
+                  95,
+                  103,
+                  117,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "token_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "metadata_program",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_id",
+          "type": "u16"
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "update_fee_config",
+      "docs": [
+        "Update the fee configuration for the bridge.",
+        "",
+        "This instruction allows the authority to update the fee configuration parameters for the bridge,",
+        "including the minimum operational fee, bridge fee, minimum bridging amount, treasury address, and",
+        "relayer address. The authority can choose to update any subset of these parameters, and the instruction",
+        "will validate the new values and emit an event with the updated configuration.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing accounts for updating the fee configuration",
+        "* `min_operational_fee` - Optional new minimum operational fee (lamports)",
+        "* `bridge_fee` - Optional new bridge fee (lamports)",
+        "* `min_bridging_amount` - Optional new minimum bridging amount (in smallest unit, e.g. lamports for SOL)",
+        "* `update_treasury` - Optional flag indicating whether to update the treasury address",
+        "* `update_relayer` - Optional flag indicating whether to update the relayer address",
+        "",
+        "# Errors",
+        "* `InvalidRelayer` - If the new relayer address is invalid",
+        "* `InvalidTreasury` - If the new treasury address is invalid"
+      ],
+      "discriminator": [
+        104,
+        184,
+        103,
+        242,
+        88,
+        151,
+        107,
+        20
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "fee_config"
+          ]
+        },
+        {
+          "name": "fee_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_treasury",
+          "docs": [
+            "New treasury account — only needed when updating treasury."
+          ]
+        },
+        {
+          "name": "new_relayer",
+          "docs": [
+            "New relayer account — only needed when updating relayer."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "min_operational_fee",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "bridge_fee",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "min_bridging_amount",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "update_treasury",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "update_relayer",
+          "type": {
+            "option": "bool"
+          }
         }
       ]
     }
@@ -613,6 +1193,45 @@
         105,
         182,
         43
+      ]
+    },
+    {
+      "name": "FeeConfig",
+      "discriminator": [
+        143,
+        52,
+        146,
+        187,
+        219,
+        123,
+        76,
+        155
+      ]
+    },
+    {
+      "name": "TokenIdGuard",
+      "discriminator": [
+        176,
+        49,
+        94,
+        91,
+        195,
+        131,
+        192,
+        192
+      ]
+    },
+    {
+      "name": "TokenRegistry",
+      "discriminator": [
+        227,
+        255,
+        152,
+        118,
+        84,
+        200,
+        145,
+        120
       ]
     },
     {
@@ -667,6 +1286,45 @@
         59,
         162,
         143
+      ]
+    },
+    {
+      "name": "FeeConfigUpdatedEvent",
+      "discriminator": [
+        139,
+        188,
+        235,
+        116,
+        222,
+        55,
+        95,
+        201
+      ]
+    },
+    {
+      "name": "LockUnlockTokenRegisteredEvent",
+      "discriminator": [
+        190,
+        93,
+        87,
+        189,
+        153,
+        86,
+        187,
+        120
+      ]
+    },
+    {
+      "name": "MintBurnTokenRegisteredEvent",
+      "discriminator": [
+        45,
+        109,
+        50,
+        56,
+        70,
+        204,
+        25,
+        113
       ]
     },
     {
@@ -811,6 +1469,66 @@
       "code": 6022,
       "name": "TooManyValidatorsRemoved",
       "msg": "Cannot remove more validators than will exist after additions"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientFee",
+      "msg": "Insufficient bridge fee provided"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidTreasury",
+      "msg": "Treasury account does not match fee config"
+    },
+    {
+      "code": 6025,
+      "name": "Unauthorized",
+      "msg": "Unauthorized action attempted"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidRelayer",
+      "msg": "Relayer account does not match fee config"
+    },
+    {
+      "code": 6027,
+      "name": "FeeConfigOverflow",
+      "msg": "Fee values overflow when combined — reduce min_operational_fee or bridge_fee"
+    },
+    {
+      "code": 6028,
+      "name": "BridgingAmountTooLow",
+      "msg": "Bridging amount is below the minimum threshold"
+    },
+    {
+      "code": 6029,
+      "name": "CurrencyTokenId",
+      "msg": "Token ID is reserved for the currency token"
+    },
+    {
+      "code": 6030,
+      "name": "TokenIdAlreadyRegistered",
+      "msg": "Token ID is already registered to another mint"
+    },
+    {
+      "code": 6031,
+      "name": "MintAlreadyRegistered",
+      "msg": "This mint is already registered in the token registry"
+    },
+    {
+      "code": 6032,
+      "name": "TokenNotRegistered",
+      "msg": "Mint is not registered in the token registry"
+    },
+    {
+      "code": 6033,
+      "name": "NotLockUnlock",
+      "msg": "Token is not a Lock/Unlock token"
+    },
+    {
+      "code": 6034,
+      "name": "NotMintBurn",
+      "msg": "Token is not a Mint/Burn token"
     }
   ],
   "types": [
@@ -866,6 +1584,20 @@
             "name": "batch_request_id",
             "docs": [
               "The batch request ID associated with this bridge request"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bridge_fee",
+            "docs": [
+              "The fee amount for the relayer to process this bridge request"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "operational_fee",
+            "docs": [
+              "The operational fee for the bridge to maintain its operations"
             ],
             "type": "u64"
           }
@@ -945,6 +1677,266 @@
               "The batch ID of this transaction (must be greater than last_batch_id)"
             ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeConfig",
+      "docs": [
+        "Stores protocol-level fee configuration.",
+        "Created once by the bridge authority via init_fee_config.",
+        "Can be updated via update_fee_config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_operational_fee",
+            "docs": [
+              "Minimum fee that goes to the bridge treasury (operational tip)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bridge_fee",
+            "docs": [
+              "Estimated fee to refund the relayer for destination chain gas"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_bridging_amount",
+            "docs": [
+              "Minimum token amount allowed per bridge request"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "currency_token_id",
+            "docs": [
+              "The token ID reserved for native SOL bridging"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "Treasury account where operational fees are sent"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "relayer",
+            "docs": [
+              "Relayer account — receives bridge_fee directly per bridge request"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "docs": [
+              "Who is allowed to update this config (bridge authority)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeConfigUpdatedEvent",
+      "docs": [
+        "Emitted when fee config values are updated by the authority."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_operational_fee",
+            "docs": [
+              "Minimum operational fee (SOL lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bridge_fee",
+            "docs": [
+              "Bridge fee paid to relayer (SOL lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_bridging_amount",
+            "docs": [
+              "Minimum bridging amount"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "Treasury address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "relayer",
+            "docs": [
+              "Relayer address"
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockUnlockTokenRegisteredEvent",
+      "docs": [
+        "Emitted when a LockUnlock token is registered.",
+        "Gateway parity: TokenRegistered event in Gateway.sol",
+        "",
+        "LockUnlock path:",
+        "mint pre-exists (e.g. USDC, WSOL)",
+        "vault ATA receives/releases tokens",
+        "no new SPL mint is created",
+        "is_lock_unlock always true"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_id",
+            "docs": [
+              "Gateway-compatible uint16 identifier.",
+              "Destination chain uses this to route events."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The pre-existing SPL mint being registered."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintBurnTokenRegisteredEvent",
+      "docs": [
+        "Emitted when a MintBurn token is registered.",
+        "Gateway parity: TokenRegistered event in Gateway.sol",
+        "",
+        "MintBurn path:",
+        "new SPL mint CREATED during this instruction",
+        "vault PDA is set as mint_authority",
+        "tokens burned on bridge_request",
+        "tokens minted on bridge_transaction",
+        "is_lock_unlock always false"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_id",
+            "docs": [
+              "Gateway-compatible uint16 identifier."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The NEWLY CREATED SPL mint.",
+              "Client generated the keypair — this is its public key."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "docs": [
+              "On-chain token name stored in Metaplex metadata."
+            ],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "docs": [
+              "On-chain token symbol stored in Metaplex metadata."
+            ],
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenIdGuard",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "docs": [
+              "The mint assigned to this token_id.",
+              "Stored for auditability — lets you trace token_id → mint on-chain."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Stored to avoid recomputing."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenRegistry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_id",
+            "docs": [
+              "Unique token ID assigned by the bridge authority at registration."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The SPL mint this registry entry corresponds to.",
+              "LockUnlock: pre-existing mint passed by admin.",
+              "MintBurn:   newly created mint from register_mint_burn_token."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "is_lock_unlock",
+            "docs": [
+              "Determines token movement direction at bridge_request / bridge_transaction.",
+              "true  → Lock/Unlock: transfer to/from vault ATA",
+              "false → Mint/Burn:   burn from user ATA / mint to user ATA",
+              "Declared once by authority at registration — immutable thereafter."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Stored to avoid recomputing in CPI calls."
+            ],
+            "type": "u8"
           }
         ]
       }

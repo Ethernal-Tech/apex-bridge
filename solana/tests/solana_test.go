@@ -60,9 +60,15 @@ import (
 // provides deterministic testing of the bridge functionality.
 func Test_SolanaTransactions(t *testing.T) {
 	const (
-		amount        = 10 * solana.LAMPORTS_PER_SOL // Initial airdrop amount for fee payer
-		numValidators = 4                            // Number of validators in the validator set
+		amount            = 10 * solana.LAMPORTS_PER_SOL // Initial airdrop amount for fee payer
+		numValidators     = 4                            // Number of validators in the validator set
+		minBridgingFee    = 1 * solana.LAMPORTS_PER_SOL
+		minOperationFee   = 1 * solana.LAMPORTS_PER_SOL
+		minAmountToBridge = uint64(1)
+		tokenID           = uint16(17)
 	)
+
+	ctx := context.Background()
 
 	// Start a local Solana test validator node
 	validator := testvalidator.NewTestValidator()
@@ -73,7 +79,7 @@ func Test_SolanaTransactions(t *testing.T) {
 	require.NoError(t, validator.WaitForNode(rpc.New(rpc.LocalNet_RPC)))
 
 	// Create a Solana client connected to the local network
-	cli, err := client.NewSolanaClient(client.WithLocalnet())
+	cli, err := client.NewSolanaClient(client.WithLocalnet(ctx))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -86,7 +92,7 @@ func Test_SolanaTransactions(t *testing.T) {
 	storage := storagehelper.NewStorage()
 
 	// Start event tracker in a goroutine to monitor program events (must be in a goroutine to work)
-	ctx, cancel := context.WithCancel(context.Background())
+	trackerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go func() {
@@ -103,7 +109,7 @@ func Test_SolanaTransactions(t *testing.T) {
 		require.NoError(t, track.Start())
 		defer track.Terminate()
 
-		<-ctx.Done()
+		<-trackerCtx.Done()
 	}()
 
 	// Load program and fee payer keypairs from files
@@ -125,8 +131,17 @@ func Test_SolanaTransactions(t *testing.T) {
 	feePayer, err := solana.PrivateKeyFromSolanaKeygenFile(feePayerPath)
 	require.NoError(t, err)
 
+	feeConfigPda, _, err := solana.FindProgramAddress([][]byte{skyline_program.FEE_CONFIG_SEED}, programKeypair.PublicKey())
+	require.NoError(t, err)
+
+	treasuryAccountPK, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
+	relayerAccountPK, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
 	// Airdrop SOL to fee payer for transaction fees
-	require.NoError(t, cli.Airdrop(feePayer.PublicKey(), amount))
+	require.NoError(t, cli.Airdrop(ctx, feePayer.PublicKey(), amount))
 
 	// Deploy the skyline_program to the local network
 	require.NoError(t, cli.Deploy(feePayerPath, programPath, buildPath))
@@ -149,14 +164,16 @@ func Test_SolanaTransactions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Initialize the program with validators (threshold defaults to 3 out of 4)
-	initializeIx, err := skyline_program.NewInitializeInstruction(validators, nil, feePayer.PublicKey(), vsPda, vaultPda, solana.SystemProgramID)
+	initializeIx, err := skyline_program.NewInitializeInstruction(validators, nil, minOperationFee, minBridgingFee,
+		minAmountToBridge, tokenID, feePayer.PublicKey(), vsPda, vaultPda, feeConfigPda,
+		treasuryAccountPK.PublicKey(), relayerAccountPK.PublicKey(), solana.SystemProgramID)
 	require.NoError(t, err)
 
-	_, err = cli.ExecuteInstruction(&initializeIx, map[solana.PublicKey]*solana.PrivateKey{}, feePayer)
+	_, err = cli.ExecuteInstruction(ctx, &initializeIx, map[solana.PublicKey]*solana.PrivateKey{}, feePayer)
 	require.NoError(t, err)
 
 	// Verify validator set initialization
-	vsInfo, err := cli.GetRpcClient().GetAccountInfo(context.Background(), vsPda)
+	vsInfo, err := cli.GetRPCClient().GetAccountInfo(ctx, vsPda)
 	require.NoError(t, err)
 
 	// Unmarshal the validator set account data
@@ -169,7 +186,7 @@ func Test_SolanaTransactions(t *testing.T) {
 	require.Equal(t, vs.BridgeRequestCount, uint64(0))
 
 	// Create a token mint and associated token accounts
-	mint, err := cli.CreateTokenAccount(feePayer, vaultPda)
+	mint, err := cli.CreateTokenAccount(ctx, feePayer, vaultPda)
 	require.NoError(t, err)
 
 	// Find the associated token address for the fee payer
@@ -221,11 +238,11 @@ func Test_SolanaTransactions(t *testing.T) {
 		}
 
 		// Execute the bridge transaction with validator signatures
-		_, err = cli.ExecuteInstructionWithAccounts(bridgeTxIx, accounts, signers, feePayer)
+		_, err = cli.ExecuteInstructionWithAccounts(ctx, bridgeTxIx, accounts, signers, feePayer)
 		require.NoError(t, err)
 
 		// Verify the fee payer's token balance was updated correctly
-		res, err := cli.GetRpcClient().GetTokenAccountBalance(context.Background(), feePayerAta, rpc.CommitmentFinalized)
+		res, err := cli.GetRPCClient().GetTokenAccountBalance(ctx, feePayerAta, rpc.CommitmentFinalized)
 		require.NoError(t, err)
 
 		balance, err := strconv.ParseUint(res.Value.Amount, 10, 64)
@@ -244,12 +261,22 @@ func Test_SolanaTransactions(t *testing.T) {
 	})
 
 	t.Run("Bridge Request (SOL -> SKYLINE)", func(t *testing.T) {
+		sendAmount := solana.LAMPORTS_PER_SOL
+
+		// Verify the fee payer's token balance was updated correctly
+		balanceBeforeBridging, err := cli.GetRPCClient().GetTokenAccountBalance(ctx, feePayerAta, rpc.CommitmentFinalized)
+		require.NoError(t, err)
+
+		initialBalance, err := strconv.ParseUint(balanceBeforeBridging.Value.Amount, 10, 64)
+		require.NoError(t, err)
+
 		// Create a bridge request to initiate a transfer from SOL to SKYLINE
 		// This creates a request that will be processed by validators
 		bridgeRequestIx, err := skyline_program.NewBridgeRequestInstruction(
-			solana.LAMPORTS_PER_SOL,
+			sendAmount,
 			[]byte("0x1234567890123456789012345678901234567890"), // Destination address (EVM format)
 			1, // Chain ID
+			minBridgingFee+minOperationFee,
 			feePayer.PublicKey(),
 			vsPda,
 			feePayerAta,
@@ -259,11 +286,14 @@ func Test_SolanaTransactions(t *testing.T) {
 			solana.TokenProgramID,
 			solana.SystemProgramID,
 			solana.SPLAssociatedTokenAccountProgramID,
+			feeConfigPda,
+			treasuryAccountPK.PublicKey(),
+			relayerAccountPK.PublicKey(),
 		)
 		require.NoError(t, err)
 
 		// Execute the bridge request (only requires fee payer signature)
-		_, err = cli.ExecuteInstruction(&bridgeRequestIx, map[solana.PublicKey]*solana.PrivateKey{}, feePayer)
+		_, err = cli.ExecuteInstruction(ctx, &bridgeRequestIx, map[solana.PublicKey]*solana.PrivateKey{}, feePayer)
 		require.NoError(t, err)
 		// Wait for and verify the BridgeRequestEvent was emitted
 		require.NoError(t, helper.WaitFor(t, 60*time.Second, 1*time.Second, func() bool {
@@ -274,6 +304,25 @@ func Test_SolanaTransactions(t *testing.T) {
 			}
 			return false
 		}))
-	})
 
+		// Verify the fee payer's token balance was updated correctly
+		balanceAfterBridging, err := cli.GetRPCClient().GetTokenAccountBalance(ctx, feePayerAta, rpc.CommitmentFinalized)
+		require.NoError(t, err)
+
+		balance, err := strconv.ParseUint(balanceAfterBridging.Value.Amount, 10, 64)
+		require.NoError(t, err)
+		require.Equal(t, balance, initialBalance-solana.LAMPORTS_PER_SOL)
+
+		treasuryBalance, err := cli.GetRPCClient().
+			GetBalance(ctx, treasuryAccountPK.PublicKey(), rpc.CommitmentFinalized)
+
+		require.NoError(t, err)
+		require.Equal(t, minOperationFee, treasuryBalance.Value)
+
+		relayerBalance, err := cli.GetRPCClient().
+			GetBalance(ctx, relayerAccountPK.PublicKey(), rpc.CommitmentFinalized)
+
+		require.NoError(t, err)
+		require.Equal(t, minBridgingFee, relayerBalance.Value)
+	})
 }

@@ -35,6 +35,12 @@ type BridgeRequestEvent struct {
 
 	// The batch request ID associated with this bridge request
 	BatchRequestId uint64 `json:"batchRequestId"`
+
+	// The fee amount for the relayer to process this bridge request
+	BridgeFee uint64 `json:"bridgeFee"`
+
+	// The operational fee for the bridge to maintain its operations
+	OperationalFee uint64 `json:"operationalFee"`
 }
 
 func (obj BridgeRequestEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
@@ -67,6 +73,16 @@ func (obj BridgeRequestEvent) MarshalWithEncoder(encoder *binary.Encoder) (err e
 	err = encoder.Encode(obj.BatchRequestId)
 	if err != nil {
 		return errors.NewField("BatchRequestId", err)
+	}
+	// Serialize `BridgeFee`:
+	err = encoder.Encode(obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Serialize `OperationalFee`:
+	err = encoder.Encode(obj.OperationalFee)
+	if err != nil {
+		return errors.NewField("OperationalFee", err)
 	}
 	return nil
 }
@@ -111,6 +127,16 @@ func (obj *BridgeRequestEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (er
 	err = decoder.Decode(&obj.BatchRequestId)
 	if err != nil {
 		return errors.NewField("BatchRequestId", err)
+	}
+	// Deserialize `BridgeFee`:
+	err = decoder.Decode(&obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Deserialize `OperationalFee`:
+	err = decoder.Decode(&obj.OperationalFee)
+	if err != nil {
+		return errors.NewField("OperationalFee", err)
 	}
 	return nil
 }
@@ -269,6 +295,582 @@ func (obj *BridgingTransaction) Unmarshal(buf []byte) error {
 
 func UnmarshalBridgingTransaction(buf []byte) (*BridgingTransaction, error) {
 	obj := new(BridgingTransaction)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+// Stores protocol-level fee configuration.
+// Created once by the bridge authority via init_fee_config.
+// Can be updated via update_fee_config.
+type FeeConfig struct {
+	// Minimum fee that goes to the bridge treasury (operational tip)
+	MinOperationalFee uint64 `json:"minOperationalFee"`
+
+	// Estimated fee to refund the relayer for destination chain gas
+	BridgeFee uint64 `json:"bridgeFee"`
+
+	// Minimum token amount allowed per bridge request
+	MinBridgingAmount uint64 `json:"minBridgingAmount"`
+
+	// The token ID reserved for native SOL bridging
+	CurrencyTokenId uint16 `json:"currencyTokenId"`
+
+	// Treasury account where operational fees are sent
+	Treasury solanago.PublicKey `json:"treasury"`
+
+	// Relayer account — receives bridge_fee directly per bridge request
+	Relayer solanago.PublicKey `json:"relayer"`
+
+	// Who is allowed to update this config (bridge authority)
+	Authority solanago.PublicKey `json:"authority"`
+
+	// PDA bump
+	Bump uint8 `json:"bump"`
+}
+
+func (obj FeeConfig) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `MinOperationalFee`:
+	err = encoder.Encode(obj.MinOperationalFee)
+	if err != nil {
+		return errors.NewField("MinOperationalFee", err)
+	}
+	// Serialize `BridgeFee`:
+	err = encoder.Encode(obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Serialize `MinBridgingAmount`:
+	err = encoder.Encode(obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
+	}
+	// Serialize `CurrencyTokenId`:
+	err = encoder.Encode(obj.CurrencyTokenId)
+	if err != nil {
+		return errors.NewField("CurrencyTokenId", err)
+	}
+	// Serialize `Treasury`:
+	err = encoder.Encode(obj.Treasury)
+	if err != nil {
+		return errors.NewField("Treasury", err)
+	}
+	// Serialize `Relayer`:
+	err = encoder.Encode(obj.Relayer)
+	if err != nil {
+		return errors.NewField("Relayer", err)
+	}
+	// Serialize `Authority`:
+	err = encoder.Encode(obj.Authority)
+	if err != nil {
+		return errors.NewField("Authority", err)
+	}
+	// Serialize `Bump`:
+	err = encoder.Encode(obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj FeeConfig) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding FeeConfig: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *FeeConfig) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `MinOperationalFee`:
+	err = decoder.Decode(&obj.MinOperationalFee)
+	if err != nil {
+		return errors.NewField("MinOperationalFee", err)
+	}
+	// Deserialize `BridgeFee`:
+	err = decoder.Decode(&obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Deserialize `MinBridgingAmount`:
+	err = decoder.Decode(&obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
+	}
+	// Deserialize `CurrencyTokenId`:
+	err = decoder.Decode(&obj.CurrencyTokenId)
+	if err != nil {
+		return errors.NewField("CurrencyTokenId", err)
+	}
+	// Deserialize `Treasury`:
+	err = decoder.Decode(&obj.Treasury)
+	if err != nil {
+		return errors.NewField("Treasury", err)
+	}
+	// Deserialize `Relayer`:
+	err = decoder.Decode(&obj.Relayer)
+	if err != nil {
+		return errors.NewField("Relayer", err)
+	}
+	// Deserialize `Authority`:
+	err = decoder.Decode(&obj.Authority)
+	if err != nil {
+		return errors.NewField("Authority", err)
+	}
+	// Deserialize `Bump`:
+	err = decoder.Decode(&obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj *FeeConfig) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling FeeConfig: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalFeeConfig(buf []byte) (*FeeConfig, error) {
+	obj := new(FeeConfig)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+// Emitted when fee config values are updated by the authority.
+type FeeConfigUpdatedEvent struct {
+	// Minimum operational fee (SOL lamports)
+	MinOperationalFee uint64 `json:"minOperationalFee"`
+
+	// Bridge fee paid to relayer (SOL lamports)
+	BridgeFee uint64 `json:"bridgeFee"`
+
+	// Minimum bridging amount
+	MinBridgingAmount uint64 `json:"minBridgingAmount"`
+
+	// Treasury address
+	Treasury solanago.PublicKey `json:"treasury"`
+
+	// Relayer address
+	Relayer solanago.PublicKey `json:"relayer"`
+}
+
+func (obj FeeConfigUpdatedEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `MinOperationalFee`:
+	err = encoder.Encode(obj.MinOperationalFee)
+	if err != nil {
+		return errors.NewField("MinOperationalFee", err)
+	}
+	// Serialize `BridgeFee`:
+	err = encoder.Encode(obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Serialize `MinBridgingAmount`:
+	err = encoder.Encode(obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
+	}
+	// Serialize `Treasury`:
+	err = encoder.Encode(obj.Treasury)
+	if err != nil {
+		return errors.NewField("Treasury", err)
+	}
+	// Serialize `Relayer`:
+	err = encoder.Encode(obj.Relayer)
+	if err != nil {
+		return errors.NewField("Relayer", err)
+	}
+	return nil
+}
+
+func (obj FeeConfigUpdatedEvent) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding FeeConfigUpdatedEvent: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *FeeConfigUpdatedEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `MinOperationalFee`:
+	err = decoder.Decode(&obj.MinOperationalFee)
+	if err != nil {
+		return errors.NewField("MinOperationalFee", err)
+	}
+	// Deserialize `BridgeFee`:
+	err = decoder.Decode(&obj.BridgeFee)
+	if err != nil {
+		return errors.NewField("BridgeFee", err)
+	}
+	// Deserialize `MinBridgingAmount`:
+	err = decoder.Decode(&obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
+	}
+	// Deserialize `Treasury`:
+	err = decoder.Decode(&obj.Treasury)
+	if err != nil {
+		return errors.NewField("Treasury", err)
+	}
+	// Deserialize `Relayer`:
+	err = decoder.Decode(&obj.Relayer)
+	if err != nil {
+		return errors.NewField("Relayer", err)
+	}
+	return nil
+}
+
+func (obj *FeeConfigUpdatedEvent) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling FeeConfigUpdatedEvent: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalFeeConfigUpdatedEvent(buf []byte) (*FeeConfigUpdatedEvent, error) {
+	obj := new(FeeConfigUpdatedEvent)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+// Emitted when a LockUnlock token is registered.
+// Gateway parity: TokenRegistered event in Gateway.sol
+//
+// LockUnlock path:
+// mint pre-exists (e.g. USDC, WSOL)
+// vault ATA receives/releases tokens
+// no new SPL mint is created
+// is_lock_unlock always true
+type LockUnlockTokenRegisteredEvent struct {
+	// Gateway-compatible uint16 identifier.
+	// Destination chain uses this to route events.
+	TokenId uint16 `json:"tokenId"`
+
+	// The pre-existing SPL mint being registered.
+	Mint solanago.PublicKey `json:"mint"`
+}
+
+func (obj LockUnlockTokenRegisteredEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `TokenId`:
+	err = encoder.Encode(obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Serialize `Mint`:
+	err = encoder.Encode(obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	return nil
+}
+
+func (obj LockUnlockTokenRegisteredEvent) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding LockUnlockTokenRegisteredEvent: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *LockUnlockTokenRegisteredEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `TokenId`:
+	err = decoder.Decode(&obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Deserialize `Mint`:
+	err = decoder.Decode(&obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	return nil
+}
+
+func (obj *LockUnlockTokenRegisteredEvent) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling LockUnlockTokenRegisteredEvent: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalLockUnlockTokenRegisteredEvent(buf []byte) (*LockUnlockTokenRegisteredEvent, error) {
+	obj := new(LockUnlockTokenRegisteredEvent)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+// Emitted when a MintBurn token is registered.
+// Gateway parity: TokenRegistered event in Gateway.sol
+//
+// MintBurn path:
+// new SPL mint CREATED during this instruction
+// vault PDA is set as mint_authority
+// tokens burned on bridge_request
+// tokens minted on bridge_transaction
+// is_lock_unlock always false
+type MintBurnTokenRegisteredEvent struct {
+	// Gateway-compatible uint16 identifier.
+	TokenId uint16 `json:"tokenId"`
+
+	// The NEWLY CREATED SPL mint.
+	// Client generated the keypair — this is its public key.
+	Mint solanago.PublicKey `json:"mint"`
+
+	// On-chain token name stored in Metaplex metadata.
+	Name string `json:"name"`
+
+	// On-chain token symbol stored in Metaplex metadata.
+	Symbol string `json:"symbol"`
+}
+
+func (obj MintBurnTokenRegisteredEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `TokenId`:
+	err = encoder.Encode(obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Serialize `Mint`:
+	err = encoder.Encode(obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Serialize `Name`:
+	err = encoder.Encode(obj.Name)
+	if err != nil {
+		return errors.NewField("Name", err)
+	}
+	// Serialize `Symbol`:
+	err = encoder.Encode(obj.Symbol)
+	if err != nil {
+		return errors.NewField("Symbol", err)
+	}
+	return nil
+}
+
+func (obj MintBurnTokenRegisteredEvent) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding MintBurnTokenRegisteredEvent: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *MintBurnTokenRegisteredEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `TokenId`:
+	err = decoder.Decode(&obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Deserialize `Mint`:
+	err = decoder.Decode(&obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Deserialize `Name`:
+	err = decoder.Decode(&obj.Name)
+	if err != nil {
+		return errors.NewField("Name", err)
+	}
+	// Deserialize `Symbol`:
+	err = decoder.Decode(&obj.Symbol)
+	if err != nil {
+		return errors.NewField("Symbol", err)
+	}
+	return nil
+}
+
+func (obj *MintBurnTokenRegisteredEvent) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling MintBurnTokenRegisteredEvent: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalMintBurnTokenRegisteredEvent(buf []byte) (*MintBurnTokenRegisteredEvent, error) {
+	obj := new(MintBurnTokenRegisteredEvent)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+type TokenIdGuard struct {
+	// The mint assigned to this token_id.
+	// Stored for auditability — lets you trace token_id → mint on-chain.
+	Mint solanago.PublicKey `json:"mint"`
+
+	// Stored to avoid recomputing.
+	Bump uint8 `json:"bump"`
+}
+
+func (obj TokenIdGuard) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `Mint`:
+	err = encoder.Encode(obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Serialize `Bump`:
+	err = encoder.Encode(obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj TokenIdGuard) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding TokenIdGuard: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *TokenIdGuard) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `Mint`:
+	err = decoder.Decode(&obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Deserialize `Bump`:
+	err = decoder.Decode(&obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj *TokenIdGuard) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling TokenIdGuard: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalTokenIdGuard(buf []byte) (*TokenIdGuard, error) {
+	obj := new(TokenIdGuard)
+	err := obj.Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+type TokenRegistry struct {
+	// Unique token ID assigned by the bridge authority at registration.
+	TokenId uint16 `json:"tokenId"`
+
+	// The SPL mint this registry entry corresponds to.
+	// LockUnlock: pre-existing mint passed by admin.
+	// MintBurn:   newly created mint from register_mint_burn_token.
+	Mint solanago.PublicKey `json:"mint"`
+
+	// Determines token movement direction at bridge_request / bridge_transaction.
+	// true  → Lock/Unlock: transfer to/from vault ATA
+	// false → Mint/Burn:   burn from user ATA / mint to user ATA
+	// Declared once by authority at registration — immutable thereafter.
+	IsLockUnlock bool `json:"isLockUnlock"`
+
+	// Stored to avoid recomputing in CPI calls.
+	Bump uint8 `json:"bump"`
+}
+
+func (obj TokenRegistry) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `TokenId`:
+	err = encoder.Encode(obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Serialize `Mint`:
+	err = encoder.Encode(obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Serialize `IsLockUnlock`:
+	err = encoder.Encode(obj.IsLockUnlock)
+	if err != nil {
+		return errors.NewField("IsLockUnlock", err)
+	}
+	// Serialize `Bump`:
+	err = encoder.Encode(obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj TokenRegistry) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	encoder := binary.NewBorshEncoder(buf)
+	err := obj.MarshalWithEncoder(encoder)
+	if err != nil {
+		return nil, fmt.Errorf("error while encoding TokenRegistry: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (obj *TokenRegistry) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `TokenId`:
+	err = decoder.Decode(&obj.TokenId)
+	if err != nil {
+		return errors.NewField("TokenId", err)
+	}
+	// Deserialize `Mint`:
+	err = decoder.Decode(&obj.Mint)
+	if err != nil {
+		return errors.NewField("Mint", err)
+	}
+	// Deserialize `IsLockUnlock`:
+	err = decoder.Decode(&obj.IsLockUnlock)
+	if err != nil {
+		return errors.NewField("IsLockUnlock", err)
+	}
+	// Deserialize `Bump`:
+	err = decoder.Decode(&obj.Bump)
+	if err != nil {
+		return errors.NewField("Bump", err)
+	}
+	return nil
+}
+
+func (obj *TokenRegistry) Unmarshal(buf []byte) error {
+	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
+	if err != nil {
+		return fmt.Errorf("error while unmarshaling TokenRegistry: %w", err)
+	}
+	return nil
+}
+
+func UnmarshalTokenRegistry(buf []byte) (*TokenRegistry, error) {
+	obj := new(TokenRegistry)
 	err := obj.Unmarshal(buf)
 	if err != nil {
 		return nil, err

@@ -22,6 +22,27 @@ func ParseAnyEvent(eventData []byte) (any, error) {
 			return nil, fmt.Errorf("failed to unmarshal event as BridgeRequestEvent: %w", err)
 		}
 		return value, nil
+	case Event_FeeConfigUpdatedEvent:
+		value := new(FeeConfigUpdatedEvent)
+		err := value.UnmarshalWithDecoder(decoder)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal event as FeeConfigUpdatedEvent: %w", err)
+		}
+		return value, nil
+	case Event_LockUnlockTokenRegisteredEvent:
+		value := new(LockUnlockTokenRegisteredEvent)
+		err := value.UnmarshalWithDecoder(decoder)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal event as LockUnlockTokenRegisteredEvent: %w", err)
+		}
+		return value, nil
+	case Event_MintBurnTokenRegisteredEvent:
+		value := new(MintBurnTokenRegisteredEvent)
+		err := value.UnmarshalWithDecoder(decoder)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal event as MintBurnTokenRegisteredEvent: %w", err)
+		}
+		return value, nil
 	case Event_TransactionExecutedEvent:
 		value := new(TransactionExecutedEvent)
 		err := value.UnmarshalWithDecoder(decoder)
@@ -54,6 +75,57 @@ func ParseEvent_BridgeRequestEvent(eventData []byte) (*BridgeRequestEvent, error
 	err = event.UnmarshalWithDecoder(decoder)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal event of type BridgeRequestEvent: %w", err)
+	}
+	return event, nil
+}
+
+func ParseEvent_FeeConfigUpdatedEvent(eventData []byte) (*FeeConfigUpdatedEvent, error) {
+	decoder := binary.NewBorshDecoder(eventData)
+	discriminator, err := decoder.ReadDiscriminator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to peek discriminator: %w", err)
+	}
+	if discriminator != Event_FeeConfigUpdatedEvent {
+		return nil, fmt.Errorf("expected discriminator %v, got %s", Event_FeeConfigUpdatedEvent, binary.FormatDiscriminator(discriminator))
+	}
+	event := new(FeeConfigUpdatedEvent)
+	err = event.UnmarshalWithDecoder(decoder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal event of type FeeConfigUpdatedEvent: %w", err)
+	}
+	return event, nil
+}
+
+func ParseEvent_LockUnlockTokenRegisteredEvent(eventData []byte) (*LockUnlockTokenRegisteredEvent, error) {
+	decoder := binary.NewBorshDecoder(eventData)
+	discriminator, err := decoder.ReadDiscriminator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to peek discriminator: %w", err)
+	}
+	if discriminator != Event_LockUnlockTokenRegisteredEvent {
+		return nil, fmt.Errorf("expected discriminator %v, got %s", Event_LockUnlockTokenRegisteredEvent, binary.FormatDiscriminator(discriminator))
+	}
+	event := new(LockUnlockTokenRegisteredEvent)
+	err = event.UnmarshalWithDecoder(decoder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal event of type LockUnlockTokenRegisteredEvent: %w", err)
+	}
+	return event, nil
+}
+
+func ParseEvent_MintBurnTokenRegisteredEvent(eventData []byte) (*MintBurnTokenRegisteredEvent, error) {
+	decoder := binary.NewBorshDecoder(eventData)
+	discriminator, err := decoder.ReadDiscriminator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to peek discriminator: %w", err)
+	}
+	if discriminator != Event_MintBurnTokenRegisteredEvent {
+		return nil, fmt.Errorf("expected discriminator %v, got %s", Event_MintBurnTokenRegisteredEvent, binary.FormatDiscriminator(discriminator))
+	}
+	event := new(MintBurnTokenRegisteredEvent)
+	err = event.UnmarshalWithDecoder(decoder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal event of type MintBurnTokenRegisteredEvent: %w", err)
 	}
 	return event, nil
 }

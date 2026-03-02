@@ -57,3 +57,6 @@ var VALIDATOR_SET_SEED = []byte{118, 97, 108, 105, 100, 97, 116, 111, 114, 45, 1
 //
 // This seed is combined with the vault address to create a unique address for the vault account.
 var VAULT_SEED = []byte{118, 97, 117, 108, 116}
+
+// "Read-only. Used solely to validate that authority == fee_config.authority.",
+var FEE_CONFIG_SEED = []byte{102, 101, 101, 95, 99, 111, 110, 102, 105, 103}

@@ -18,6 +18,7 @@ func NewBridgeRequestInstruction(
 	amountParam uint64,
 	receiverParam []byte,
 	destinationChainParam uint8,
+	feesParam uint64,
 
 	// Accounts:
 	signerAccount solanago.PublicKey,
@@ -29,6 +30,9 @@ func NewBridgeRequestInstruction(
 	tokenProgramAccount solanago.PublicKey,
 	systemProgramAccount solanago.PublicKey,
 	associatedTokenProgramAccount solanago.PublicKey,
+	feeConfigAccount solanago.PublicKey,
+	treasuryAccount solanago.PublicKey,
+	relayerAccount solanago.PublicKey,
 ) (solanago.Instruction, error) {
 	buf__ := new(bytes.Buffer)
 	enc__ := binary.NewBorshEncoder(buf__)
@@ -53,6 +57,11 @@ func NewBridgeRequestInstruction(
 		err = enc__.Encode(destinationChainParam)
 		if err != nil {
 			return nil, errors.NewField("destinationChainParam", err)
+		}
+		// Serialize `feesParam`:
+		err = enc__.Encode(feesParam)
+		if err != nil {
+			return nil, errors.NewField("feesParam", err)
 		}
 	}
 	accounts__ := solanago.AccountMetaSlice{}
@@ -89,6 +98,15 @@ func NewBridgeRequestInstruction(
 		// Account 8 "associated_token_program": Read-only, Non-signer, Required, Address: ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL
 		// The associated token program for creating token accounts
 		accounts__.Append(solanago.NewAccountMeta(associatedTokenProgramAccount, false, false))
+		// Account 9 "fee_config": Read-only, Non-signer, Required
+		// Fee configuration PDA — read to get fee amounts & treasury
+		accounts__.Append(solanago.NewAccountMeta(feeConfigAccount, false, false))
+		// Account 10 "treasury": Writable, Non-signer, Required
+		// Treasury — receives operational fee immediately
+		accounts__.Append(solanago.NewAccountMeta(treasuryAccount, true, false))
+		// Account 11 "relayer": Writable, Non-signer, Required
+		// Relayer — receives bridge_fee immediately
+		accounts__.Append(solanago.NewAccountMeta(relayerAccount, true, false))
 	}
 
 	// Create the instruction.
@@ -253,16 +271,23 @@ func NewBridgeVsuInstruction(
 }
 
 // Builds a "initialize" instruction.
-// Initialize the validator set and vault for the bridge system. //  // This instruction sets up the initial validator set that will control all bridge operations // and creates the vault account that will hold bridged tokens. The validators must be unique // and meet the minimum/maximum requirements. The consensus threshold is automatically calculated // as 2/3 of the validator count (rounded up). //  // # Arguments // * `ctx` - The context containing accounts for initialization // * `validators` - Vector of validator public keys (4-128 validators required) // * `last_id` - Optional initial batch ID (defaults to 0 if not provided) //  // # Errors // * `MaxValidatorsExceeded` - If more than 10 validators are provided // * `MinValidatorsNotMet` - If fewer than 4 validators are provided // * `ValidatorsNotUnique` - If duplicate validators are provided
+// Initializes the full bridge system: // 1. ValidatorSet — validators, threshold, bump // 2. Vault        — bump // 3. FeeConfig    — operational fee, relayer fee estimate, treasury, authority //  // # Arguments // * `ctx`                  - The instruction context // * `validators`           - Vector of validator public keys // * `last_id`              - Last known batch ID (for replay protection) // * `min_operational_fee`  - Minimum bridge tip sent to treasury (lamports) // * `bridge_fee`           - Estimated destination chain gas cost (lamports) // * `min_bridging_amount`  - Minimum amount of tokens that can be bridged (in smallest unit, e.g. lamports for SOL) //  // # Errors // * `ValidatorsNotUnique`    - Duplicate validators provided // * `MaxValidatorsExceeded`  - Too many validators // * `MinValidatorsNotMet`    - Too few validators
 func NewInitializeInstruction(
 	// Params:
 	validatorsParam []solanago.PublicKey,
 	lastIdParam *uint64,
+	minOperationalFeeParam uint64,
+	bridgeFeeParam uint64,
+	minBridgingAmountParam uint64,
+	currencyTokenIdParam uint16,
 
 	// Accounts:
 	signerAccount solanago.PublicKey,
 	validatorSetAccount solanago.PublicKey,
 	vaultAccount solanago.PublicKey,
+	feeConfigAccount solanago.PublicKey,
+	treasuryAccount solanago.PublicKey,
+	relayerAccount solanago.PublicKey,
 	systemProgramAccount solanago.PublicKey,
 ) (solanago.Instruction, error) {
 	buf__ := new(bytes.Buffer)
@@ -297,6 +322,26 @@ func NewInitializeInstruction(
 				}
 			}
 		}
+		// Serialize `minOperationalFeeParam`:
+		err = enc__.Encode(minOperationalFeeParam)
+		if err != nil {
+			return nil, errors.NewField("minOperationalFeeParam", err)
+		}
+		// Serialize `bridgeFeeParam`:
+		err = enc__.Encode(bridgeFeeParam)
+		if err != nil {
+			return nil, errors.NewField("bridgeFeeParam", err)
+		}
+		// Serialize `minBridgingAmountParam`:
+		err = enc__.Encode(minBridgingAmountParam)
+		if err != nil {
+			return nil, errors.NewField("minBridgingAmountParam", err)
+		}
+		// Serialize `currencyTokenIdParam`:
+		err = enc__.Encode(currencyTokenIdParam)
+		if err != nil {
+			return nil, errors.NewField("currencyTokenIdParam", err)
+		}
 	}
 	accounts__ := solanago.AccountMetaSlice{}
 
@@ -311,9 +356,345 @@ func NewInitializeInstruction(
 		// Account 2 "vault": Writable, Non-signer, Required
 		// The vault account
 		accounts__.Append(solanago.NewAccountMeta(vaultAccount, true, false))
-		// Account 3 "system_program": Read-only, Non-signer, Required
+		// Account 3 "fee_config": Writable, Non-signer, Required
+		// The fee config PDA — created here, one per program
+		accounts__.Append(solanago.NewAccountMeta(feeConfigAccount, true, false))
+		// Account 4 "treasury": Read-only, Non-signer, Required
+		// The treasury account that will receive operational fees
+		accounts__.Append(solanago.NewAccountMeta(treasuryAccount, false, false))
+		// Account 5 "relayer": Read-only, Non-signer, Required
+		// Relayer account — receives bridge fees directly
+		accounts__.Append(solanago.NewAccountMeta(relayerAccount, false, false))
+		// Account 6 "system_program": Read-only, Non-signer, Required
 		// The system program for account creation
 		accounts__.Append(solanago.NewAccountMeta(systemProgramAccount, false, false))
+	}
+
+	// Create the instruction.
+	return solanago.NewInstruction(
+		ProgramID,
+		accounts__,
+		buf__.Bytes(),
+	), nil
+}
+
+// Builds a "register_lock_unlock_token" instruction.
+func NewRegisterLockUnlockTokenInstruction(
+	// Params:
+	tokenIdParam uint16,
+
+	// Accounts:
+	authorityAccount solanago.PublicKey,
+	feeConfigAccount solanago.PublicKey,
+	mintAccount solanago.PublicKey,
+	tokenRegistryAccount solanago.PublicKey,
+	tokenIdGuardAccount solanago.PublicKey,
+	systemProgramAccount solanago.PublicKey,
+) (solanago.Instruction, error) {
+	buf__ := new(bytes.Buffer)
+	enc__ := binary.NewBorshEncoder(buf__)
+
+	// Encode the instruction discriminator.
+	err := enc__.WriteBytes(Instruction_RegisterLockUnlockToken[:], false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write instruction discriminator: %w", err)
+	}
+	{
+		// Serialize `tokenIdParam`:
+		err = enc__.Encode(tokenIdParam)
+		if err != nil {
+			return nil, errors.NewField("tokenIdParam", err)
+		}
+	}
+	accounts__ := solanago.AccountMetaSlice{}
+
+	// Add the accounts to the instruction.
+	{
+		// Account 0 "authority": Writable, Signer, Required
+		// The admin who owns the bridge.
+		// Must match fee_config.authority — enforced by constraint below.
+		// Pays rent for TokenRegistry and TokenIdGuard PDAs.
+		accounts__.Append(solanago.NewAccountMeta(authorityAccount, true, true))
+		// Account 1 "fee_config": Read-only, Non-signer, Required
+		// Read-only. Used solely to validate that authority == fee_config.authority.
+		// PDA: [FEE_CONFIG_SEED]
+		accounts__.Append(solanago.NewAccountMeta(feeConfigAccount, false, false))
+		// Account 2 "mint": Read-only, Non-signer, Required
+		// The pre-existing SPL mint being registered (e.g. USDC, WSOL).
+		// NOT created here — must already exist on-chain.
+		// Anchor validates this is a real, initialized SPL mint account.
+		accounts__.Append(solanago.NewAccountMeta(mintAccount, false, false))
+		// Account 3 "token_registry": Writable, Non-signer, Required
+		// One PDA per mint. Anchor init fails if it already exists.
+		// That failure surfaces as MintAlreadyRegistered (via init constraint).
+		// PDA: [TOKEN_REGISTRY_SEED, mint.key()]
+		accounts__.Append(solanago.NewAccountMeta(tokenRegistryAccount, true, false))
+		// Account 4 "token_id_guard": Writable, Non-signer, Required
+		// One PDA per token_id. Anchor init fails if it already exists.
+		// That failure prevents two mints sharing the same token_id,
+		// which would corrupt destination-chain routing.
+		// PDA: [TOKEN_ID_GUARD_SEED, token_id.to_le_bytes()]
+		accounts__.Append(solanago.NewAccountMeta(tokenIdGuardAccount, true, false))
+		// Account 5 "system_program": Read-only, Non-signer, Required
+		// The system program for account creation
+		accounts__.Append(solanago.NewAccountMeta(systemProgramAccount, false, false))
+	}
+
+	// Create the instruction.
+	return solanago.NewInstruction(
+		ProgramID,
+		accounts__,
+		buf__.Bytes(),
+	), nil
+}
+
+// Builds a "register_mint_burn_token" instruction.
+// Register a new SPL mint as a MintBurn bridgeable token. //  // Creates the mint, assigns vault as mint_authority, attaches Metaplex // metadata, and writes TokenRegistry + TokenIdGuard PDAs. //  // Only callable by the bridge authority. //  // # Arguments // * `ctx`      - Instruction context // * `token_id` - Unique gateway-compatible uint16 identifier // * `decimals` - Decimal precision of the new mint (e.g. 6 or 9) // * `name`     - Token name for Metaplex metadata // * `symbol`   - Token symbol for Metaplex metadata // * `uri`      - Metadata URI (IPFS / Arweave JSON) //  // # Errors // * `CustomError::Unauthorized`    - Signer is not the bridge authority // * `CustomError::CurrencyTokenId` - token_id is reserved for native currency
+func NewRegisterMintBurnTokenInstruction(
+	// Params:
+	tokenIdParam uint16,
+	decimalsParam uint8,
+	nameParam string,
+	symbolParam string,
+	uriParam string,
+
+	// Accounts:
+	authorityAccount solanago.PublicKey,
+	feeConfigAccount solanago.PublicKey,
+	vaultAccount solanago.PublicKey,
+	mintAccount solanago.PublicKey,
+	metadataAccount solanago.PublicKey,
+	tokenRegistryAccount solanago.PublicKey,
+	tokenIdGuardAccount solanago.PublicKey,
+	tokenProgramAccount solanago.PublicKey,
+	metadataProgramAccount solanago.PublicKey,
+	systemProgramAccount solanago.PublicKey,
+	rentAccount solanago.PublicKey,
+) (solanago.Instruction, error) {
+	buf__ := new(bytes.Buffer)
+	enc__ := binary.NewBorshEncoder(buf__)
+
+	// Encode the instruction discriminator.
+	err := enc__.WriteBytes(Instruction_RegisterMintBurnToken[:], false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write instruction discriminator: %w", err)
+	}
+	{
+		// Serialize `tokenIdParam`:
+		err = enc__.Encode(tokenIdParam)
+		if err != nil {
+			return nil, errors.NewField("tokenIdParam", err)
+		}
+		// Serialize `decimalsParam`:
+		err = enc__.Encode(decimalsParam)
+		if err != nil {
+			return nil, errors.NewField("decimalsParam", err)
+		}
+		// Serialize `nameParam`:
+		err = enc__.Encode(nameParam)
+		if err != nil {
+			return nil, errors.NewField("nameParam", err)
+		}
+		// Serialize `symbolParam`:
+		err = enc__.Encode(symbolParam)
+		if err != nil {
+			return nil, errors.NewField("symbolParam", err)
+		}
+		// Serialize `uriParam`:
+		err = enc__.Encode(uriParam)
+		if err != nil {
+			return nil, errors.NewField("uriParam", err)
+		}
+	}
+	accounts__ := solanago.AccountMetaSlice{}
+
+	// Add the accounts to the instruction.
+	{
+		// Account 0 "authority": Writable, Signer, Required
+		// Bridge authority — must match fee_config.authority.
+		// Pays rent for: new Mint, Metadata, TokenRegistry, TokenIdGuard.
+		accounts__.Append(solanago.NewAccountMeta(authorityAccount, true, true))
+		// Account 1 "fee_config": Read-only, Non-signer, Required
+		// Read-only. Validates authority and provides currency_token_id guard value.
+		// PDA: [FEE_CONFIG_SEED]
+		accounts__.Append(solanago.NewAccountMeta(feeConfigAccount, false, false))
+		// Account 2 "vault": Read-only, Non-signer, Required
+		// Vault PDA — will be set as mint_authority + freeze_authority for the new mint.
+		// This is what gives the bridge exclusive minting rights.
+		// PDA: [VAULT_SEED]
+		//
+		// it is only used as an authority pubkey in CPI calls.
+		accounts__.Append(solanago.NewAccountMeta(vaultAccount, false, false))
+		// Account 3 "mint": Writable, Signer, Required
+		// The brand-new SPL mint created by this instruction.
+		// Client generates the keypair off-chain and passes it as a signer.
+		// mint_authority and freeze_authority → vault PDA.
+		// decimals → provided by caller (typically 6 or 9).
+		accounts__.Append(solanago.NewAccountMeta(mintAccount, true, true))
+		// Account 4 "metadata": Writable, Non-signer, Required
+		// Metaplex metadata account for the new mint.
+		// Derived by Metaplex program — seeds are managed by the metadata CPI.
+		//
+		// inside the Metaplex create_metadata_accounts_v3 CPI call.
+		accounts__.Append(solanago.NewAccountMeta(metadataAccount, true, false))
+		// Account 5 "token_registry": Writable, Non-signer, Required
+		// One PDA per mint — enforces mint uniqueness across the registry.
+		// Anchor init fails with AlreadyInUse if this mint was already registered.
+		// PDA: [TOKEN_REGISTRY_SEED, mint.key()]
+		accounts__.Append(solanago.NewAccountMeta(tokenRegistryAccount, true, false))
+		// Account 6 "token_id_guard": Writable, Non-signer, Required
+		// One PDA per token_id — enforces token_id uniqueness across the registry.
+		// Anchor init fails with AlreadyInUse if this token_id is already taken.
+		// PDA: [TOKEN_ID_GUARD_SEED, token_id.to_le_bytes()]
+		accounts__.Append(solanago.NewAccountMeta(tokenIdGuardAccount, true, false))
+		// Account 7 "token_program": Read-only, Non-signer, Required, Address: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+		accounts__.Append(solanago.NewAccountMeta(tokenProgramAccount, false, false))
+		// Account 8 "metadata_program": Read-only, Non-signer, Required, Address: metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
+		accounts__.Append(solanago.NewAccountMeta(metadataProgramAccount, false, false))
+		// Account 9 "system_program": Read-only, Non-signer, Required
+		accounts__.Append(solanago.NewAccountMeta(systemProgramAccount, false, false))
+		// Account 10 "rent": Read-only, Non-signer, Required, Address: SysvarRent111111111111111111111111111111111
+		accounts__.Append(solanago.NewAccountMeta(rentAccount, false, false))
+	}
+
+	// Create the instruction.
+	return solanago.NewInstruction(
+		ProgramID,
+		accounts__,
+		buf__.Bytes(),
+	), nil
+}
+
+// Builds a "update_fee_config" instruction.
+// Update the fee configuration for the bridge. //  // This instruction allows the authority to update the fee configuration parameters for the bridge, // including the minimum operational fee, bridge fee, minimum bridging amount, treasury address, and // relayer address. The authority can choose to update any subset of these parameters, and the instruction // will validate the new values and emit an event with the updated configuration. //  // # Arguments // * `ctx` - The context containing accounts for updating the fee configuration // * `min_operational_fee` - Optional new minimum operational fee (lamports) // * `bridge_fee` - Optional new bridge fee (lamports) // * `min_bridging_amount` - Optional new minimum bridging amount (in smallest unit, e.g. lamports for SOL) // * `update_treasury` - Optional flag indicating whether to update the treasury address // * `update_relayer` - Optional flag indicating whether to update the relayer address //  // # Errors // * `InvalidRelayer` - If the new relayer address is invalid // * `InvalidTreasury` - If the new treasury address is invalid
+func NewUpdateFeeConfigInstruction(
+	// Params:
+	minOperationalFeeParam *uint64,
+	bridgeFeeParam *uint64,
+	minBridgingAmountParam *uint64,
+	updateTreasuryParam *bool,
+	updateRelayerParam *bool,
+
+	// Accounts:
+	authorityAccount solanago.PublicKey,
+	feeConfigAccount solanago.PublicKey,
+	newTreasuryAccount solanago.PublicKey,
+	newRelayerAccount solanago.PublicKey,
+) (solanago.Instruction, error) {
+	buf__ := new(bytes.Buffer)
+	enc__ := binary.NewBorshEncoder(buf__)
+
+	// Encode the instruction discriminator.
+	err := enc__.WriteBytes(Instruction_UpdateFeeConfig[:], false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write instruction discriminator: %w", err)
+	}
+	{
+		// Serialize `minOperationalFeeParam` (optional):
+		{
+			if minOperationalFeeParam == nil {
+				err = enc__.WriteOption(false)
+				if err != nil {
+					return nil, errors.NewOption("minOperationalFeeParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+			} else {
+				err = enc__.WriteOption(true)
+				if err != nil {
+					return nil, errors.NewOption("minOperationalFeeParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+				err = enc__.Encode(minOperationalFeeParam)
+				if err != nil {
+					return nil, errors.NewField("minOperationalFeeParam", err)
+				}
+			}
+		}
+		// Serialize `bridgeFeeParam` (optional):
+		{
+			if bridgeFeeParam == nil {
+				err = enc__.WriteOption(false)
+				if err != nil {
+					return nil, errors.NewOption("bridgeFeeParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+			} else {
+				err = enc__.WriteOption(true)
+				if err != nil {
+					return nil, errors.NewOption("bridgeFeeParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+				err = enc__.Encode(bridgeFeeParam)
+				if err != nil {
+					return nil, errors.NewField("bridgeFeeParam", err)
+				}
+			}
+		}
+		// Serialize `minBridgingAmountParam` (optional):
+		{
+			if minBridgingAmountParam == nil {
+				err = enc__.WriteOption(false)
+				if err != nil {
+					return nil, errors.NewOption("minBridgingAmountParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+			} else {
+				err = enc__.WriteOption(true)
+				if err != nil {
+					return nil, errors.NewOption("minBridgingAmountParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+				err = enc__.Encode(minBridgingAmountParam)
+				if err != nil {
+					return nil, errors.NewField("minBridgingAmountParam", err)
+				}
+			}
+		}
+		// Serialize `updateTreasuryParam` (optional):
+		{
+			if updateTreasuryParam == nil {
+				err = enc__.WriteOption(false)
+				if err != nil {
+					return nil, errors.NewOption("updateTreasuryParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+			} else {
+				err = enc__.WriteOption(true)
+				if err != nil {
+					return nil, errors.NewOption("updateTreasuryParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+				err = enc__.Encode(updateTreasuryParam)
+				if err != nil {
+					return nil, errors.NewField("updateTreasuryParam", err)
+				}
+			}
+		}
+		// Serialize `updateRelayerParam` (optional):
+		{
+			if updateRelayerParam == nil {
+				err = enc__.WriteOption(false)
+				if err != nil {
+					return nil, errors.NewOption("updateRelayerParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+			} else {
+				err = enc__.WriteOption(true)
+				if err != nil {
+					return nil, errors.NewOption("updateRelayerParam", fmt.Errorf("error while encoding optionality: %w", err))
+				}
+				err = enc__.Encode(updateRelayerParam)
+				if err != nil {
+					return nil, errors.NewField("updateRelayerParam", err)
+				}
+			}
+		}
+	}
+	accounts__ := solanago.AccountMetaSlice{}
+
+	// Add the accounts to the instruction.
+	{
+		// Account 0 "authority": Read-only, Signer, Required
+		accounts__.Append(solanago.NewAccountMeta(authorityAccount, false, true))
+		// Account 1 "fee_config": Writable, Non-signer, Required
+		accounts__.Append(solanago.NewAccountMeta(feeConfigAccount, true, false))
+		// Account 2 "new_treasury": Read-only, Non-signer, Required
+		// New treasury account — only needed when updating treasury.
+		accounts__.Append(solanago.NewAccountMeta(newTreasuryAccount, false, false))
+		// Account 3 "new_relayer": Read-only, Non-signer, Required
+		// New relayer account — only needed when updating relayer.
+		accounts__.Append(solanago.NewAccountMeta(newRelayerAccount, false, false))
 	}
 
 	// Create the instruction.
