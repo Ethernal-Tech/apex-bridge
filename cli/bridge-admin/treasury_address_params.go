@@ -23,11 +23,8 @@ const (
 )
 
 type treasuryBaseParams struct {
-	nodeURL          string
-	gatewayAddress   string
-	chainID          string
-	chainIDsConfig   string
-	chainIDConverter *common.ChainIDConverter
+	nodeURL        string
+	gatewayAddress string
 }
 
 func (bp *treasuryBaseParams) ValidateBaseFlags() error {
@@ -35,36 +32,14 @@ func (bp *treasuryBaseParams) ValidateBaseFlags() error {
 		return fmt.Errorf("invalid --%s flag", nodeFlag)
 	}
 
-	if err := validateConfigFilePath(bp.chainIDsConfig); err != nil {
-		return err
-	}
-
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](bp.chainIDsConfig, "")
-	if err != nil {
-		return fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	bp.chainIDConverter = chainIDsConfig.ToChainIDConverter()
-
-	if !bp.chainIDConverter.IsExistingChainID(bp.chainID) {
-		return fmt.Errorf("invalid --%s flag", chainIDFlag)
-	}
-
-	if !common.IsValidAddress(bp.chainID, bp.gatewayAddress, bp.chainIDConverter) {
-		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
+	if !ethcommon.IsHexAddress(bp.gatewayAddress) {
+		return fmt.Errorf("invalid gateway contract address: --%s", gatewayAddressFlag)
 	}
 
 	return nil
 }
 
 func (bp *treasuryBaseParams) RegisterBaseFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(
-		&bp.chainID,
-		chainIDFlag,
-		"",
-		chainIDFlagDesc,
-	)
-
 	cmd.Flags().StringVar(
 		&bp.nodeURL,
 		nodeFlag,
@@ -77,13 +52,6 @@ func (bp *treasuryBaseParams) RegisterBaseFlags(cmd *cobra.Command) {
 		gatewayAddressFlag,
 		"",
 		gatewayAddressFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&bp.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
 	)
 }
 
@@ -104,8 +72,8 @@ func (sp *setTreasuryAddressParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(sp.chainID, sp.treasuryAddressStr, sp.chainIDConverter) {
-		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
+	if !ethcommon.IsHexAddress(sp.treasuryAddressStr) {
+		return fmt.Errorf("invalid treasury address: --%s", treasuryAddressFlag)
 	}
 
 	sp.treasuryAddress = ethcommon.HexToAddress(sp.treasuryAddressStr)
