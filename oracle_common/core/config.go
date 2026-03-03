@@ -74,6 +74,15 @@ type CardanoChainConfig struct {
 	TreasuryAddress            string                   `json:"treasuryAddress"`
 }
 
+type SolanaChainConfig struct {
+	ChainID                    string        `json:"-"`
+	NodeURL                    string        `json:"nodeUrl"`
+	TrackedProgram             string        `json:"trackedProgram"`
+	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
+	PoolIntervalMiliseconds    time.Duration `json:"poolIntervalMs"`
+	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+}
+
 type SubmitConfig struct {
 	ConfirmedBlocksThreshold  int             `json:"confirmedBlocksThreshold"`
 	ConfirmedBlocksSubmitTime int             `json:"confirmedBlocksSubmitTime"`
@@ -120,6 +129,7 @@ type AppConfig struct {
 	ChainIDConverter         *common.ChainIDConverter        `json:"chainIdConverter"`
 	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
+	SolanaChains             map[string]*SolanaChainConfig   `json:"solanaChains"`
 	Bridge                   BridgeConfig                    `json:"bridge"`
 	Settings                 AppSettings                     `json:"appSettings"`
 	BridgingSettings         BridgingSettings                `json:"bridgingSettings"`
