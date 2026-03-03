@@ -69,7 +69,7 @@ func (sp *setTreasuryAddressParams) ValidateFlags() error {
 	}
 
 	if sp.privateKey == "" && sp.privateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
 	if !ethcommon.IsHexAddress(sp.treasuryAddressStr) {
