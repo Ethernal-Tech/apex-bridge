@@ -21,6 +21,7 @@ type AppConfig struct {
 	ChainIDConverter             *common.ChainIDConverter                  `json:"-"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
+	SolanaChains                 map[string]*oracleCore.SolanaChainConfig  `json:"solanaChains"`
 	DirectionConfig              map[string]common.DirectionConfig         `json:"directionConfig"`
 	Bridge                       oracleCore.BridgeConfig                   `json:"bridge"`
 	BridgingSettings             oracleCore.BridgingSettings               `json:"bridgingSettings"`

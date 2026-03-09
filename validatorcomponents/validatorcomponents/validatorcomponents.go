@@ -34,6 +34,7 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -144,6 +145,18 @@ func NewValidatorComponents(
 		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
 	}
 
+	solanaIndexerDbs := make(map[string]solanaTrackerStore.BoltStorageHandler, len(appConfig.SolanaChains))
+
+	for _, solanaChainConfig := range oracleConfig.SolanaChains {
+		solanaIndexerDB, err := solanaTrackerStore.NewBoltStorageHandler(filepath.Join(
+			appConfig.Settings.DbsPath, solanaChainConfig.ChainID+".db"), true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", solanaChainConfig.ChainID, err)
+		}
+
+		solanaIndexerDbs[solanaChainConfig.ChainID] = *solanaIndexerDB
+	}
+
 	oracleDB, err := oracleCommonDA.NewDatabase(
 		filepath.Join(appConfig.Settings.DbsPath, "oracle.db"), oracleConfig)
 	if err != nil {
@@ -212,7 +225,7 @@ func NewValidatorComponents(
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
+		cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
 		bridgingAddressesCoordinator, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
