@@ -31,7 +31,7 @@ func NewBatcherManager(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	cardanoIndexerDbs map[string]indexer.Database,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
-	solanaIndexerDbs map[string]solanaTrackerStore.BoltStorageHandler,
+	solanaIndexerDbs map[string]solanaTrackerStore.StorageHandler,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgingAddressesManager common.BridgingAddressesManager,
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
@@ -122,7 +122,7 @@ type GetCardanoOpsParams struct {
 type GetSolanaOpsParams struct {
 	Config           core.ChainConfig
 	ChainIDConverter *common.ChainIDConverter
-	SolanaIndexerDB  map[string]solanaTrackerStore.BoltStorageHandler
+	SolanaIndexerDB  map[string]solanaTrackerStore.StorageHandler
 	SecretsManager   secrets.SecretsManager
 	Logger           hclog.Logger
 }

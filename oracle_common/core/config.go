@@ -8,6 +8,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -75,12 +76,14 @@ type CardanoChainConfig struct {
 }
 
 type SolanaChainConfig struct {
+	solana.SolanaChainConfig
 	ChainID                    string        `json:"-"`
 	NodeURL                    string        `json:"nodeUrl"`
 	TrackedProgram             string        `json:"trackedProgram"`
 	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
 	PoolIntervalMiliseconds    time.Duration `json:"poolIntervalMs"`
 	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+	TreasuryAddress            string        `json:"treasuryAddress"`
 }
 
 type SubmitConfig struct {
@@ -150,7 +153,13 @@ func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []strin
 }
 
 func (appConfig *AppConfig) GetTreasuryAddress(chainID string) string {
-	return appConfig.CardanoChains[chainID].TreasuryAddress
+	if _, exists := appConfig.CardanoChains[chainID]; exists {
+		return appConfig.CardanoChains[chainID].TreasuryAddress
+	} else if _, exists := appConfig.SolanaChains[chainID]; exists {
+		return appConfig.SolanaChains[chainID].TreasuryAddress
+	} else {
+		return ""
+	}
 }
 
 func (appConfig *AppConfig) FillOut() {

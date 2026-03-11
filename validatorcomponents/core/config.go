@@ -54,7 +54,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.DestinationChains = directionConfig.DestinationChains
 			data.Tokens = directionConfig.Tokens
 			appConfig.EthChains[chainID] = data
-		} else {
+		} else if appConfig.ChainIDConverter.IsCardanoChainID(chainID) {
 			if _, ok := appConfig.CardanoChains[chainID]; !ok {
 				return fmt.Errorf("invalid cardano chain while setting up direction config. %s", chainID)
 			}
@@ -64,6 +64,16 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.CardanoChainConfig.Tokens = directionConfig.Tokens
 			data.CardanoChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			appConfig.CardanoChains[chainID] = data
+		} else {
+			if _, ok := appConfig.SolanaChains[chainID]; !ok {
+				return fmt.Errorf("invalid solana chain while setting up direction config. %s", chainID)
+			}
+
+			data := appConfig.SolanaChains[chainID]
+			data.SolanaChainConfig.DestinationChains = directionConfig.DestinationChains
+			data.SolanaChainConfig.Tokens = directionConfig.Tokens
+			data.SolanaChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
+			appConfig.SolanaChains[chainID] = data
 		}
 	}
 
@@ -74,8 +84,10 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
 ) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
-	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	batcherChains := make(
+		[]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains)+len(appConfig.SolanaChains))
 	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
+	oracleSolanaChains := make(map[string]*oracleCore.SolanaChainConfig, len(appConfig.SolanaChains))
 
 	for _, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[ccConfig.ChainID] = ccConfig
@@ -109,6 +121,17 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		})
 	}
 
+	for _, scConfig := range appConfig.SolanaChains {
+		oracleSolanaChains[scConfig.ChainID] = scConfig
+
+		chainSpecificJSONRaw, _ := scConfig.SolanaChainConfig.Serialize()
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainID:       scConfig.ChainID,
+			ChainType:     common.ChainTypeSolanaStr,
+			ChainSpecific: chainSpecificJSONRaw,
+		})
+	}
+
 	oracleConfig := &oracleCore.AppConfig{
 		RunMode:                  appConfig.RunMode,
 		RefundEnabled:            appConfig.RefundEnabled,
@@ -121,6 +144,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
+		SolanaChains:             oracleSolanaChains,
 		ChainIDConverter:         appConfig.ChainIDConverter,
 	}
 

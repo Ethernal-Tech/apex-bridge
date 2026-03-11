@@ -6,7 +6,7 @@ require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260312105002-49f2b4c6d497
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260306144905-aeae61b2bc8c
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260311074953-69bc0e12fff4
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gagliardetto/solana-go v1.14.0
 	github.com/gorilla/handlers v1.5.2
@@ -41,7 +41,6 @@ require (
 	github.com/aws/aws-sdk-go v1.51.18 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -63,7 +62,6 @@ require (
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/gorilla/rpc v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
@@ -103,6 +101,7 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/streamingfast/logging v0.0.0-20230608130331-f22c91403091 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/test-go/testify v1.1.4 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/umbracle/fastrlp v0.1.1-0.20230504065717-58a1b8a9929d // indirect
 	github.com/umbracle/go-eth-bn256 v0.0.0-20230125114011-47cb310d9b0b // indirect
@@ -179,3 +178,5 @@ require (
 	golang.org/x/tools v0.30.0
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+replace github.com/Ethernal-Tech/solana-infrastructure => /home/nikola/Ethernal/apex/solana-infrastructure/

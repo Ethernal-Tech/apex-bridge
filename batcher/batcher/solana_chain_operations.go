@@ -2,6 +2,8 @@ package batcher
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"sort"
@@ -9,11 +11,12 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	solana "github.com/Ethernal-Tech/apex-bridge/solana"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/Ethernal-Tech/solana-infrastructure/wallet"
+	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mr-tron/base58"
@@ -24,10 +27,9 @@ var (
 )
 
 type SolanaChainOperations struct {
-	config           *solana.SolanaChainConfig
-	wallet           solana.ApexSolanaWallet
-	solanaProgramKey *wallet.Wallet
-	db               solanaTrackerStore.BoltStorageHandler
+	config           *solanatx.SolanaChainConfig
+	privateKey       solana.PrivateKey
+	db               solanaTrackerStore.StorageHandler
 	gasLimiter       eth.GasLimitHolder
 	secretsManager   secrets.SecretsManager
 	chainIDConverter *common.ChainIDConverter
@@ -37,30 +39,24 @@ type SolanaChainOperations struct {
 func NewSolanaChainOperations(
 	jsonConfig json.RawMessage,
 	chainIDConverter *common.ChainIDConverter,
-	db solanaTrackerStore.BoltStorageHandler,
+	db solanaTrackerStore.StorageHandler,
 	secretsManager secrets.SecretsManager,
 	destChainID string,
 	logger hclog.Logger,
 ) (*SolanaChainOperations, error) {
-	solanaConfig, err := solana.NewSolanaChainConfig(jsonConfig)
+	solanaConfig, err := solanatx.NewSolanaChainConfig(jsonConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	solanaWallet, err := solana.LoadWallet(secretsManager, destChainID)
-	if err != nil {
-		return nil, err
-	}
-
-	solanaProgramKey, err := solana.LoadSolanaProgramKeyPair(secretsManager)
+	solanaPrivateKey, err := solanatx.LoadBatcherSolanaPrivateKey(secretsManager, destChainID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SolanaChainOperations{
 		config:           solanaConfig,
-		wallet:           *solanaWallet,
-		solanaProgramKey: solanaProgramKey,
+		privateKey:       *solanaPrivateKey,
 		chainIDConverter: chainIDConverter,
 		db:               db,
 		gasLimiter: eth.NewGasLimitHolder(submitBatchMinGasLimit,
@@ -82,10 +78,7 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 		MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
 	}
 
-	txSender, err := sendtx.NewTxSender(txProvider, chainConfig, sco.solanaProgramKey.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
+	txSender := sendtx.NewTxSender(txProvider, chainConfig, &sco.config.InstructionConfig)
 
 	bridgingTxs, err := sco.newSolanaSmartContractTransaction(
 		sco.config,
@@ -110,12 +103,18 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	}
 
 	tx, err := txSender.CreateTx(
-		ctx, *sco.wallet.BridgeWallet, sendtx.InstructionTypeBridgeTransaction, blockHash, bridgingTxs)
+		ctx, sco.privateKey, sendtx.InstructionTypeBridgeTransaction, blockHash, *bridgingTxs)
 	if err != nil {
 		return nil, err
 	}
 
-	txHash := tx.Signatures[0].String()
+	txMsgBytes, err := tx.Message.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	hash := sha256.Sum256(txMsgBytes)
+	txHash := hex.EncodeToString(hash[:])
 
 	rawTx, err := tx.MarshalBinary()
 	if err != nil {
@@ -134,19 +133,17 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 
 func (sco *SolanaChainOperations) SignBatchTransaction(
 	generatedBatchData *core.GeneratedBatchTxData) (*core.BatchSignatures, error) {
-	bridgeWallet := sco.wallet.BridgeWallet
-
 	hashBytes, err := base58.Decode(generatedBatchData.TxHash)
 	if err != nil {
 		return nil, err
 	}
 
-	signature, err := bridgeWallet.Sign(hashBytes)
+	signature, err := sco.privateKey.Sign(hashBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	signatureBytes, err := bridgeWallet.MarshalSignature(*signature)
+	signatureBytes, err := signature.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +151,7 @@ func (sco *SolanaChainOperations) SignBatchTransaction(
 	if sco.logger.IsDebug() {
 		sco.logger.Debug("Signature has been created",
 			"signature", signature.String(),
-			"public", bridgeWallet.PublicKey.String())
+			"public", sco.privateKey.PublicKey().String())
 	}
 
 	return &core.BatchSignatures{
@@ -206,7 +203,7 @@ func (sco *SolanaChainOperations) getSlotNumber() (uint64, error) {
 }
 
 func (sco *SolanaChainOperations) newSolanaSmartContractTransaction(
-	config *solana.SolanaChainConfig,
+	config *solanatx.SolanaChainConfig,
 	destChainID string,
 	batchNonceID uint64,
 	confirmedTransactions []eth.ConfirmedTransaction,
@@ -325,7 +322,7 @@ func (sco *SolanaChainOperations) newSolanaSmartContractTransaction(
 	return &sendtx.BridgeTransactionDto{
 		SrcChainID: 0,
 		DstChainID: sco.chainIDConverter.StrToInt[destChainID],
-		SenderAddr: sco.wallet.BridgeWallet.PrivateKey.String(),
+		SenderAddr: sco.config.BridgingFeeAddress,
 		Receivers:  receivers,
 		BatchID:    batchNonceID,
 	}, nil

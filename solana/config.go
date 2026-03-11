@@ -10,12 +10,15 @@ import (
 )
 
 type SolanaChainConfig struct {
-	TTLSlotNumberInc      uint64                   `json:"ttlSlotNumberIncrement"`
-	SlotRoundingThreshold uint64                   `json:"slotRoundingThreshold"`
-	NoBatchPeriodPercent  float64                  `json:"noBatchPeriodPercent"`
-	MinFeeForBridging     *big.Int                 `json:"minFeeForBridging"`
-	Tokens                map[uint16]common.Token  `json:"tokens"`
-	InstructionConfig     sendtx.InstructionConfig `json:"instructionConfig"`
+	TTLSlotNumberInc                      uint64                       `json:"ttlSlotNumberIncrement"`
+	SlotRoundingThreshold                 uint64                       `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`
+	MinFeeForBridging                     *big.Int                     `json:"minFeeForBridging"`
+	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
+	Tokens                                map[uint16]common.Token      `json:"tokens"`
+	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
+	InstructionConfig                     sendtx.InstructionConfig     `json:"instructionConfig"`
+	BridgingFeeAddress                    string                       `json:"bridgingFeeAddress"`
 }
 
 func NewSolanaChainConfig(rawMessage json.RawMessage) (*SolanaChainConfig, error) {
