@@ -2,9 +2,9 @@ package batcher
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -18,7 +18,9 @@ import (
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
+	solanaWallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mr-tron/base58"
 	"github.com/stretchr/testify/mock"
@@ -125,9 +127,82 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		}
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
-		fmt.Printf("\ntxHash: %s\nrawTx: %s\n", batchTxData.TxHash, hex.EncodeToString(batchTxData.TxRaw[:]))
 		require.NoError(t, err)
 		require.NotNil(t, batchTxData)
+	})
+
+	t.Run("tx matches manual build", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+
+		solanaHash, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
+		slotNumber := uint64(4)
+		expectedSlot := slotNumber + 2
+		expectedBlockhash := solana.Hash(solanaHash.PublicKey())
+
+		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+		dbMock.On("GetBlockhashBySlot", expectedSlot).Return(expectedBlockhash, nil).Once()
+
+		confirmedTransactions := []eth.ConfirmedTransaction{
+			{
+				Nonce:       1,
+				BlockHeight: big.NewInt(1),
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: receiverWallet.PublicKey().String(),
+						Amount:             minAmount,
+						AmountWrapped:      big.NewInt(0),
+						TokenId:            1,
+					},
+				},
+				TransactionType: uint8(common.BridgingConfirmedTxType),
+			},
+		}
+
+		gbt, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, gbt)
+
+		// Build expected tx data using the same building blocks as GenerateBatchTransaction.
+		txProvider, err := solanaWallet.NewProvider(rpc.LocalNet_WS)
+		require.NoError(t, err)
+
+		chainConfig := sendtx.ChainConfig{
+			MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
+		}
+		txSender := sendtx.NewTxSender(txProvider, chainConfig, &sco.config.InstructionConfig)
+
+		bridgingTxs, err := sco.newSolanaSmartContractTransaction(
+			sco.config,
+			destChainID,
+			batchNonceID,
+			confirmedTransactions,
+			sco.config.MinFeeForBridging,
+		)
+		require.NoError(t, err)
+
+		expectedTx, err := txSender.CreateTx(
+			ctx,
+			sco.privateKey,
+			sendtx.InstructionTypeBridgeTransaction,
+			expectedBlockhash,
+			*bridgingTxs,
+		)
+		require.NoError(t, err)
+
+		expectedTxMsgBytes, err := expectedTx.Message.MarshalBinary()
+		require.NoError(t, err)
+
+		expectedHash := sha256.Sum256(expectedTxMsgBytes)
+		expectedTxHash := hex.EncodeToString(expectedHash[:])
+
+		expectedRaw, err := expectedTx.MarshalBinary()
+		require.NoError(t, err)
+
+		require.Nil(t, expectedTx.Signatures)
+		require.Equal(t, expectedTxHash, gbt.TxHash)
+		require.Equal(t, expectedRaw, gbt.TxRaw)
 	})
 
 	t.Run("error when building solana transaction (invalid token)", func(t *testing.T) {
@@ -139,6 +214,29 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 						Amount:             minAmount,
 						AmountWrapped:      big.NewInt(0),
 						TokenId:            99,
+					},
+				},
+			},
+		}
+
+		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.Nil(t, batchTxData)
+	})
+
+	t.Run("error when slot is in non-active batch period (rounding threshold)", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+
+		dbMock.On("ReadSlot").Return(uint64(6), nil).Once()
+
+		confirmedTransactions := []eth.ConfirmedTransaction{
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: receiverWallet.PublicKey().String(),
+						Amount:             minAmount,
+						AmountWrapped:      big.NewInt(0),
+						TokenId:            0,
 					},
 				},
 			},
@@ -290,6 +388,43 @@ func TestSolanaChain_IsSynchronized(t *testing.T) {
 		require.False(t, synced)
 
 		bridgeMock.AssertExpectations(t)
+	})
+
+	t.Run("error from db is returned", func(t *testing.T) {
+		destChainID, sco, dbMock, cleanup := newTestSolanaChainOperations(t)
+		defer cleanup()
+
+		ctx := context.Background()
+
+		bridgeMock := &eth.BridgeSmartContractMock{}
+		bridgeMock.On("GetLastObservedBlock", ctx, destChainID).Return(
+			eth.CardanoBlock{BlockSlot: big.NewInt(10)}, nil,
+		).Once()
+
+		expectedErr := errors.New("db error")
+		dbMock.On("GetLatestBlockPoint").Return((*solanaTrackerStore.BlockPoint)(nil), expectedErr).Once()
+
+		synced, err := sco.IsSynchronized(ctx, bridgeMock, destChainID)
+		require.ErrorIs(t, err, expectedErr)
+		require.False(t, synced)
+	})
+
+	t.Run("not synchronized when db returns nil block point", func(t *testing.T) {
+		destChainID, sco, dbMock, cleanup := newTestSolanaChainOperations(t)
+		defer cleanup()
+
+		ctx := context.Background()
+
+		bridgeMock := &eth.BridgeSmartContractMock{}
+		bridgeMock.On("GetLastObservedBlock", ctx, destChainID).Return(
+			eth.CardanoBlock{BlockSlot: big.NewInt(10)}, nil,
+		).Once()
+
+		dbMock.On("GetLatestBlockPoint").Return((*solanaTrackerStore.BlockPoint)(nil), error(nil)).Once()
+
+		synced, err := sco.IsSynchronized(ctx, bridgeMock, destChainID)
+		require.NoError(t, err)
+		require.False(t, synced)
 	})
 }
 

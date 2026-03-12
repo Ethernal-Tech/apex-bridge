@@ -44,7 +44,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
 
 	for chainID, directionConfig := range directionConfig.Directions {
-		if appConfig.ChainIDConverter.IsEVMChainID(chainID) {
+		if appConfig.ChainIDConverter.IsEVMChainID(chainID) { //nolint:gocritic
 			if _, ok := appConfig.EthChains[chainID]; !ok {
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
