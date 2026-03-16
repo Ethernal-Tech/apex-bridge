@@ -473,6 +473,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[0], txs[0])
 	})
 
+	//nolint:dupl
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -501,6 +502,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Nil(t, txs)
 	})
 
+	//nolint:dupl
 	t.Run("MarkExpectedTxsAsInvalid", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
