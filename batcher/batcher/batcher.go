@@ -247,7 +247,8 @@ func (b *BatcherImpl) getBridgingRequestStateKeys(
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
 			!common.IsDirectlyConfirmedTransaction(confirmedTx.TransactionType) {
 			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
-				b.config.ChainIDConverter.ToChainIDStr(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
+				b.config.ChainIDConverter.ToChainIDStr(confirmedTx.SourceChainId),
+				common.NewHashFromBytes(confirmedTx.ObservedTransactionHash),
 				confirmedTx.TransactionType == uint8(common.RefundConfirmedTxType)))
 		}
 	}

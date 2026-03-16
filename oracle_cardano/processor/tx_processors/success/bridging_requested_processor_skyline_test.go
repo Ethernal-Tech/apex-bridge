@@ -2488,7 +2488,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -2577,7 +2577,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -2677,7 +2677,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -2759,7 +2759,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -2922,7 +2922,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -3011,7 +3011,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
@@ -3095,7 +3095,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
 
@@ -3304,7 +3304,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
 
@@ -3400,7 +3400,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
 

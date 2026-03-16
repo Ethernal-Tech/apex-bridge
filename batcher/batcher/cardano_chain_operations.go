@@ -1007,7 +1007,7 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 
 		for j, indx := range indexes {
 			txInput := indexer.TxInput{
-				Hash:  ct.ObservedTransactionHash,
+				Hash:  common.SafelyConvertObservedTransactionHashToHash(ct.ObservedTransactionHash),
 				Index: uint32(indx),
 			}
 

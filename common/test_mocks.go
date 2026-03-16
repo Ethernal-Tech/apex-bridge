@@ -140,6 +140,7 @@ func NewTestChainIDConverter() *ChainIDConverter {
 			ChainIDStrNexus:   ChainIDIntNexus,
 			ChainIDStrCardano: ChainIDIntCardano,
 			ChainIDStrPolygon: ChainIDIntPolygon,
+			ChainIDStrSolana:  ChainIDIntSolana,
 		},
 		IntToStr: map[ChainIDNum]string{
 			ChainIDIntPrime:   ChainIDStrPrime,
@@ -147,6 +148,7 @@ func NewTestChainIDConverter() *ChainIDConverter {
 			ChainIDIntNexus:   ChainIDStrNexus,
 			ChainIDIntCardano: ChainIDStrCardano,
 			ChainIDIntPolygon: ChainIDStrPolygon,
+			ChainIDIntSolana:  ChainIDStrSolana,
 		},
 		EvmChains: []string{
 			ChainIDStrNexus,

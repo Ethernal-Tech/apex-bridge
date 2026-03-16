@@ -1240,7 +1240,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash,
+					ObservedTransactionHash: txHash[:],
 					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1457,7 +1457,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		brcProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash1,
+					ObservedTransactionHash: txHash1[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1468,12 +1468,12 @@ func TestEthTxsProcessor(t *testing.T) {
 		becProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, oCore.BatchExecutionFailedClaim{
-					ObservedTransactionHash: txHashBatch1,
+					ObservedTransactionHash: txHashBatch1[:],
 					BatchNonceId:            1,
 					ChainId:                 common.ChainIDIntPrime,
 				})
 				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oCore.BatchExecutedClaim{
-					ObservedTransactionHash: txHashBatch2,
+					ObservedTransactionHash: txHashBatch2[:],
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntPrime,
 				})
@@ -1487,14 +1487,14 @@ func TestEthTxsProcessor(t *testing.T) {
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: txHash1,
+					ObservedTransactionHash: txHash1[:],
 				},
 			}, error(nil))
 		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: txHash2,
+					ObservedTransactionHash: txHash2[:],
 				},
 			}, error(nil))
 

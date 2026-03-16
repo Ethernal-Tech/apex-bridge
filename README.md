@@ -2,8 +2,8 @@
 
 # How to go get private repo
 ```shell
-$ git config url."git@github.com:Ethernal-Tech/cardano-infrastructure.git".insteadOf "https://github.com/Ethernal-Tech/cardano-infrastructure"
-$ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get github.com/Ethernal-Tech/cardano-infrastructure
+$ git config url."git@github.com:Ethernal-Tech/solana-infrastructure.git".insteadOf "https://github.com/Ethernal-Tech/solana-infrastructure"
+$ GOPRIVATE=github.com/Ethernal-Tech/solana-infrastructure go get github.com/Ethernal-Tech/solana-infrastructure@dev
 ```
 
 # How to generate go binding for smart contract(s)

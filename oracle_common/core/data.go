@@ -99,7 +99,7 @@ func NewDBBatchInfoEvent(
 	for i, tx := range txs {
 		dbBatchTxs[i] = DBBatchTx{
 			SourceChainID:           tx.SourceChainId,
-			ObservedTransactionHash: tx.ObservedTransactionHash,
+			ObservedTransactionHash: common.SafelyConvertObservedTransactionHashToHash(tx.ObservedTransactionHash),
 			TransactionType:         tx.TransactionType,
 		}
 	}

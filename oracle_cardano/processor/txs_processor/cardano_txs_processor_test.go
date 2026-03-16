@@ -1368,7 +1368,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash,
+					ObservedTransactionHash: txHash[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1577,7 +1577,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
-					ObservedTransactionHash: tx1.Hash,
+					ObservedTransactionHash: tx1.Hash[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1588,12 +1588,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		becProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, cCore.BatchExecutedClaim{
-					ObservedTransactionHash: txBatch.Hash,
+					ObservedTransactionHash: txBatch.Hash[:],
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntVector,
 				})
 				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{
-					ObservedTransactionHash: txBatchFailed.Hash,
+					ObservedTransactionHash: txBatchFailed.Hash[:],
 					BatchNonceId:            1,
 					ChainId:                 common.ChainIDIntVector,
 				})
@@ -1607,14 +1607,14 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: tx1.Hash,
+					ObservedTransactionHash: tx1.Hash[:],
 				},
 			}, error(nil))
 		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: tx2.Hash,
+					ObservedTransactionHash: tx2.Hash[:],
 				},
 			}, error(nil))
 

@@ -158,7 +158,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	})
 
 	claim := oCore.BridgingRequestClaim{
-		ObservedTransactionHash:         tx.Hash,
+		ObservedTransactionHash:         tx.Hash[:],
 		SourceChainId:                   chainIDConverter.ToChainIDNum(tx.OriginChainID),
 		DestinationChainId:              chainIDConverter.ToChainIDNum(metadata.DestinationChainID),
 		Receivers:                       receivers,

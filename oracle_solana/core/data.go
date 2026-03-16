@@ -1,11 +1,21 @@
 package core
 
 import (
+	"encoding/binary"
+	"math/big"
 	"time"
 
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/gagliardetto/solana-go"
 )
+
+const (
+	BridgeRequestEvent       = "BridgeRequestEvent"
+	TransactionExecutedEvent = "TransactionExecutedEvent"
+	ValidatorSetUpdatedEvent = "ValidatorSetUpdatedEvent"
+)
+
+type SolanaUpdateTxsData = oCore.UpdateTxsData[*SolanaTx, *ProcessedSolanaTx, *BridgeExpectedSolanaTx]
 
 type SolanaTx struct {
 	OriginChainID  string    `json:"origin_chain_id"`
@@ -14,103 +24,118 @@ type SolanaTx struct {
 	BatchTryCount  uint32    `json:"bf_count"`
 	RefundTryCount uint32    `json:"refund_try_count"`
 	LastTimeTried  time.Time `json:"last_time_tried"`
+
+	SlotNumber      uint64           `json:"slot_number"`
+	TxSignature     solana.Signature `json:"tx_signature"`
+	Value           *big.Int         `json:"value"`
+	Metadata        []byte           `json:"metadata"`
+	InnerActionHash solana.Signature `json:"ia_hash"`
 }
 
 var _ oCore.BaseTx = (*SolanaTx)(nil)
 
-// GetChainID implements core.BaseTx.
-func (s *SolanaTx) GetChainID() string {
-	panic("unimplemented") //nolint:gocritic
+func (s SolanaTx) GetChainID() string {
+	return s.OriginChainID
 }
 
-// GetPriority implements core.BaseTx.
-func (s *SolanaTx) GetPriority() uint8 {
-	panic("unimplemented") //nolint:gocritic
+func (s SolanaTx) GetPriority() uint8 {
+	return s.Priority
 }
 
-// GetSubmitTryCount implements core.BaseTx.
-func (s *SolanaTx) GetSubmitTryCount() uint32 {
-	panic("unimplemented") //nolint:gocritic
+func (s SolanaTx) GetSubmitTryCount() uint32 {
+	return s.SubmitTryCount
 }
 
-// GetTxHash implements core.BaseTx.
-func (s *SolanaTx) GetTxHash() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (s SolanaTx) GetTxHash() []byte {
+	return s.TxSignature[:]
 }
 
-// IncrementBatchTryCount implements core.BaseTx.
 func (s *SolanaTx) IncrementBatchTryCount() {
-	panic("unimplemented") //nolint:gocritic
+	s.BatchTryCount++
 }
 
-// IncrementRefundTryCount implements core.BaseTx.
 func (s *SolanaTx) IncrementRefundTryCount() {
-	panic("unimplemented") //nolint:gocritic
+	s.RefundTryCount++
 }
 
-// ResetSubmitTryCount implements core.BaseTx.
 func (s *SolanaTx) ResetSubmitTryCount() {
-	panic("unimplemented") //nolint:gocritic
+	s.SubmitTryCount = 0
 }
 
-// SetLastTimeTried implements core.BaseTx.
 func (s *SolanaTx) SetLastTimeTried(lastTimeTried time.Time) {
-	panic("unimplemented") //nolint:gocritic
+	s.LastTimeTried = lastTimeTried
 }
 
-// ToProcessed implements core.BaseTx.
 func (s *SolanaTx) ToProcessed(isInvalid bool) oCore.BaseProcessedTx {
-	panic("unimplemented") //nolint:gocritic
+	return s.ToProcessedSolanaTx(isInvalid)
 }
 
-// UnprocessedDBKey implements core.BaseTx.
-func (s *SolanaTx) UnprocessedDBKey() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (s SolanaTx) UnprocessedDBKey() []byte {
+	return toUnprocessedSolanaTxKey(s.Priority, s.SlotNumber, s.TxSignature)
+}
+
+func (s SolanaTx) ToSolanaTxKey() []byte {
+	return ToSolanaTxKey(s.OriginChainID, s.TxSignature)
+}
+
+func (s SolanaTx) ToExpectedSolanaTxKey() []byte {
+	return ToSolanaTxKey(s.OriginChainID, s.InnerActionHash)
+}
+
+func (s *SolanaTx) ToProcessedSolanaTx(isInvalid bool) *ProcessedSolanaTx {
+	return &ProcessedSolanaTx{
+		SlotNumber:      s.SlotNumber,
+		OriginChainID:   s.OriginChainID,
+		TxSignature:     s.TxSignature,
+		Priority:        s.Priority,
+		InnerActionHash: s.InnerActionHash,
+		IsInvalid:       isInvalid,
+	}
 }
 
 type ProcessedSolanaTx struct {
-	SlotNumber    uint64           `json:"block_number"`
-	OriginChainID string           `json:"origin_chain_id"`
-	TxSignature   solana.Signature `json:"tx_signature"`
-	Priority      uint8            `json:"priority"`
-	IsInvalid     bool             `json:"is_invalid"`
+	SlotNumber      uint64           `json:"slot_number"`
+	OriginChainID   string           `json:"origin_chain_id"`
+	TxSignature     solana.Signature `json:"tx_signature"`
+	Priority        uint8            `json:"priority"`
+	IsInvalid       bool             `json:"is_invalid"`
+	InnerActionHash solana.Signature `json:"ia_hash"`
 }
 
 var _ oCore.BaseProcessedTx = (*ProcessedSolanaTx)(nil)
 
-// GetChainID implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) GetChainID() string {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) GetChainID() string {
+	return p.OriginChainID
 }
 
-// GetInnerActionTxHash implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) GetInnerActionTxHash() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) GetTxHash() []byte {
+	return p.TxSignature[:]
 }
 
-// GetIsInvalid implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) GetIsInvalid() bool {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) HasInnerActionTxHash() bool {
+	return p.InnerActionHash != (solana.Signature{})
 }
 
-// GetTxHash implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) GetTxHash() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) GetInnerActionTxHash() []byte {
+	return p.InnerActionHash[:]
 }
 
-// HasInnerActionTxHash implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) HasInnerActionTxHash() bool {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) UnprocessedDBKey() []byte {
+	return toUnprocessedSolanaTxKey(p.Priority, p.SlotNumber, p.TxSignature)
 }
 
-// UnprocessedDBKey implements core.BaseProcessedTx.
-func (p *ProcessedSolanaTx) UnprocessedDBKey() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (p ProcessedSolanaTx) GetIsInvalid() bool {
+	return p.IsInvalid
+}
+
+func (p ProcessedSolanaTx) ToSolanaTxKey() []byte {
+	return ToSolanaTxKey(p.OriginChainID, p.TxSignature)
 }
 
 type BridgeExpectedSolanaTx struct {
 	ChainID     string           `json:"chain_id"`
 	TxSignature solana.Signature `json:"tx_signature"`
+	Metadata    []byte           `json:"metadata"`
 	TTL         uint64           `json:"ttl"`
 	Priority    uint8            `json:"priority"`
 
@@ -120,42 +145,78 @@ type BridgeExpectedSolanaTx struct {
 
 var _ oCore.BaseExpectedTx = (*BridgeExpectedSolanaTx)(nil)
 
-// DBKey implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) DBKey() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) DBKey() []byte {
+	return b.ToExpectedTxKey()
 }
 
-// GetChainID implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) GetChainID() string {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) GetChainID() string {
+	return b.ChainID
 }
 
-// GetIsInvalid implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) GetIsInvalid() bool {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) GetTxHash() []byte {
+	return b.TxSignature[:]
 }
 
-// GetIsProcessed implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) GetIsProcessed() bool {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) GetPriority() uint8 {
+	return b.Priority
 }
 
-// GetPriority implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) GetPriority() uint8 {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) GetIsInvalid() bool {
+	return b.IsInvalid
 }
 
-// GetTxHash implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) GetTxHash() []byte {
-	panic("unimplemented") //nolint:gocritic
+func (b BridgeExpectedSolanaTx) GetIsProcessed() bool {
+	return b.IsProcessed
 }
 
-// SetInvalid implements core.BaseExpectedTx.
-func (b *BridgeExpectedSolanaTx) SetInvalid() {
-	panic("unimplemented") //nolint:gocritic
-}
-
-// SetProcessed implements core.BaseExpectedTx.
 func (b *BridgeExpectedSolanaTx) SetProcessed() {
-	panic("unimplemented") //nolint:gocritic
+	b.IsProcessed = true
+}
+
+func (b *BridgeExpectedSolanaTx) SetInvalid() {
+	b.IsInvalid = true
+}
+
+func (b BridgeExpectedSolanaTx) ToSolanaTxKey() []byte {
+	return ToSolanaTxKey(b.ChainID, b.TxSignature)
+}
+
+func (b BridgeExpectedSolanaTx) ToExpectedTxKey() []byte {
+	bytes := [9]byte{b.Priority}
+
+	binary.BigEndian.PutUint64(bytes[1:], b.TTL)
+
+	return append(bytes[:], b.TxSignature[:]...)
+}
+
+// BridgeClaimsSlotInfo tracks the current Solana slot being processed for claim grouping.
+type BridgeClaimsSlotInfo struct {
+	ChainID string
+	Number  uint64
+}
+
+func (bi *BridgeClaimsSlotInfo) EqualWithUnprocessed(tx *SolanaTx) bool {
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.SlotNumber
+}
+
+func (bi *BridgeClaimsSlotInfo) EqualWithProcessed(tx *ProcessedSolanaTx) bool {
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.SlotNumber
+}
+
+func (bi *BridgeClaimsSlotInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, slotNumber uint64) bool {
+	return bi.ChainID == tx.ChainID && bi.Number == slotNumber
+}
+
+// toUnprocessedSolanaTxKey builds a sortable composite DB key: priority(1B) | slotNumber(8B BigEndian) | signature(64B)
+func toUnprocessedSolanaTxKey(priority uint8, slotNumber uint64, sig solana.Signature) []byte {
+	bytes := [9]byte{priority}
+
+	binary.BigEndian.PutUint64(bytes[1:], slotNumber)
+
+	return append(bytes[:], sig[:]...)
+}
+
+// ToSolanaTxKey builds the processed-tx lookup key: chainID || signature
+func ToSolanaTxKey(originChainID string, sig solana.Signature) []byte {
+	return append([]byte(originChainID), sig[:]...)
 }

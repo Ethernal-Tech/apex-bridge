@@ -7,9 +7,11 @@ type ChainIDNum = uint8
 const (
 	ChainTypeCardano = iota
 	ChainTypeEVM
+	ChainTypeSolana
 
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"
+	ChainTypeSolanaStr  = "solana"
 
 	// Used for tests only
 	ChainIDStrPrime   = "prime"
@@ -17,6 +19,7 @@ const (
 	ChainIDStrCardano = "cardano"
 	ChainIDStrNexus   = "nexus"
 	ChainIDStrPolygon = "polygon"
+	ChainIDStrSolana  = "solana"
 
 	// Used for tests only
 	ChainIDIntPrime   = ChainIDNum(1)
@@ -24,6 +27,7 @@ const (
 	ChainIDIntNexus   = ChainIDNum(3)
 	ChainIDIntCardano = ChainIDNum(4)
 	ChainIDIntPolygon = ChainIDNum(5)
+	ChainIDIntSolana  = ChainIDNum(6)
 )
 
 type ChainIDConverter struct {
@@ -53,4 +57,8 @@ func (c *ChainIDConverter) IsCardanoChainID(chainIDStr string) bool {
 
 func (c *ChainIDConverter) IsEVMChainID(chainIDStr string) bool {
 	return slices.Contains(c.EvmChains, chainIDStr)
+}
+
+func (c *ChainIDConverter) IsSolanaChainID(chainIDStr string) bool {
+	return ChainIDStrSolana == chainIDStr
 }

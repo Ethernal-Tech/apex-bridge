@@ -84,6 +84,10 @@ func (p *TxsProcessorImpl) getSortedChainIDs() []string {
 		for k := range p.appConfig.EthChains {
 			keys = append(keys, k)
 		}
+	case common.ChainTypeSolanaStr:
+		for k := range p.appConfig.SolanaChains {
+			keys = append(keys, k)
+		}
 	default:
 		p.logger.Error("Invalid chainType", "chainType", p.stateProcessor.GetChainType())
 	}
@@ -181,13 +185,15 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	}
 
 	for _, x := range claims.BatchExecutedClaims {
-		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, false); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId,
+			common.SafelyConvertObservedTransactionHashToHash(x.ObservedTransactionHash), false); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, x := range claims.BatchExecutionFailedClaims {
-		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, true); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId,
+			common.SafelyConvertObservedTransactionHashToHash(x.ObservedTransactionHash), true); err != nil {
 			return nil, err
 		}
 	}

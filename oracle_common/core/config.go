@@ -75,12 +75,22 @@ type CardanoChainConfig struct {
 }
 
 type SolanaChainConfig struct {
-	ChainID                    string        `json:"-"`
-	NodeURL                    string        `json:"nodeUrl"`
-	TrackedProgram             string        `json:"trackedProgram"`
-	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
-	PoolIntervalMiliseconds    time.Duration `json:"poolIntervalMs"`
-	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+	ChainID                    string                       `json:"-"`
+	NodeURL                    string                       `json:"nodeUrl"`
+	TrackedProgram             string                       `json:"trackedProgram"`
+	BlockFetchDelayMiliseconds time.Duration                `json:"blockFetchDelayMiliseconds"`
+	PoolIntervalMiliseconds    time.Duration                `json:"poolIntervalMs"`
+	RestartTrackerPullCheck    time.Duration                `json:"restartTrackerPullCheck"`
+	DestinationChains          map[string]common.TokenPairs `json:"destChain"`
+	Tokens                     map[uint16]common.Token      `json:"tokens"`
+	FeeAddrBridgingAmount      uint64                       `json:"feeAddressBridgingAmount"`
+	MinColCoinsAllowedToBridge uint64                       `json:"minColCoinsAllowedToBridge"`
+	MinOperationFee            uint64                       `json:"minOperationFee"`
+	MinFeeForBridging          uint64                       `json:"minFeeForBridging"`
+
+	SlotBuffSize  uint8 `json:"slotBuffSize"`
+	EventBuffSize uint8 `json:"eventBuffSize"`
+	ErrorBuffSize uint8 `json:"errorBuffSize"`
 }
 
 type SubmitConfig struct {
@@ -161,6 +171,10 @@ func (appConfig *AppConfig) FillOut() {
 	for chainID, ethChainConfig := range appConfig.EthChains {
 		ethChainConfig.ChainID = chainID
 	}
+
+	for chainID, solanaChainConfig := range appConfig.SolanaChains {
+		solanaChainConfig.ChainID = chainID
+	}
 }
 
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
@@ -182,6 +196,27 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 func (config EthChainConfig) GetCurrencyID() (uint16, error) {
 	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency id not found for chain %s", config.ChainID)
+}
+
+func (config SolanaChainConfig) GetTokenIDByName(tokenName string) (tokenID uint16, err error) {
+	for tokenID, token := range config.Tokens {
+		if token.ChainSpecific == tokenName {
+			return tokenID, nil
+		}
+	}
+
+	return 0, fmt.Errorf("token not found in chain config")
+}
+
+func (config SolanaChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		// wTODO: Replace with the actual currency token name in solana-infra
 		if token.ChainSpecific == cardanowallet.AdaTokenName {
 			return id, nil
 		}

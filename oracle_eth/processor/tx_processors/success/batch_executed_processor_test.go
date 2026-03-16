@@ -52,7 +52,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
-		require.Equal(t, [32]byte{}, claims.BatchExecutedClaims[0].ObservedTransactionHash)
+		require.Equal(t, [32]byte{}, [32]byte(claims.BatchExecutedClaims[0].ObservedTransactionHash))
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {

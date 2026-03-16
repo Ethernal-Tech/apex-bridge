@@ -139,9 +139,19 @@ func Keccak256(v ...[]byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// Safely convert ObservedTransactionHash to [32]byte
+func SafelyConvertObservedTransactionHashToHash(observedTransactionHash []byte) [32]byte {
+	if len(observedTransactionHash) == 0 {
+		return [32]byte{}
+	}
+
+	return [32]byte(observedTransactionHash)
+}
+
 const (
-	DfmDecimals = 6
-	WeiDecimals = 18
+	DfmDecimals     = 6
+	WeiDecimals     = 18
+	LamportDecimals = 9
 )
 
 func DfmToWei(dfm *big.Int) *big.Int {
@@ -170,6 +180,13 @@ func WeiToDfmCeil(wei *big.Int) *big.Int {
 	}
 
 	return dfm
+}
+
+func LamportToWei(lamport *big.Int) *big.Int {
+	wei := new(big.Int).Set(lamport)
+	base := big.NewInt(10)
+
+	return wei.Mul(wei, base.Exp(base, big.NewInt(WeiDecimals-LamportDecimals), nil))
 }
 
 type IsRecoverableErrorFn func(err error) bool

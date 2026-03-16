@@ -309,7 +309,8 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		brc := claims.BridgingRequestClaims[brcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId), brc.ObservedTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId),
+				common.SafelyConvertObservedTransactionHashToHash(brc.ObservedTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -649,7 +650,9 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			updateToSubmittedToBridge(
-				brClaim.SourceChainId, brClaim.ObservedTransactionHash, brClaim.DestinationChainId, false)
+				brClaim.SourceChainId,
+				common.SafelyConvertObservedTransactionHashToHash(brClaim.ObservedTransactionHash),
+				brClaim.DestinationChainId, false)
 		}
 
 		for _, rrClaim := range bridgeClaims.RefundRequestClaims {

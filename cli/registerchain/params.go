@@ -257,7 +257,29 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		if err != nil {
 			return nil, fmt.Errorf("failed to create serialized signature: %w", err)
 		}
+	case common.ChainTypeSolana:
+		// TODO: implement solana wallet loading
+		// tbd after solana keys are added to sc
+		privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, ip.chainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load eth wallet: %w", err)
+		}
 
+		bigInts := privateKey.PublicKey().ToBigInt()
+		validatorChainData.Key[0] = bigInts[0]
+		validatorChainData.Key[1] = bigInts[1]
+		validatorChainData.Key[2] = bigInts[2]
+		validatorChainData.Key[3] = bigInts[3]
+
+		sign, err := privateKey.Sign(messageHash, eth.BN256Domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create signature: %w", err)
+		}
+
+		signatureMultisig, err = sign.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create serialized signature: %w", err)
+		}
 	default:
 		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}

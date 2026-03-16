@@ -9,6 +9,7 @@ const skylineUse = "skyline"
 
 const cardanoChainUse = "cardano-chain"
 const evmChainUse = "evm-chain"
+const solanaChainUse = "solana-chain"
 
 var (
 	paramsData        = &generateConfigsParams{}
@@ -16,6 +17,7 @@ var (
 
 	cardanoChainParamsData = &cardanoChainGenerateConfigsParams{}
 	evmChainParamsData     = &evmChainGenerateConfigsParams{}
+	solanaChainParamsData  = &solanaChainGenerateConfigsParams{}
 )
 
 func GetGenerateConfigsCommand() *cobra.Command {
@@ -44,17 +46,25 @@ func GetGenerateConfigsCommand() *cobra.Command {
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(evmChainParamsData),
 	}
+	cmdSolanaChain := &cobra.Command{
+		Use:     solanaChainUse,
+		Short:   "add solana chain config to config json file",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(solanaChainParamsData),
+	}
 
 	paramsData.setFlags(cmd)
 	skylineParamsData.setFlags(cmdSkyline)
 
 	cardanoChainParamsData.setFlags(cmdCardanoChain)
 	evmChainParamsData.setFlags(cmdEvmChain)
+	solanaChainParamsData.setFlags(cmdSolanaChain)
 
 	cmd.AddCommand(cmdSkyline)
 
 	cmd.AddCommand(cmdCardanoChain)
 	cmd.AddCommand(cmdEvmChain)
+	cmd.AddCommand(cmdSolanaChain)
 
 	return cmd
 }
@@ -67,6 +77,8 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 		return cardanoChainParamsData.validateFlags()
 	case evmChainUse:
 		return evmChainParamsData.validateFlags()
+	case solanaChainUse:
+		return solanaChainParamsData.validateFlags()
 	default:
 		return paramsData.validateFlags()
 	}
