@@ -4,13 +4,11 @@ go 1.24.1
 
 toolchain go1.24.2
 
-replace github.com/Ethernal-Tech/solana-infrastructure => ../solana-infrastructure
-
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260224131128-283944cfc50a
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260226093721-aec9dccf245f
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260316183234-352608bec5eb
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gagliardetto/solana-go v1.14.0
 	github.com/gorilla/handlers v1.5.2
