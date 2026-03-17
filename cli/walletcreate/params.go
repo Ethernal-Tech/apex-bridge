@@ -8,6 +8,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -144,6 +145,34 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			ChainID:        ip.chainID,
 			PrivateKey:     string(pkBytes),
 			PublicKey:      hex.EncodeToString(pubBytes),
+			showPrivateKey: ip.showPrivateKey,
+		}, nil
+
+	case "relayer-solana":
+		privateKey, err := solanatx.GenerateAndStoreRelayerSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
+		if err != nil {
+			return nil, err
+		}
+
+		return &evmCmdResult{
+			ChainID:        ip.chainID,
+			PrivateKey:     privateKey.String(),
+			PublicKey:      privateKey.PublicKey().String(),
+			Address:        privateKey.PublicKey().String(),
+			showPrivateKey: ip.showPrivateKey,
+		}, nil
+
+	case "batcher-solana":
+		privateKey, err := solanatx.GenerateAndStoreBatcherSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
+		if err != nil {
+			return nil, err
+		}
+
+		return &evmCmdResult{
+			ChainID:        ip.chainID,
+			PrivateKey:     privateKey.String(),
+			PublicKey:      privateKey.PublicKey().String(),
+			Address:        privateKey.PublicKey().String(),
 			showPrivateKey: ip.showPrivateKey,
 		}, nil
 
