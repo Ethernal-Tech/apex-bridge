@@ -33,7 +33,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
 		err := proc.ValidateAndAddClaim(claims, &core.BridgeExpectedSolanaTx{}, nil)
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.Equal(t, 0, claims.Count())
 	})
 
@@ -43,10 +43,18 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 
-		err := proc.ValidateAndAddClaim(claims, &core.BridgeExpectedSolanaTx{
-			ChainID: common.ChainIDStrSolana,
+		metadata, err := core.MarshalSolMetadata(core.BatchExecutedSolMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+			BatchNonceID:   7,
+		})
+		require.NoError(t, err)
+
+		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedSolanaTx{
+			ChainID:  common.ChainIDStrSolana,
+			Metadata: metadata,
 		}, appConfig)
 		require.NoError(t, err)
-		require.Equal(t, 0, claims.Count())
+		require.Len(t, claims.BatchExecutionFailedClaims, 1)
+		require.Equal(t, uint64(7), claims.BatchExecutionFailedClaims[0].BatchNonceId)
 	})
 }

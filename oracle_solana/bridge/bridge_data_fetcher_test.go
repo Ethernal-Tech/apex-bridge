@@ -7,15 +7,18 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSolanaBridgeDataFetcher(t *testing.T) {
+	emptyIndexerDbs := map[string]solanaTxsStore.StorageHandler{}
+
 	t.Run("NewSolanaBridgeDataFetcher", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 
 		require.NotNil(t, fetcher)
 	})
@@ -25,7 +28,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		bridgeSC.On("GetBatchStatusAndTransactions", mock.Anything, mock.Anything, mock.Anything).
 			Return(uint8(0), nil, fmt.Errorf("test err"))
 
-		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 		require.NotNil(t, fetcher)
 
 		_, err := fetcher.GetBatchTransactions(common.ChainIDStrSolana, 1)
@@ -38,7 +41,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		bridgeSC.On("GetBatchStatusAndTransactions", mock.Anything, mock.Anything, mock.Anything).
 			Return(uint8(0), []eth.TxDataInfo{{}}, nil)
 
-		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 		require.NotNil(t, fetcher)
 
 		batchTxs, err := fetcher.GetBatchTransactions(common.ChainIDStrSolana, 1)
@@ -50,7 +53,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, nil)
 
-		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 		require.NotNil(t, fetcher)
 
 		expectedTx, err := fetcher.FetchExpectedTx(common.ChainIDStrSolana)
@@ -65,7 +68,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, fmt.Errorf("sc error"))
 
-		fetcher := NewSolanaBridgeDataFetcher(ctx, bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(ctx, bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 		require.NotNil(t, fetcher)
 
 		expectedTx, err := fetcher.FetchExpectedTx(common.ChainIDStrSolana)
@@ -78,7 +81,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return([]byte{}, nil)
 
-		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC, emptyIndexerDbs, hclog.NewNullLogger())
 		require.NotNil(t, fetcher)
 
 		expectedTx, err := fetcher.FetchExpectedTx(common.ChainIDStrSolana)

@@ -399,7 +399,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid to Cardano", func(t *testing.T) {
 		amount := common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))
+
 		var txSig solana.Signature
+
 		copy(txSig[:], []byte("test_tx_signature_for_bridging_req_00001"))
 
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
@@ -426,7 +428,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txSig[:], claims.BridgingRequestClaims[0].ObservedTransactionHash[:])
+		require.Equal(t, txSig, claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t,
 			common.ChainIDStrPrime,
 			appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
@@ -435,7 +437,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid to ETH", func(t *testing.T) {
 		amount := common.LamportToWei(new(big.Int).SetUint64(utxoMinValue))
+
 		var txSig solana.Signature
+
 		copy(txSig[:], []byte("test_tx_sig_eth_dest_000002"))
 
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
@@ -462,7 +466,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txSig[:], claims.BridgingRequestClaims[0].ObservedTransactionHash[:])
+		require.Equal(t, txSig, claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t,
 			common.ChainIDStrNexus,
 			appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
@@ -470,7 +474,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim multiple receivers valid", func(t *testing.T) {
 		amount := common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))
+
 		var txSig solana.Signature
+
 		copy(txSig[:], []byte("test_tx_sig_multi_recv_000003"))
 
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{

@@ -311,7 +311,7 @@ func (s *SolStateProcessor) findRejectedTxInPending(
 		copy(sig[:], brc.ObservedTransactionHash)
 
 		tx, exists := allPendingMap[string(
-			core.ToSolanaTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId), sig))]
+			core.ToSolanaTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId), sig[:]))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -332,7 +332,7 @@ func (s *SolStateProcessor) findRejectedTxInPending(
 		copy(sig[:], rrc.OriginTransactionHash[:])
 
 		tx, exists := allPendingMap[string(
-			core.ToSolanaTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), sig))]
+			core.ToSolanaTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), sig[:]))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -562,7 +562,7 @@ func (s *SolStateProcessor) checkExpectedTxs(
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.TxSignature[:])
+		processedTx, _ := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
@@ -632,7 +632,7 @@ func (s *SolStateProcessor) UpdateBridgingRequestStates(
 
 			copy(sig[:], observedTransactionHash)
 
-			key := core.ToSolanaTxKey(srcChainID, sig)
+			key := core.ToSolanaTxKey(srcChainID, sig[:])
 			if !notRejectedMap[string(key)] {
 				return
 			}

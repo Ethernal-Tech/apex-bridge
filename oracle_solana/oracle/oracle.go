@@ -23,12 +23,13 @@ import (
 )
 
 type OracleImpl struct {
-	ctx                  context.Context
-	appConfig            *oCore.AppConfig
-	solanaTxsProcessor   oCore.TxsProcessor
-	expectedTxsFetcher   oCore.ExpectedTxsFetcher
-	solanaChainObservers []core.SolanaChainObserver
-	logger               hclog.Logger
+	ctx                      context.Context
+	appConfig                *oCore.AppConfig
+	solanaTxsProcessor       oCore.TxsProcessor
+	expectedTxsFetcher       oCore.ExpectedTxsFetcher
+	solanaChainObservers     []core.SolanaChainObserver
+	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
+	logger                   hclog.Logger
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -49,13 +50,14 @@ func NewSolanaOracle(
 	db.Init(boltDB, appConfig, typeRegister)
 
 	bridgeDataFetcher := bridge.NewSolanaBridgeDataFetcher(
-		ctx, oracleBridgeSC, logger.Named("solana_bridge_data_fetcher"))
+		ctx, oracleBridgeSC, indexerDbs, logger.Named("solana_bridge_data_fetcher"))
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("solana_expected_txs_fetcher"))
 
 	successProcessors := []core.SolanaTxSuccessProcessor{
 		successtxprocessors.NewSolanaBridgingRequestedProcessor(logger, cardanoChainInfos),
+		successtxprocessors.NewSolanaBatchExecutedProcessor(logger),
 	}
 
 	failedProcessors := []core.SolanaTxFailedProcessor{
@@ -95,9 +97,18 @@ func NewSolanaOracle(
 	)
 
 	solanaChainObservers := make([]core.SolanaChainObserver, 0, len(appConfig.SolanaChains))
+	confirmedBlockSubmitters := make([]oCore.ConfirmedBlocksSubmitter, 0, len(appConfig.SolanaChains))
 
 	for _, solanaChainConfig := range appConfig.SolanaChains {
 		indexerDB := indexerDbs[solanaChainConfig.ChainID]
+
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, db, indexerDB, solanaChainConfig.ChainID, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create solana block submitter for `%s`: %w", solanaChainConfig.ChainID, err)
+		}
+
+		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		solanaChainObserver, err := sol_chain.NewSolanaChainObserver(
 			solanaChainConfig,
@@ -113,12 +124,13 @@ func NewSolanaOracle(
 	}
 
 	return &OracleImpl{
-		ctx:                  ctx,
-		appConfig:            appConfig,
-		solanaChainObservers: solanaChainObservers,
-		logger:               logger,
-		solanaTxsProcessor:   solanaTxsProcessor,
-		expectedTxsFetcher:   expectedTxsFetcher,
+		ctx:                      ctx,
+		appConfig:                appConfig,
+		solanaChainObservers:     solanaChainObservers,
+		confirmedBlockSubmitters: confirmedBlockSubmitters,
+		logger:                   logger,
+		solanaTxsProcessor:       solanaTxsProcessor,
+		expectedTxsFetcher:       expectedTxsFetcher,
 	}, nil
 }
 
@@ -127,6 +139,10 @@ func (o *OracleImpl) Start() error {
 
 	go o.solanaTxsProcessor.Start()
 	go o.expectedTxsFetcher.Start()
+
+	for _, cbs := range o.confirmedBlockSubmitters {
+		cbs.Start(o.ctx)
+	}
 
 	for _, solanaChainObserver := range o.solanaChainObservers {
 		err := solanaChainObserver.Start()

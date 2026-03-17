@@ -124,7 +124,7 @@ func (r *SolEventReceiverImpl) parseEvent(
 	case core.BridgeRequestEvent:
 		return r.parseBridgeRequestEvent(originChainID, event)
 	case core.TransactionExecutedEvent:
-		return r.parseTransactionExecutedEvent(event)
+		return r.parseTransactionExecutedEvent(originChainID, event)
 	case core.ValidatorSetUpdatedEvent:
 		panic("not implemented") //nolint:gocritic
 	default:
@@ -140,7 +140,6 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 		return nil, fmt.Errorf("failed to parse bridge request event")
 	}
 
-	// wTODO: fill this with the correct values
 	tokenID, err := r.appConfig.SolanaChains[originChainID].GetTokenIDByName(bridgeRequestEvent.MintToken.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token id by name: %w", err)
@@ -178,6 +177,30 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 	}, nil
 }
 
-func (r *SolEventReceiverImpl) parseTransactionExecutedEvent(event tracker.EventNotification) (*core.SolanaTx, error) {
-	return nil, nil
+func (r *SolEventReceiverImpl) parseTransactionExecutedEvent(
+	originChainID string,
+	event tracker.EventNotification,
+) (*core.SolanaTx, error) {
+	transactionExecutedEvent, ok := event.EventData.(*skyline.TransactionExecutedEvent)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse transaction executed event")
+	}
+
+	metadata, err := core.MarshalSolMetadata(core.BatchExecutedSolMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceID:   transactionExecutedEvent.BatchId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	return &core.SolanaTx{
+		OriginChainID: originChainID,
+		Priority:      1,
+
+		SlotNumber:      event.SlotNumber,
+		TxSignature:     event.TxSignature,
+		InnerActionHash: event.InnerActionHash,
+		Metadata:        metadata,
+	}, nil
 }

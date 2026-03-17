@@ -29,7 +29,7 @@ type SolanaTx struct {
 	TxSignature     solana.Signature `json:"tx_signature"`
 	Value           *big.Int         `json:"value"`
 	Metadata        []byte           `json:"metadata"`
-	InnerActionHash solana.Signature `json:"ia_hash"`
+	InnerActionHash [32]byte         `json:"ia_hash"`
 }
 
 var _ oCore.BaseTx = (*SolanaTx)(nil)
@@ -75,11 +75,11 @@ func (s SolanaTx) UnprocessedDBKey() []byte {
 }
 
 func (s SolanaTx) ToSolanaTxKey() []byte {
-	return ToSolanaTxKey(s.OriginChainID, s.TxSignature)
+	return ToSolanaTxKey(s.OriginChainID, s.TxSignature[:])
 }
 
 func (s SolanaTx) ToExpectedSolanaTxKey() []byte {
-	return ToSolanaTxKey(s.OriginChainID, s.InnerActionHash)
+	return ToSolanaTxKey(s.OriginChainID, s.InnerActionHash[:])
 }
 
 func (s *SolanaTx) ToProcessedSolanaTx(isInvalid bool) *ProcessedSolanaTx {
@@ -99,7 +99,7 @@ type ProcessedSolanaTx struct {
 	TxSignature     solana.Signature `json:"tx_signature"`
 	Priority        uint8            `json:"priority"`
 	IsInvalid       bool             `json:"is_invalid"`
-	InnerActionHash solana.Signature `json:"ia_hash"`
+	InnerActionHash [32]byte         `json:"ia_hash"`
 }
 
 var _ oCore.BaseProcessedTx = (*ProcessedSolanaTx)(nil)
@@ -113,7 +113,7 @@ func (p ProcessedSolanaTx) GetTxHash() []byte {
 }
 
 func (p ProcessedSolanaTx) HasInnerActionTxHash() bool {
-	return p.InnerActionHash != (solana.Signature{})
+	return p.InnerActionHash != ([32]byte{})
 }
 
 func (p ProcessedSolanaTx) GetInnerActionTxHash() []byte {
@@ -129,15 +129,15 @@ func (p ProcessedSolanaTx) GetIsInvalid() bool {
 }
 
 func (p ProcessedSolanaTx) ToSolanaTxKey() []byte {
-	return ToSolanaTxKey(p.OriginChainID, p.TxSignature)
+	return ToSolanaTxKey(p.OriginChainID, p.InnerActionHash[:])
 }
 
 type BridgeExpectedSolanaTx struct {
-	ChainID     string           `json:"chain_id"`
-	TxSignature solana.Signature `json:"tx_signature"`
-	Metadata    []byte           `json:"metadata"`
-	TTL         uint64           `json:"ttl"`
-	Priority    uint8            `json:"priority"`
+	ChainID  string   `json:"chain_id"`
+	Hash     [32]byte `json:"hash"`
+	Metadata []byte   `json:"metadata"`
+	TTL      uint64   `json:"ttl"`
+	Priority uint8    `json:"priority"`
 
 	IsProcessed bool `json:"is_processed"`
 	IsInvalid   bool `json:"is_invalid"`
@@ -154,7 +154,7 @@ func (b BridgeExpectedSolanaTx) GetChainID() string {
 }
 
 func (b BridgeExpectedSolanaTx) GetTxHash() []byte {
-	return b.TxSignature[:]
+	return b.Hash[:]
 }
 
 func (b BridgeExpectedSolanaTx) GetPriority() uint8 {
@@ -178,7 +178,7 @@ func (b *BridgeExpectedSolanaTx) SetInvalid() {
 }
 
 func (b BridgeExpectedSolanaTx) ToSolanaTxKey() []byte {
-	return ToSolanaTxKey(b.ChainID, b.TxSignature)
+	return ToSolanaTxKey(b.ChainID, b.Hash[:])
 }
 
 func (b BridgeExpectedSolanaTx) ToExpectedTxKey() []byte {
@@ -186,7 +186,7 @@ func (b BridgeExpectedSolanaTx) ToExpectedTxKey() []byte {
 
 	binary.BigEndian.PutUint64(bytes[1:], b.TTL)
 
-	return append(bytes[:], b.TxSignature[:]...)
+	return append(bytes[:], b.Hash[:]...)
 }
 
 // BridgeClaimsSlotInfo tracks the current Solana slot being processed for claim grouping.
@@ -217,6 +217,6 @@ func toUnprocessedSolanaTxKey(priority uint8, slotNumber uint64, sig solana.Sign
 }
 
 // ToSolanaTxKey builds the processed-tx lookup key: chainID || signature
-func ToSolanaTxKey(originChainID string, sig solana.Signature) []byte {
-	return append([]byte(originChainID), sig[:]...)
+func ToSolanaTxKey(originChainID string, hash []byte) []byte {
+	return append([]byte(originChainID), hash...)
 }

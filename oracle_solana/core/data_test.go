@@ -10,7 +10,7 @@ import (
 
 func TestSolanaTx(t *testing.T) {
 	sig := solana.Signature{1, 2, 3, 4, 5}
-	iaSig := solana.Signature{10, 20, 30}
+	iaSig := [32]byte{10, 20, 30}
 
 	tx := &SolanaTx{
 		OriginChainID:   "solana",
@@ -106,7 +106,7 @@ func TestSolanaTx(t *testing.T) {
 
 func TestProcessedSolanaTx(t *testing.T) {
 	sig := solana.Signature{5, 6, 7}
-	iaSig := solana.Signature{15, 16, 17}
+	iaSig := [32]byte{15, 16, 17}
 
 	ptx := &ProcessedSolanaTx{
 		SlotNumber:      200,
@@ -160,11 +160,9 @@ func TestProcessedSolanaTx(t *testing.T) {
 }
 
 func TestBridgeExpectedSolanaTx(t *testing.T) {
-	sig := solana.Signature{8, 9, 10}
-
 	etx := &BridgeExpectedSolanaTx{
 		ChainID:     "solana",
-		TxSignature: sig,
+		Hash:        [32]byte{1, 2, 3},
 		Metadata:    []byte("test_metadata"),
 		TTL:         500,
 		Priority:    0,
@@ -182,7 +180,7 @@ func TestBridgeExpectedSolanaTx(t *testing.T) {
 	})
 
 	t.Run("GetTxHash", func(t *testing.T) {
-		require.Equal(t, sig[:], etx.GetTxHash())
+		require.Equal(t, etx.Hash[:], etx.GetTxHash())
 	})
 
 	t.Run("GetPriority", func(t *testing.T) {
@@ -268,7 +266,7 @@ func TestBridgeClaimsSlotInfo(t *testing.T) {
 
 func TestToSolanaTxKey(t *testing.T) {
 	sig := solana.Signature{1, 2, 3}
-	key := ToSolanaTxKey("solana", sig)
+	key := ToSolanaTxKey("solana", sig[:])
 
 	require.NotEmpty(t, key)
 	require.Equal(t, append([]byte("solana"), sig[:]...), key)

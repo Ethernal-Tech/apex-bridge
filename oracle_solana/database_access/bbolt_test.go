@@ -180,13 +180,12 @@ func TestBoltDatabase(t *testing.T) {
 		db, err := createDB(filePath)
 		require.NoError(t, err)
 
-		sig := solana.Signature{50, 60, 70}
 		expectedTx := &core.BridgeExpectedSolanaTx{
-			ChainID:     common.ChainIDStrSolana,
-			TxSignature: sig,
-			TTL:         100,
-			Priority:    0,
-			Metadata:    []byte("test_metadata"),
+			ChainID:  common.ChainIDStrSolana,
+			Hash:     [32]byte{1, 2, 3},
+			TTL:      100,
+			Priority: 0,
+			Metadata: []byte("test_metadata"),
 		}
 
 		err = db.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{expectedTx})
@@ -195,7 +194,7 @@ func TestBoltDatabase(t *testing.T) {
 		txs, err := db.GetExpectedTxs(common.ChainIDStrSolana, 0, 0)
 		require.NoError(t, err)
 		require.Len(t, txs, 1)
-		require.Equal(t, sig, txs[0].TxSignature)
+		require.Equal(t, expectedTx.Hash, txs[0].Hash)
 	})
 
 	t.Run("GetAllExpectedTxs", func(t *testing.T) {
@@ -205,8 +204,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		err = db.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{
-			{ChainID: common.ChainIDStrSolana, TxSignature: solana.Signature{1}, TTL: 100, Priority: 0},
-			{ChainID: common.ChainIDStrSolana, TxSignature: solana.Signature{2}, TTL: 200, Priority: 0},
+			{ChainID: common.ChainIDStrSolana, Hash: [32]byte{1, 2, 3}, TTL: 100, Priority: 0},
+			{ChainID: common.ChainIDStrSolana, Hash: [32]byte{4, 5, 6}, TTL: 200, Priority: 0},
 		})
 		require.NoError(t, err)
 

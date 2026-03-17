@@ -8,8 +8,9 @@ require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260224131128-283944cfc50a
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260316183234-352608bec5eb
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260317154935-121ebac06c72
 	github.com/ethereum/go-ethereum v1.13.14
+	github.com/gagliardetto/binary v0.8.0
 	github.com/gagliardetto/solana-go v1.14.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
@@ -49,7 +50,6 @@ require (
 	github.com/ebitengine/purego v0.6.0-alpha.5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gagliardetto/anchor-go v1.0.0 // indirect
-	github.com/gagliardetto/binary v0.8.0 // indirect
 	github.com/gagliardetto/treeout v0.1.4 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
