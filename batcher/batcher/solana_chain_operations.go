@@ -17,9 +17,7 @@ import (
 	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
-	"github.com/mr-tron/base58"
 )
 
 var (
@@ -69,16 +67,16 @@ func NewSolanaChainOperations(
 func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	ctx context.Context, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	txProvider, err := wallet.NewProvider(rpc.LocalNet_WS)
+	txProvider, err := wallet.NewProvider(sco.config.TxProviderEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	chainConfig := sendtx.ChainConfig{
+	chainConfig := &sendtx.ChainConfig{
 		MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
 	}
 
-	txSender := sendtx.NewTxSender(txProvider, chainConfig, &sco.config.InstructionConfig)
+	txSender := sendtx.NewTxSender(txProvider, chainConfig)
 
 	bridgingTxs, err := sco.newSolanaSmartContractTransaction(
 		sco.config,
@@ -103,7 +101,7 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	}
 
 	tx, err := txSender.CreateTx(
-		ctx, sco.privateKey, sendtx.InstructionTypeBridgeTransaction, blockHash, *bridgingTxs)
+		ctx, sco.privateKey.PublicKey(), sendtx.InstructionTypeBridgeTransaction, blockHash, *bridgingTxs)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +114,7 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	hash := sha256.Sum256(txMsgBytes)
 	txHash := hex.EncodeToString(hash[:])
 
-	rawTx, err := tx.MarshalBinary()
+	rawTx, err := wallet.MarshalTransaction(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -133,20 +131,22 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 
 func (sco *SolanaChainOperations) SignBatchTransaction(
 	generatedBatchData *core.GeneratedBatchTxData) (*core.BatchSignatures, error) {
-	hashBytes, err := base58.Decode(generatedBatchData.TxHash)
+	tx, err := wallet.UnmarshalTransaction(generatedBatchData.TxRaw)
 	if err != nil {
 		return nil, err
 	}
 
-	signature, err := sco.privateKey.Sign(hashBytes)
+	messageBytes, err := tx.Message.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	signatureBytes, err := signature.MarshalJSON()
+	signature, err := sco.privateKey.Sign(messageBytes)
 	if err != nil {
 		return nil, err
 	}
+
+	signatureBytes := signature[:]
 
 	if sco.logger.IsDebug() {
 		sco.logger.Debug("Signature has been created",
@@ -320,8 +320,6 @@ func (sco *SolanaChainOperations) newSolanaSmartContractTransaction(
 	})
 
 	return &sendtx.BridgeTransactionDto{
-		SrcChainID: 0,
-		DstChainID: sco.chainIDConverter.StrToInt[destChainID],
 		SenderAddr: sco.config.BridgingFeeAddress,
 		Receivers:  receivers,
 		BatchID:    batchNonceID,

@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 )
 
 type SolanaChainConfig struct {
@@ -17,8 +16,8 @@ type SolanaChainConfig struct {
 	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
 	Tokens                                map[uint16]common.Token      `json:"tokens"`
 	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
-	InstructionConfig                     sendtx.InstructionConfig     `json:"instructionConfig"`
 	BridgingFeeAddress                    string                       `json:"bridgingFeeAddress"`
+	TxProviderEndpoint                    string                       `json:"txProviderEndpoint"`
 }
 
 func NewSolanaChainConfig(rawMessage json.RawMessage) (*SolanaChainConfig, error) {

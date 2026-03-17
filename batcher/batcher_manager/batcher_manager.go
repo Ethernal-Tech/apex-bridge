@@ -120,11 +120,12 @@ type GetCardanoOpsParams struct {
 }
 
 type GetSolanaOpsParams struct {
-	Config           core.ChainConfig
-	ChainIDConverter *common.ChainIDConverter
-	SolanaIndexerDB  map[string]solanaTrackerStore.StorageHandler
-	SecretsManager   secrets.SecretsManager
-	Logger           hclog.Logger
+	Config             core.ChainConfig
+	ChainIDConverter   *common.ChainIDConverter
+	SolanaIndexerDB    map[string]solanaTrackerStore.StorageHandler
+	SecretsManager     secrets.SecretsManager
+	TxProviderEndpoint string
+	Logger             hclog.Logger
 }
 
 func getCardanoOperations(params GetCardanoOpsParams) (core.ChainOperations, error) {

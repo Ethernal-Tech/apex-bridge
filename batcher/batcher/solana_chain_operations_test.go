@@ -22,7 +22,6 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
-	"github.com/mr-tron/base58"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -54,9 +53,6 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 		wrappedCurrencyID        = 2
 	)
 
-	instructionConfig, err := sendtx.NewInstructionConfig()
-	require.NoError(t, err)
-
 	wrappedTokenMint, err := solana.NewRandomPrivateKey()
 	require.NoError(t, err)
 
@@ -78,7 +74,6 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 		},
 		BridgingFeeAddress: bridgingFeeWallet.PublicKey().String(),
 		MinFeeForBridging:  big.NewInt(1_000_000),
-		InstructionConfig:  *instructionConfig,
 	}
 
 	chainSpecificJSONRaw, err := batcherConfig.Serialize()
@@ -171,7 +166,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		chainConfig := sendtx.ChainConfig{
 			MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
 		}
-		txSender := sendtx.NewTxSender(txProvider, chainConfig, &sco.config.InstructionConfig)
+		txSender := sendtx.NewTxSender(txProvider, &chainConfig)
 
 		bridgingTxs, err := sco.newSolanaSmartContractTransaction(
 			sco.config,
@@ -184,7 +179,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 
 		expectedTx, err := txSender.CreateTx(
 			ctx,
-			sco.privateKey,
+			sco.privateKey.PublicKey(),
 			sendtx.InstructionTypeBridgeTransaction,
 			expectedBlockhash,
 			*bridgingTxs,
@@ -301,26 +296,77 @@ func TestSolanaChain_SignBatchTransaction(t *testing.T) {
 	destChainID, sco, _, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
 
-	_ = destChainID
+	buildValidTxRaw := func(t *testing.T) []byte {
+		t.Helper()
+
+		txProvider, err := solanaWallet.NewProvider(rpc.LocalNet_WS)
+		require.NoError(t, err)
+
+		chainConfig := &sendtx.ChainConfig{
+			MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
+		}
+		txSender := sendtx.NewTxSender(txProvider, chainConfig)
+
+		receiverWallet, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
+		confirmed := []eth.ConfirmedTransaction{
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: receiverWallet.PublicKey().String(),
+						Amount:             big.NewInt(2_000_000),
+						AmountWrapped:      big.NewInt(0),
+						TokenId:            1,
+					},
+				},
+			},
+		}
+
+		bridgingTxs, err := sco.newSolanaSmartContractTransaction(
+			sco.config, destChainID, 1, confirmed, sco.config.MinFeeForBridging,
+		)
+		require.NoError(t, err)
+
+		blockHash, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
+		tx, err := txSender.CreateTx(
+			context.Background(),
+			sco.privateKey.PublicKey(),
+			sendtx.InstructionTypeBridgeTransaction,
+			solana.Hash(blockHash.PublicKey()),
+			*bridgingTxs,
+		)
+		require.NoError(t, err)
+
+		raw, err := solanaWallet.MarshalTransaction(tx)
+		require.NoError(t, err)
+
+		return raw
+	}
 
 	t.Run("success", func(t *testing.T) {
-		hashBytes := []byte("hash-to-sign")
-		txHash := base58.Encode(hashBytes)
+		txRaw := buildValidTxRaw(t)
+
+		txMsgHash := sha256.Sum256(txRaw)
+		txHash := hex.EncodeToString(txMsgHash[:])
 
 		data := &batcherCore.GeneratedBatchTxData{
+			TxRaw:  txRaw,
 			TxHash: txHash,
 		}
 
 		signatures, err := sco.SignBatchTransaction(data)
 		require.NoError(t, err)
 		require.NotNil(t, signatures)
-		require.NotEmpty(t, signatures.Multisig)
+		require.Len(t, signatures.Multisig, 64)
 	})
 
-	t.Run("error on invalid hash", func(t *testing.T) {
-		// invalid base58 string should cause Decode to fail before signing
+	t.Run("error on invalid TxRaw", func(t *testing.T) {
 		data := &batcherCore.GeneratedBatchTxData{
-			TxHash: "###-invalid-base58-hash-###",
+			TxRaw:  []byte("not-a-valid-solana-transaction"),
+			TxHash: "somehash",
 		}
 
 		signatures, err := sco.SignBatchTransaction(data)
@@ -506,8 +552,6 @@ func TestSolanaChain_newSolanaSmartContractTransaction_AggregationAndSorting(t *
 	require.NoError(t, err)
 	require.NotNil(t, dto)
 
-	require.Equal(t, uint8(0), dto.SrcChainID)
-	require.Equal(t, sco.chainIDConverter.StrToInt[destChainID], dto.DstChainID)
 	require.Equal(t, sco.config.BridgingFeeAddress, dto.SenderAddr)
 	require.Equal(t, uint64(42), dto.BatchID)
 
