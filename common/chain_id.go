@@ -10,6 +10,7 @@ const (
 
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"
+	ChainTypeSolanaStr  = "solana"
 
 	// Used for tests only
 	ChainIDStrPrime   = "prime"
@@ -17,6 +18,7 @@ const (
 	ChainIDStrCardano = "cardano"
 	ChainIDStrNexus   = "nexus"
 	ChainIDStrPolygon = "polygon"
+	ChainIDStrSolana  = "solana"
 
 	// Used for tests only
 	ChainIDIntPrime   = ChainIDNum(1)
@@ -24,6 +26,7 @@ const (
 	ChainIDIntNexus   = ChainIDNum(3)
 	ChainIDIntCardano = ChainIDNum(4)
 	ChainIDIntPolygon = ChainIDNum(5)
+	ChainIDIntSolana  = ChainIDNum(6)
 )
 
 type ChainIDConverter struct {
