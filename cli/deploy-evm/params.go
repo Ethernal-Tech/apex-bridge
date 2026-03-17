@@ -94,7 +94,7 @@ const (
 	MyTokenTestName   = "Test Token"
 	MyTokenTestSymbol = "TTK"
 
-	defaultEvmBranch       = "feat/skyline-solana"
+	defaultEvmBranch       = "feat/skyline"
 	defaultCurrencyTokenID = 1
 )
 
