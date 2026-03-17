@@ -6,14 +6,13 @@ require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260312105002-49f2b4c6d497
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260317104604-195b1509c8d8
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260317140324-b5cd58529a48
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gagliardetto/solana-go v1.14.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-metrics v0.5.4
-	github.com/mr-tron/base58 v1.2.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/quasilyte/go-ruleguard v0.4.5
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23
@@ -85,6 +84,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mostynb/zstdpool-freelist v0.0.0-20201229113212-927304c0c3b1 // indirect
+	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
