@@ -2,11 +2,13 @@ package cligenerateconfigs
 
 import (
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/spf13/cobra"
 )
@@ -189,7 +191,10 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 	}
 
 	vcConfig.SolanaChains[p.chainIDString] = &oCore.SolanaChainConfig{
-		NodeURL:                    p.solanaChainNodeURL,
+		SolanaChainConfig: solana.SolanaChainConfig{
+			MinFeeForBridging:  common.LamportToWei(new(big.Int).SetUint64(p.solanaMinFeeForBridging)),
+			TxProviderEndpoint: p.solanaChainNodeURL,
+		},
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
 		PoolIntervalMiliseconds:    defaultSolanaPoolIntervalMiliseconds,
@@ -197,7 +202,6 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		FeeAddrBridgingAmount:      p.solanaFeeAddrBridging,
 		MinColCoinsAllowedToBridge: defaultSolanaMinColCoinsAllowedToBridge,
 		MinOperationFee:            p.solanaMinOperationFee,
-		MinFeeForBridging:          p.solanaMinFeeForBridging,
 		SlotBuffSize:               p.solanaSlotBuffSize,
 		EventBuffSize:              p.solanaEventBuffSize,
 		ErrorBuffSize:              p.solanaErrorBuffSize,

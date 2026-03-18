@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
@@ -68,21 +69,23 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			},
 			SolanaChains: map[string]*oCore.SolanaChainConfig{
 				common.ChainIDStrSolana: {
-					DestinationChains: map[string]common.TokenPairs{
-						common.ChainIDStrPrime: {
-							{SourceTokenID: solanaCurrencyID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+					SolanaChainConfig: solanatx.SolanaChainConfig{
+						DestinationChains: map[string]common.TokenPairs{
+							common.ChainIDStrPrime: {
+								{SourceTokenID: solanaCurrencyID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+							},
+							common.ChainIDStrNexus: {
+								{SourceTokenID: solanaCurrencyID, DestinationTokenID: nexusCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+							},
 						},
-						common.ChainIDStrNexus: {
-							{SourceTokenID: solanaCurrencyID, DestinationTokenID: nexusCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+						Tokens: map[uint16]common.Token{
+							solanaCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						},
-					},
-					Tokens: map[uint16]common.Token{
-						solanaCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						MinFeeForBridging: common.LamportToWei(new(big.Int).SetUint64(minFeeForBridging)),
 					},
 					FeeAddrBridgingAmount:      feeAddrBridgingAmt,
 					MinColCoinsAllowedToBridge: minColCoinsToBridge,
 					MinOperationFee:            minOperationFee,
-					MinFeeForBridging:          minFeeForBridging,
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
@@ -428,7 +431,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txSig, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txSig[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t,
 			common.ChainIDStrPrime,
 			appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
@@ -466,7 +469,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txSig, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txSig[:], claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t,
 			common.ChainIDStrNexus,
 			appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))

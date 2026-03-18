@@ -7,6 +7,7 @@ import (
 
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -19,8 +20,10 @@ func TestSolanaChainObserver(t *testing.T) {
 	logger := hclog.NewNullLogger()
 
 	config := &oCore.SolanaChainConfig{
+		SolanaChainConfig: solana.SolanaChainConfig{
+			TxProviderEndpoint: solanaNodeURL,
+		},
 		ChainID:                    "solana-devnet",
-		NodeURL:                    solanaNodeURL,
 		TrackedProgram:             trackedProgram,
 		PoolIntervalMiliseconds:    time.Duration(1000), // 1000 ms
 		BlockFetchDelayMiliseconds: time.Duration(100),  // 100 ms
@@ -87,8 +90,10 @@ func TestSolanaChainObserver(t *testing.T) {
 		// updateIsTrackerAlive (ReadSlot) was called from the health-check goroutine.
 		restartCheckInterval := 25 * time.Millisecond
 		configShortInterval := &oCore.SolanaChainConfig{
-			ChainID:                    "solana-devnet",
-			NodeURL:                    solanaNodeURL,
+			ChainID: "solana-devnet",
+			SolanaChainConfig: solana.SolanaChainConfig{
+				TxProviderEndpoint: solanaNodeURL,
+			},
 			TrackedProgram:             trackedProgram,
 			PoolIntervalMiliseconds:    time.Duration(1000),
 			BlockFetchDelayMiliseconds: time.Duration(100),
@@ -167,8 +172,10 @@ func TestSolanaChainObserver_Dispose(t *testing.T) {
 	indexerDB.On("UseTransactions").Return(false)
 
 	testConfig := &oCore.SolanaChainConfig{
-		ChainID:                    "solana-devnet",
-		NodeURL:                    solanaNodeURL,
+		ChainID: "solana-devnet",
+		SolanaChainConfig: solana.SolanaChainConfig{
+			TxProviderEndpoint: solanaNodeURL,
+		},
 		TrackedProgram:             trackedProgram,
 		PoolIntervalMiliseconds:    time.Duration(1000),
 		BlockFetchDelayMiliseconds: time.Duration(100),
@@ -190,7 +197,9 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 	logger := hclog.NewNullLogger()
 
 	config := &oCore.SolanaChainConfig{
-		NodeURL:                    solanaNodeURL,
+		SolanaChainConfig: solana.SolanaChainConfig{
+			TxProviderEndpoint: solanaNodeURL,
+		},
 		TrackedProgram:             trackedProgram,
 		PoolIntervalMiliseconds:    time.Duration(1000),
 		BlockFetchDelayMiliseconds: time.Duration(100),
@@ -199,7 +208,7 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 	cfg, err := loadTrackerConfigs(config, logger)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	require.Equal(t, config.NodeURL, cfg.RPCEndpoint)
+	require.Equal(t, config.TxProviderEndpoint, cfg.RPCEndpoint)
 	require.Equal(t, config.PoolIntervalMiliseconds*time.Millisecond, cfg.PollTime)
 	require.Equal(t, config.BlockFetchDelayMiliseconds*time.Millisecond, cfg.BlockFetchDelay)
 	require.NotEmpty(t, cfg.TrackedPrograms)

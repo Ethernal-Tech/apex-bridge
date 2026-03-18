@@ -8,6 +8,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -75,18 +76,16 @@ type CardanoChainConfig struct {
 }
 
 type SolanaChainConfig struct {
-	ChainID                    string                       `json:"-"`
-	NodeURL                    string                       `json:"nodeUrl"`
-	TrackedProgram             string                       `json:"trackedProgram"`
-	BlockFetchDelayMiliseconds time.Duration                `json:"blockFetchDelayMiliseconds"`
-	PoolIntervalMiliseconds    time.Duration                `json:"poolIntervalMs"`
-	RestartTrackerPullCheck    time.Duration                `json:"restartTrackerPullCheck"`
-	DestinationChains          map[string]common.TokenPairs `json:"destChain"`
-	Tokens                     map[uint16]common.Token      `json:"tokens"`
-	FeeAddrBridgingAmount      uint64                       `json:"feeAddressBridgingAmount"`
-	MinColCoinsAllowedToBridge uint64                       `json:"minColCoinsAllowedToBridge"`
-	MinOperationFee            uint64                       `json:"minOperationFee"`
-	MinFeeForBridging          uint64                       `json:"minFeeForBridging"`
+	solana.SolanaChainConfig
+	ChainID                    string        `json:"-"`
+	TrackedProgram             string        `json:"trackedProgram"`
+	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
+	PoolIntervalMiliseconds    time.Duration `json:"poolIntervalMs"`
+	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount      uint64        `json:"feeAddressBridgingAmount"`
+	MinColCoinsAllowedToBridge uint64        `json:"minColCoinsAllowedToBridge"`
+	MinOperationFee            uint64        `json:"minOperationFee"`
+	TreasuryAddress            string        `json:"treasuryAddress"`
 
 	SlotBuffSize  uint8 `json:"slotBuffSize"`
 	EventBuffSize uint8 `json:"eventBuffSize"`

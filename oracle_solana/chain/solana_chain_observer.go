@@ -38,7 +38,7 @@ func NewSolanaChainObserver(
 }
 
 func (so *SolanaChainObserverImpl) Start() error {
-	so.logger.Debug("Starting solana chain observer", "endpoint", so.config.NodeURL)
+	so.logger.Debug("Starting solana chain observer", "endpoint", so.config.TxProviderEndpoint)
 
 	trackerConfig, err := loadTrackerConfigs(so.config, so.logger)
 	if err != nil {
@@ -145,7 +145,7 @@ func loadTrackerConfigs(config *oCore.SolanaChainConfig, logger hclog.Logger) (*
 	}
 
 	return &tracker.EventTrackerConfig{
-		RPCEndpoint:     config.NodeURL,
+		RPCEndpoint:     config.TxProviderEndpoint,
 		TrackedPrograms: TrackedPrograms,
 		PollTime:        config.PoolIntervalMiliseconds * time.Millisecond,
 		BlockFetchDelay: config.BlockFetchDelayMiliseconds * time.Millisecond,

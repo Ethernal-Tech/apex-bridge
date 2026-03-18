@@ -162,18 +162,6 @@ func NewValidatorComponents(
 		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
 	}
 
-	solanaIndexerDbs := make(map[string]solanaStore.StorageHandler, len(appConfig.SolanaChains))
-
-	for _, solanaChainConfig := range oracleConfig.SolanaChains {
-		solanaIndexerDB, err := solanaTrackerStore.NewBoltStorageHandler(filepath.Join(
-			appConfig.Settings.DbsPath, solanaChainConfig.ChainID+".db"), true)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", solanaChainConfig.ChainID, err)
-		}
-
-		solanaIndexerDbs[solanaChainConfig.ChainID] = solanaIndexerDB
-	}
-
 	oracleDB, err := oracleCommonDA.NewDatabase(
 		filepath.Join(appConfig.Settings.DbsPath, "oracle.db"), oracleConfig)
 	if err != nil {
