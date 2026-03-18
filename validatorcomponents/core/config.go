@@ -86,7 +86,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
 ) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
-	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	batcherChains := make(
+		[]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains)+len(appConfig.SolanaChains))
 	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
 	oracleSolanaChains := make(map[string]*oracleCore.SolanaChainConfig, len(appConfig.SolanaChains))
 
@@ -124,6 +125,13 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 	for _, scConfig := range appConfig.SolanaChains {
 		oracleSolanaChains[scConfig.ChainID] = scConfig
+
+		chainSpecificJSONRaw, _ := scConfig.SolanaChainConfig.Serialize()
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainID:       scConfig.ChainID,
+			ChainType:     common.ChainTypeSolanaStr,
+			ChainSpecific: chainSpecificJSONRaw,
+		})
 	}
 
 	oracleConfig := &oracleCore.AppConfig{

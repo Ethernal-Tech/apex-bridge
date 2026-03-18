@@ -11,6 +11,8 @@ const (
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
+	WSOLTokenMint = "So11111111111111111111111111111111111111112"
+
 	PotentialFeeDefault           = 250_000
 	MaxInputsPerBridgingTxDefault = 50
 

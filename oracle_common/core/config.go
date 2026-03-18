@@ -160,7 +160,13 @@ func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []strin
 }
 
 func (appConfig *AppConfig) GetTreasuryAddress(chainID string) string {
-	return appConfig.CardanoChains[chainID].TreasuryAddress
+	if _, exists := appConfig.CardanoChains[chainID]; exists {
+		return appConfig.CardanoChains[chainID].TreasuryAddress
+	} else if _, exists := appConfig.SolanaChains[chainID]; exists {
+		return appConfig.SolanaChains[chainID].TreasuryAddress
+	} else {
+		return ""
+	}
 }
 
 func (appConfig *AppConfig) FillOut() {

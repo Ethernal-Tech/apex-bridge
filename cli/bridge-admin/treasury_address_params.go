@@ -23,12 +23,8 @@ const (
 )
 
 type treasuryBaseParams struct {
-	nodeURL          string
-	privateKey       string
-	privateKeyConfig string
-	gatewayAddress   string
-	chainID          string
-	chainIDConverter *common.ChainIDConverter
+	nodeURL        string
+	gatewayAddress string
 }
 
 func (bp *treasuryBaseParams) ValidateBaseFlags() error {
@@ -36,12 +32,8 @@ func (bp *treasuryBaseParams) ValidateBaseFlags() error {
 		return fmt.Errorf("invalid --%s flag", nodeFlag)
 	}
 
-	if bp.privateKey == "" && bp.privateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
-	}
-
-	if !common.IsValidAddress(bp.chainID, bp.gatewayAddress, bp.chainIDConverter) {
-		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
+	if !ethcommon.IsHexAddress(bp.gatewayAddress) {
+		return fmt.Errorf("invalid gateway contract address: --%s", gatewayAddressFlag)
 	}
 
 	return nil
@@ -56,55 +48,32 @@ func (bp *treasuryBaseParams) RegisterBaseFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&bp.privateKey,
-		evmPrivateKeyFlag,
-		"",
-		evmPrivateKeyFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&bp.privateKeyConfig,
-		privateKeyConfigFlag,
-		"",
-		privateKeyConfigFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&bp.gatewayAddress,
 		gatewayAddressFlag,
 		"",
 		gatewayAddressFlagDesc,
 	)
-
-	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, evmPrivateKeyFlag)
 }
 
 type setTreasuryAddressParams struct {
 	treasuryBaseParams
+	privateKey         string
+	privateKeyConfig   string
 	treasuryAddressStr string
 	treasuryAddress    ethcommon.Address
-	chainIDsConfig     string
-	chainIDConverter   *common.ChainIDConverter
 }
 
 func (sp *setTreasuryAddressParams) ValidateFlags() error {
-	if err := validateConfigFilePath(sp.chainIDsConfig); err != nil {
-		return err
-	}
-
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](sp.chainIDsConfig, "")
-	if err != nil {
-		return fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	sp.chainIDConverter = chainIDsConfig.ToChainIDConverter()
-
 	if err := sp.ValidateBaseFlags(); err != nil {
 		return err
 	}
 
-	if !common.IsValidAddress(sp.chainID, sp.treasuryAddressStr, sp.chainIDConverter) {
-		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
+	if sp.privateKey == "" && sp.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
+	}
+
+	if !ethcommon.IsHexAddress(sp.treasuryAddressStr) {
+		return fmt.Errorf("invalid treasury address: --%s", treasuryAddressFlag)
 	}
 
 	sp.treasuryAddress = ethcommon.HexToAddress(sp.treasuryAddressStr)
@@ -116,10 +85,17 @@ func (sp *setTreasuryAddressParams) RegisterFlags(cmd *cobra.Command) {
 	sp.RegisterBaseFlags(cmd)
 
 	cmd.Flags().StringVar(
-		&sp.chainIDsConfig,
-		chainIDsConfigFlag,
+		&sp.privateKey,
+		privateKeyFlag,
 		"",
-		chainIDsConfigFlagDesc,
+		privateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&sp.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -128,6 +104,8 @@ func (sp *setTreasuryAddressParams) RegisterFlags(cmd *cobra.Command) {
 		"",
 		treasuryAddressFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)
 }
 
 func (sp *setTreasuryAddressParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -228,11 +206,6 @@ func (gp *getTreasuryAddressParams) Execute(outputter common.OutputFormatter) (c
 	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(gp.nodeURL))
 	if err != nil {
 		return nil, err
-	}
-
-	_, err = eth.GetEthWalletForBladeAdmin(true, gp.privateKey, gp.privateKeyConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	gatewayAddress := common.HexToAddress(gp.gatewayAddress)
