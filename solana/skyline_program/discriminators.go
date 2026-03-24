@@ -5,13 +5,11 @@ package skyline_program
 
 // Account discriminators
 var (
-	Account_BridgingTransaction = [8]byte{199, 172, 160, 246, 169, 105, 182, 43}
-	Account_FeeConfig           = [8]byte{143, 52, 146, 187, 219, 123, 76, 155}
-	Account_TokenIdGuard        = [8]byte{176, 49, 94, 91, 195, 131, 192, 192}
-	Account_TokenRegistry       = [8]byte{227, 255, 152, 118, 84, 200, 145, 120}
-	Account_ValidatorDelta      = [8]byte{78, 60, 235, 203, 202, 134, 2, 124}
-	Account_ValidatorSet        = [8]byte{35, 206, 97, 202, 43, 11, 11, 127}
-	Account_Vault               = [8]byte{211, 8, 232, 43, 2, 152, 117, 119}
+	Account_FeeConfig     = [8]byte{143, 52, 146, 187, 219, 123, 76, 155}
+	Account_TokenIdGuard  = [8]byte{176, 49, 94, 91, 195, 131, 192, 192}
+	Account_TokenRegistry = [8]byte{227, 255, 152, 118, 84, 200, 145, 120}
+	Account_ValidatorSet  = [8]byte{35, 206, 97, 202, 43, 11, 11, 127}
+	Account_Vault         = [8]byte{211, 8, 232, 43, 2, 152, 117, 119}
 )
 
 // Event discriminators

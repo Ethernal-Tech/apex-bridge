@@ -120,6 +120,46 @@
           "writable": true
         },
         {
+          "name": "token_registry",
+          "docs": [
+            "The TokenRegistry PDA for this mint.",
+            "",
+            "Determines the bridge mechanic for this token:",
+            "- is_lock_unlock = true  → transfer tokens into vault (lock)",
+            "- is_lock_unlock = false → burn tokens from user's account",
+            "",
+            "Only tokens registered via register_lock_unlock_token or register_mint_burn_token",
+            "are permitted to be bridged. Unregistered mints will fail this account constraint."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "token_program",
           "docs": [
             "The token program for token operations (burn/transfer)"
@@ -187,11 +227,11 @@
         },
         {
           "name": "receiver",
-          "type": "bytes"
+          "type": "string"
         },
         {
           "name": "destination_chain",
-          "type": "u8"
+          "type": "string"
         },
         {
           "name": "fees",
@@ -218,7 +258,6 @@
         "* `InvalidBatchId` - If the batch_id is not greater than the last_batch_id",
         "* `InvalidReceiver` - If the receiver is the same as the payer",
         "* `NoSignersProvided` - If no validator signers are provided",
-        "* `SignerAlreadyApproved` - If a signer has already approved this transaction",
         "* `NotEnoughSigners` - If insufficient validators have signed (checked when threshold is met)",
         "* `InvalidSigner` - If a signer is not in the validator set"
       ],
@@ -236,7 +275,7 @@
         {
           "name": "payer",
           "docs": [
-            "The payer for any associated token account creation"
+            "Pays rent for any recipient ATAs that need to be created (~0.002 SOL each)."
           ],
           "writable": true,
           "signer": true
@@ -244,7 +283,8 @@
         {
           "name": "validator_set",
           "docs": [
-            "The validator set account for consensus validation"
+            "Validator set — holds threshold, registered signers, and last_batch_id.",
+            "The `batch_id` constraint is the first line of replay protection."
           ],
           "writable": true,
           "pda": {
@@ -271,67 +311,9 @@
           }
         },
         {
-          "name": "bridging_transaction",
-          "docs": [
-            "The bridging transaction account to be created"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  114,
-                  105,
-                  100,
-                  103,
-                  105,
-                  110,
-                  103,
-                  95,
-                  116,
-                  114,
-                  97,
-                  110,
-                  115,
-                  97,
-                  99,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "batch_id"
-              }
-            ]
-          }
-        },
-        {
-          "name": "mint_token",
-          "writable": true
-        },
-        {
-          "name": "recipient",
-          "docs": [
-            "The recipient of the bridged tokens"
-          ]
-        },
-        {
-          "name": "recipient_ata",
-          "docs": [
-            "The recipient's associated token account for the mint",
-            "Validated to be the canonical ATA address, created manually after threshold check"
-          ],
-          "writable": true
-        },
-        {
           "name": "vault",
           "docs": [
-            "The vault account"
+            "Bridge vault PDA — signing authority for mint_to and transfer_checked CPIs."
           ],
           "writable": true,
           "pda": {
@@ -350,39 +332,43 @@
           }
         },
         {
-          "name": "vault_ata",
-          "docs": [
-            "The vault associated token account for the mint",
-            "Validated to be the canonical ATA address"
-          ],
-          "writable": true
-        },
-        {
           "name": "token_program",
           "docs": [
-            "The token program for minting operations"
+            "SPL Token program."
           ],
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
           "docs": [
-            "The system program for account creation"
+            "System program — required for ATA creation CPIs."
           ],
           "address": "11111111111111111111111111111111"
         },
         {
           "name": "associated_token_program",
           "docs": [
-            "The associated token program for creating token accounts"
+            "Associated token program — required for ATA creation CPIs."
           ],
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         }
       ],
       "args": [
         {
-          "name": "amount",
-          "type": "u64"
+          "name": "transfers",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "TransferItem"
+              }
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": {
+            "vec": "pubkey"
+          }
         },
         {
           "name": "batch_id",
@@ -430,7 +416,7 @@
         {
           "name": "payer",
           "docs": [
-            "The payer for any associated token account creation"
+            "The payer for any rent fees"
           ],
           "writable": true,
           "signer": true
@@ -465,49 +451,9 @@
           }
         },
         {
-          "name": "validator_set_change",
-          "docs": [
-            "The validator set change account to be created"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  108,
-                  105,
-                  100,
-                  97,
-                  116,
-                  111,
-                  114,
-                  95,
-                  115,
-                  101,
-                  116,
-                  95,
-                  99,
-                  104,
-                  97,
-                  110,
-                  103,
-                  101
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "batch_id"
-              }
-            ]
-          }
-        },
-        {
           "name": "system_program",
           "docs": [
-            "The system program for account creation"
+            "The system program"
           ],
           "address": "11111111111111111111111111111111"
         }
@@ -545,7 +491,6 @@
         "* `last_id`              - Last known batch ID (for replay protection)",
         "* `min_operational_fee`  - Minimum bridge tip sent to treasury (lamports)",
         "* `bridge_fee`           - Estimated destination chain gas cost (lamports)",
-        "* `min_bridging_amount`  - Minimum amount of tokens that can be bridged (in smallest unit, e.g. lamports for SOL)",
         "",
         "# Errors",
         "* `ValidatorsNotUnique`    - Duplicate validators provided",
@@ -687,14 +632,6 @@
         {
           "name": "bridge_fee",
           "type": "u64"
-        },
-        {
-          "name": "min_bridging_amount",
-          "type": "u64"
-        },
-        {
-          "name": "currency_token_id",
-          "type": "u16"
         }
       ]
     },
@@ -714,7 +651,7 @@
         {
           "name": "authority",
           "docs": [
-            "The admin who owns the bridge.",
+            "The bridge admin.",
             "Must match fee_config.authority — enforced by constraint below.",
             "Pays rent for TokenRegistry and TokenIdGuard PDAs."
           ],
@@ -724,8 +661,7 @@
         {
           "name": "fee_config",
           "docs": [
-            "Read-only. Used solely to validate that authority == fee_config.authority.",
-            "PDA: [FEE_CONFIG_SEED]"
+            "Read-only. Used solely to validate authority == fee_config.authority."
           ],
           "pda": {
             "seeds": [
@@ -750,16 +686,21 @@
         {
           "name": "mint",
           "docs": [
-            "The pre-existing SPL mint being registered (e.g. USDC, WSOL).",
-            "NOT created here — must already exist on-chain.",
+            "The pre-existing SPL mint being registered (e.g. WSOL, USDC).",
             "Anchor validates this is a real, initialized SPL mint account."
           ]
         },
         {
           "name": "token_registry",
           "docs": [
-            "One PDA per mint. Anchor init fails if it already exists.",
-            "That failure surfaces as MintAlreadyRegistered (via init constraint).",
+            "TokenRegistry PDA — one per mint.",
+            "",
+            "This is the Solana-idiomatic \"map entry\": given any mint pubkey, the",
+            "registry for that mint is always at a deterministic address:",
+            "PDA([TOKEN_REGISTRY_SEED, mint])",
+            "",
+            "Anchor's `init` rejects creation if the account already exists,",
+            "making double-registration of the same mint impossible.",
             "PDA: [TOKEN_REGISTRY_SEED, mint.key()]"
           ],
           "writable": true,
@@ -794,9 +735,10 @@
         {
           "name": "token_id_guard",
           "docs": [
-            "One PDA per token_id. Anchor init fails if it already exists.",
-            "That failure prevents two mints sharing the same token_id,",
-            "which would corrupt destination-chain routing.",
+            "TokenIdGuard PDA — one per token_id.",
+            "",
+            "Acts as a uniqueness sentinel: if two mints tried to share the same",
+            "token_id, the second `init` would fail, protecting destination-chain routing.",
             "PDA: [TOKEN_ID_GUARD_SEED, token_id.to_le_bytes()]"
           ],
           "writable": true,
@@ -840,6 +782,10 @@
         {
           "name": "token_id",
           "type": "u16"
+        },
+        {
+          "name": "min_bridging_amount",
+          "type": "u64"
         }
       ]
     },
@@ -857,13 +803,13 @@
         "* `ctx`      - Instruction context",
         "* `token_id` - Unique gateway-compatible uint16 identifier",
         "* `decimals` - Decimal precision of the new mint (e.g. 6 or 9)",
+        "* `min_bridging_amount` - Minimum raw token amount allowed per bridge_request",
         "* `name`     - Token name for Metaplex metadata",
         "* `symbol`   - Token symbol for Metaplex metadata",
         "* `uri`      - Metadata URI (IPFS / Arweave JSON)",
         "",
         "# Errors",
-        "* `CustomError::Unauthorized`    - Signer is not the bridge authority",
-        "* `CustomError::CurrencyTokenId` - token_id is reserved for native currency"
+        "* `CustomError::Unauthorized`    - Signer is not the bridge authority"
       ],
       "discriminator": [
         20,
@@ -891,7 +837,7 @@
         {
           "name": "fee_config",
           "docs": [
-            "Read-only. Validates authority and provides currency_token_id guard value.",
+            "Read-only. Validates authority",
             "PDA: [FEE_CONFIG_SEED]"
           ],
           "pda": {
@@ -1058,6 +1004,10 @@
           "type": "u8"
         },
         {
+          "name": "min_bridging_amount",
+          "type": "u64"
+        },
+        {
           "name": "name",
           "type": "string"
         },
@@ -1085,7 +1035,6 @@
         "* `ctx` - The context containing accounts for updating the fee configuration",
         "* `min_operational_fee` - Optional new minimum operational fee (lamports)",
         "* `bridge_fee` - Optional new bridge fee (lamports)",
-        "* `min_bridging_amount` - Optional new minimum bridging amount (in smallest unit, e.g. lamports for SOL)",
         "* `update_treasury` - Optional flag indicating whether to update the treasury address",
         "* `update_relayer` - Optional flag indicating whether to update the relayer address",
         "",
@@ -1161,12 +1110,6 @@
           }
         },
         {
-          "name": "min_bridging_amount",
-          "type": {
-            "option": "u64"
-          }
-        },
-        {
           "name": "update_treasury",
           "type": {
             "option": "bool"
@@ -1182,19 +1125,6 @@
     }
   ],
   "accounts": [
-    {
-      "name": "BridgingTransaction",
-      "discriminator": [
-        199,
-        172,
-        160,
-        246,
-        169,
-        105,
-        182,
-        43
-      ]
-    },
     {
       "name": "FeeConfig",
       "discriminator": [
@@ -1232,19 +1162,6 @@
         200,
         145,
         120
-      ]
-    },
-    {
-      "name": "ValidatorDelta",
-      "discriminator": [
-        78,
-        60,
-        235,
-        203,
-        202,
-        134,
-        2,
-        124
       ]
     },
     {
@@ -1407,128 +1324,138 @@
     },
     {
       "code": 6010,
-      "name": "SignerAlreadyApproved",
-      "msg": "Signer already approved"
-    },
-    {
-      "code": 6011,
-      "name": "InvalidProposalHash",
-      "msg": "Invalid proposal hash"
-    },
-    {
-      "code": 6012,
       "name": "AddingExistingSigner",
       "msg": "Adding existing signer"
     },
     {
-      "code": 6013,
+      "code": 6011,
       "name": "RemovingNonExistentSigner",
       "msg": "Removing non existent signer"
     },
     {
-      "code": 6014,
+      "code": 6012,
       "name": "DuplicateSignersProvided",
       "msg": "Duplicate signers provided"
     },
     {
-      "code": 6015,
-      "name": "BridgingTransactionMismatch",
-      "msg": "Bridging transaction details do not match"
-    },
-    {
-      "code": 6016,
+      "code": 6013,
       "name": "InvalidVault",
       "msg": "Invalid vault provided"
     },
     {
-      "code": 6017,
+      "code": 6014,
       "name": "InvalidAmount",
       "msg": "Amount must be greater than zero"
     },
     {
-      "code": 6018,
+      "code": 6015,
       "name": "InvalidTokenAccount",
       "msg": "Invalid token account"
     },
     {
-      "code": 6019,
+      "code": 6016,
       "name": "DuplicateValidatorsInAdded",
       "msg": "Duplicate validators found in added list"
     },
     {
-      "code": 6020,
+      "code": 6017,
       "name": "DuplicateValidatorsInRemoved",
       "msg": "Duplicate validators found in removed list"
     },
     {
-      "code": 6021,
+      "code": 6018,
       "name": "AddingAndRemovingSameSigner",
       "msg": "Cannot add and remove the same signer"
     },
     {
-      "code": 6022,
+      "code": 6019,
       "name": "TooManyValidatorsRemoved",
       "msg": "Cannot remove more validators than will exist after additions"
     },
     {
-      "code": 6023,
+      "code": 6020,
       "name": "InsufficientFee",
       "msg": "Insufficient bridge fee provided"
     },
     {
-      "code": 6024,
+      "code": 6021,
       "name": "InvalidTreasury",
       "msg": "Treasury account does not match fee config"
     },
     {
-      "code": 6025,
+      "code": 6022,
       "name": "Unauthorized",
       "msg": "Unauthorized action attempted"
     },
     {
-      "code": 6026,
+      "code": 6023,
       "name": "InvalidRelayer",
       "msg": "Relayer account does not match fee config"
     },
     {
-      "code": 6027,
+      "code": 6024,
       "name": "FeeConfigOverflow",
       "msg": "Fee values overflow when combined — reduce min_operational_fee or bridge_fee"
     },
     {
-      "code": 6028,
+      "code": 6025,
       "name": "BridgingAmountTooLow",
       "msg": "Bridging amount is below the minimum threshold"
     },
     {
-      "code": 6029,
-      "name": "CurrencyTokenId",
-      "msg": "Token ID is reserved for the currency token"
-    },
-    {
-      "code": 6030,
+      "code": 6026,
       "name": "TokenIdAlreadyRegistered",
       "msg": "Token ID is already registered to another mint"
     },
     {
-      "code": 6031,
+      "code": 6027,
       "name": "MintAlreadyRegistered",
       "msg": "This mint is already registered in the token registry"
     },
     {
-      "code": 6032,
+      "code": 6028,
       "name": "TokenNotRegistered",
       "msg": "Mint is not registered in the token registry"
     },
     {
-      "code": 6033,
+      "code": 6029,
       "name": "NotLockUnlock",
       "msg": "Token is not a Lock/Unlock token"
     },
     {
-      "code": 6034,
+      "code": 6030,
       "name": "NotMintBurn",
       "msg": "Token is not a Mint/Burn token"
+    },
+    {
+      "code": 6031,
+      "name": "InsufficientSigners",
+      "msg": "Not enough validators signed this transaction"
+    },
+    {
+      "code": 6032,
+      "name": "InvalidMintList",
+      "msg": "Mint list is empty or inconsistent with transfers."
+    },
+    {
+      "code": 6033,
+      "name": "InvalidMintIndex",
+      "msg": "mint_index is out of bounds for the provided mints list."
+    },
+    {
+      "code": 6034,
+      "name": "InvalidRemainingAccounts",
+      "msg": "remaining_accounts layout is inconsistent with instruction arguments."
+    },
+    {
+      "code": 6035,
+      "name": "AccountNotFound",
+      "msg": "A required account was not found in the transaction account list."
+    },
+    {
+      "code": 6036,
+      "name": "InvalidTransferCount",
+      "msg": "Transfer count must be greater or equal than 1."
     }
   ],
   "types": [
@@ -1561,17 +1488,16 @@
           {
             "name": "receiver",
             "docs": [
-              "Receiver's address on the destination chain (variable length byte vector)",
-              "This format accommodates various address formats across different blockchains"
+              "The recipient's address on the destination chain, encoded as a string."
             ],
-            "type": "bytes"
+            "type": "string"
           },
           {
             "name": "destination_chain",
             "docs": [
-              "Chain ID identifying the destination blockchain network"
+              "Identifier for the destination blockchain (e.g., \"ethereum\", \"bsc\", \"polygon\")"
             ],
-            "type": "u8"
+            "type": "string"
           },
           {
             "name": "mint_token",
@@ -1579,13 +1505,6 @@
               "Public key of the token mint being bridged"
             ],
             "type": "pubkey"
-          },
-          {
-            "name": "batch_request_id",
-            "docs": [
-              "The batch request ID associated with this bridge request"
-            ],
-            "type": "u64"
           },
           {
             "name": "bridge_fee",
@@ -1598,83 +1517,6 @@
             "name": "operational_fee",
             "docs": [
               "The operational fee for the bridge to maintain its operations"
-            ],
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "BridgingTransaction",
-      "docs": [
-        "Represents a bridging transaction that transfers tokens to a recipient.",
-        "",
-        "The `BridgingTransaction` account tracks a pending token transfer that requires",
-        "validator consensus. Once enough validators have approved the transaction (meeting",
-        "the threshold), the tokens are automatically transferred or minted to the recipient,",
-        "and the account is closed.",
-        "",
-        "# Fields",
-        "",
-        "* `id` - Unique identifier for the transaction (same as the account's key)",
-        "* `amount` - The amount of tokens to transfer to the recipient",
-        "* `receiver` - The public key of the recipient on the destination chain",
-        "* `mint_token` - The public key of the token mint being bridged",
-        "* `signers` - List of validator public keys that have approved this transaction",
-        "* `bump` - Bump seed for the PDA derivation",
-        "* `batch_id` - The batch ID of this transaction (must be greater than last_batch_id)"
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "id",
-            "docs": [
-              "Unique identifier for the transaction"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "docs": [
-              "The amount of tokens to transfer to the recipient"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "receiver",
-            "docs": [
-              "The public key of the recipient on the destination chain"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "mint_token",
-            "docs": [
-              "The public key of the token mint being bridged"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "signers",
-            "docs": [
-              "List of validator public keys that have approved this transaction"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "Bump seed for the Program Derived Address (PDA)"
-            ],
-            "type": "u8"
-          },
-          {
-            "name": "batch_id",
-            "docs": [
-              "The batch ID of this transaction (must be greater than last_batch_id)"
             ],
             "type": "u64"
           }
@@ -1704,20 +1546,6 @@
               "Estimated fee to refund the relayer for destination chain gas"
             ],
             "type": "u64"
-          },
-          {
-            "name": "min_bridging_amount",
-            "docs": [
-              "Minimum token amount allowed per bridge request"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "currency_token_id",
-            "docs": [
-              "The token ID reserved for native SOL bridging"
-            ],
-            "type": "u16"
           },
           {
             "name": "treasury",
@@ -1773,13 +1601,6 @@
             "type": "u64"
           },
           {
-            "name": "min_bridging_amount",
-            "docs": [
-              "Minimum bridging amount"
-            ],
-            "type": "u64"
-          },
-          {
             "name": "treasury",
             "docs": [
               "Treasury address"
@@ -1825,6 +1646,14 @@
               "The pre-existing SPL mint being registered."
             ],
             "type": "pubkey"
+          },
+          {
+            "name": "min_bridging_amount",
+            "docs": [
+              "Minimum raw token amount allowed per bridge_request.",
+              "Token-decimal-aware: e.g. for USDC this would be 1_000_000 (1 USDC with 6 decimals)."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -1932,6 +1761,13 @@
             "type": "bool"
           },
           {
+            "name": "min_bridging_amount",
+            "docs": [
+              "Minimum raw token amount allowed per bridge_request."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "docs": [
               "Stored to avoid recomputing in CPI calls."
@@ -1953,104 +1789,53 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "transaction_id",
-            "docs": [
-              "The unique identifier of the transaction that was executed"
-            ],
-            "type": "pubkey"
-          },
-          {
             "name": "batch_id",
             "docs": [
               "The batch ID of the executed transaction"
             ],
             "type": "u64"
+          },
+          {
+            "name": "transfer_count",
+            "docs": [
+              "The number of transfers in the executed transaction"
+            ],
+            "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "ValidatorDelta",
+      "name": "TransferItem",
       "docs": [
-        "Represents a pending validator set update that requires consensus.",
+        "Describes a single transfer within a batched bridge transaction.",
         "",
-        "The `ValidatorDelta` account tracks a proposed change to the validator set that",
-        "requires approval from the current validators. Once enough validators have approved",
-        "the proposal (meeting the threshold), the changes are applied to the validator set,",
-        "and the account is closed.",
-        "",
-        "# Fields",
-        "",
-        "* `id` - Unique identifier for the validator set change (same as the account's key)",
-        "* `added` - List of new validator public keys to add to the validator set",
-        "* `removed` - List of validator indices to remove from the validator set",
-        "* `bump` - Bump seed for the PDA derivation",
-        "* `batch_id` - The batch ID of this validator set change (must be greater than last_batch_id)",
-        "* `signers` - List of validator public keys that have approved this change",
-        "* `proposal_hash` - Hash of the proposal to ensure all validators approve the same change"
+        "`mint_index` references into the deduplicated `mints` instruction argument,",
+        "which is also parallel to the mint accounts section in `remaining_accounts`."
       ],
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "id",
+            "name": "recipient",
             "docs": [
-              "Unique identifier for the validator set change"
+              "The destination wallet pubkey (not the ATA — the raw owner wallet)."
             ],
             "type": "pubkey"
           },
           {
-            "name": "added",
+            "name": "mint_index",
             "docs": [
-              "List of new validator public keys to add (max 10 per change)"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "removed",
-            "docs": [
-              "List of validator public keys to remove (max 10 per change)"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "Bump seed for the Program Derived Address (PDA)"
+              "Zero-based index into the `mints: Vec<Pubkey>` instruction argument."
             ],
             "type": "u8"
           },
           {
-            "name": "batch_id",
+            "name": "amount",
             "docs": [
-              "The batch ID of this validator set change (must be greater than last_batch_id)"
+              "Amount of tokens to transfer, in the mint's native base unit."
             ],
             "type": "u64"
-          },
-          {
-            "name": "signers",
-            "docs": [
-              "List of validator public keys that have approved this change"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "proposal_hash",
-            "docs": [
-              "Hash of the proposal to ensure all validators approve the same change"
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           }
         ]
       }
@@ -2197,16 +1982,6 @@
       "value": "[98, 114, 105, 100, 103, 105, 110, 103, 95, 114, 101, 113, 117, 101, 115, 116]"
     },
     {
-      "name": "BRIDGING_TRANSACTION_SEED",
-      "docs": [
-        "Seed string used to derive BridgingTransaction Program Derived Addresses (PDAs).",
-        "",
-        "This seed is combined with the transaction id to create a unique address for the bridging transaction account."
-      ],
-      "type": "bytes",
-      "value": "[98, 114, 105, 100, 103, 105, 110, 103, 95, 116, 114, 97, 110, 115, 97, 99, 116, 105, 111, 110]"
-    },
-    {
       "name": "DISC",
       "docs": [
         "Size of the account discriminator in bytes.",
@@ -2216,6 +1991,14 @@
       ],
       "type": "u32",
       "value": "8"
+    },
+    {
+      "name": "FEE_CONFIG_SEED",
+      "docs": [
+        "Seed string used to derive FeeConfig PDA"
+      ],
+      "type": "bytes",
+      "value": "[102, 101, 101, 95, 99, 111, 110, 102, 105, 103]"
     },
     {
       "name": "MAX_VALIDATORS",
@@ -2253,14 +2036,20 @@
       "value": "4"
     },
     {
-      "name": "VALIDATOR_SET_CHANGE_SEED",
+      "name": "TOKEN_ID_GUARD_SEED",
       "docs": [
-        "Seed string used to derive ValidatorSetChange Program Derived Addresses (PDAs).",
-        "",
-        "This seed is combined with the validator set change address to create a unique address for the validator set change account."
+        "Seed string used to derive TokenIdGuard PDA"
       ],
       "type": "bytes",
-      "value": "[118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 115, 101, 116, 95, 99, 104, 97, 110, 103, 101]"
+      "value": "[116, 111, 107, 101, 110, 95, 105, 100, 95, 103, 117, 97, 114, 100]"
+    },
+    {
+      "name": "TOKEN_REGISTRY_SEED",
+      "docs": [
+        "Seed string used to derive TokenRegistry PDA"
+      ],
+      "type": "bytes",
+      "value": "[116, 111, 107, 101, 110, 95, 114, 101, 103, 105, 115, 116, 114, 121]"
     },
     {
       "name": "VALIDATOR_SET_SEED",

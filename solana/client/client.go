@@ -237,6 +237,8 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 	numSigs := int(tx.Message.Header.NumRequiredSignatures)
 	tx.Signatures = make([]solana.Signature, numSigs)
 
+	once := false
+
 	// Sign in correct order — matching tx.Message.AccountKeys index
 	for i := 0; i < numSigs; i++ {
 		accountKey := tx.Message.AccountKeys[i]
@@ -244,6 +246,11 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 		pk, ok := signers[accountKey]
 		if !ok {
 			return nil, fmt.Errorf("missing signer for account: %s", accountKey)
+		}
+
+		if pk.PublicKey() != feePayer.PublicKey() && !once {
+			once = true
+			continue
 		}
 
 		// Each signer independently signs the same message bytes
@@ -254,6 +261,8 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 
 		tx.Signatures[i] = sig
 	}
+
+	fmt.Println("\ntx", (tx.String()))
 
 	sig, err := s.cli.SendTransaction(ctx, tx)
 	if err != nil {

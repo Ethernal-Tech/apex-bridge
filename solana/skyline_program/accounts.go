@@ -15,13 +15,6 @@ func ParseAnyAccount(accountData []byte) (any, error) {
 		return nil, fmt.Errorf("failed to peek account discriminator: %w", err)
 	}
 	switch discriminator {
-	case Account_BridgingTransaction:
-		value := new(BridgingTransaction)
-		err := value.UnmarshalWithDecoder(decoder)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal account as BridgingTransaction: %w", err)
-		}
-		return value, nil
 	case Account_FeeConfig:
 		value := new(FeeConfig)
 		err := value.UnmarshalWithDecoder(decoder)
@@ -43,13 +36,6 @@ func ParseAnyAccount(accountData []byte) (any, error) {
 			return nil, fmt.Errorf("failed to unmarshal account as TokenRegistry: %w", err)
 		}
 		return value, nil
-	case Account_ValidatorDelta:
-		value := new(ValidatorDelta)
-		err := value.UnmarshalWithDecoder(decoder)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal account as ValidatorDelta: %w", err)
-		}
-		return value, nil
 	case Account_ValidatorSet:
 		value := new(ValidatorSet)
 		err := value.UnmarshalWithDecoder(decoder)
@@ -67,23 +53,6 @@ func ParseAnyAccount(accountData []byte) (any, error) {
 	default:
 		return nil, fmt.Errorf("unknown discriminator: %s", binary.FormatDiscriminator(discriminator))
 	}
-}
-
-func ParseAccount_BridgingTransaction(accountData []byte) (*BridgingTransaction, error) {
-	decoder := binary.NewBorshDecoder(accountData)
-	discriminator, err := decoder.ReadDiscriminator()
-	if err != nil {
-		return nil, fmt.Errorf("failed to peek discriminator: %w", err)
-	}
-	if discriminator != Account_BridgingTransaction {
-		return nil, fmt.Errorf("expected discriminator %v, got %s", Account_BridgingTransaction, binary.FormatDiscriminator(discriminator))
-	}
-	acc := new(BridgingTransaction)
-	err = acc.UnmarshalWithDecoder(decoder)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal account of type BridgingTransaction: %w", err)
-	}
-	return acc, nil
 }
 
 func ParseAccount_FeeConfig(accountData []byte) (*FeeConfig, error) {
@@ -133,23 +102,6 @@ func ParseAccount_TokenRegistry(accountData []byte) (*TokenRegistry, error) {
 	err = acc.UnmarshalWithDecoder(decoder)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal account of type TokenRegistry: %w", err)
-	}
-	return acc, nil
-}
-
-func ParseAccount_ValidatorDelta(accountData []byte) (*ValidatorDelta, error) {
-	decoder := binary.NewBorshDecoder(accountData)
-	discriminator, err := decoder.ReadDiscriminator()
-	if err != nil {
-		return nil, fmt.Errorf("failed to peek discriminator: %w", err)
-	}
-	if discriminator != Account_ValidatorDelta {
-		return nil, fmt.Errorf("expected discriminator %v, got %s", Account_ValidatorDelta, binary.FormatDiscriminator(discriminator))
-	}
-	acc := new(ValidatorDelta)
-	err = acc.UnmarshalWithDecoder(decoder)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal account of type ValidatorDelta: %w", err)
 	}
 	return acc, nil
 }

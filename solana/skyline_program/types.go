@@ -23,18 +23,14 @@ type BridgeRequestEvent struct {
 	// Amount of tokens to be bridged to the destination chain
 	Amount uint64 `json:"amount"`
 
-	// Receiver's address on the destination chain (variable length byte vector)
-	// This format accommodates various address formats across different blockchains
-	Receiver []byte `json:"receiver"`
+	// The recipient's address on the destination chain, encoded as a string.
+	Receiver string `json:"receiver"`
 
-	// Chain ID identifying the destination blockchain network
-	DestinationChain uint8 `json:"destinationChain"`
+	// Identifier for the destination blockchain (e.g., "ethereum", "bsc", "polygon")
+	DestinationChain string `json:"destinationChain"`
 
 	// Public key of the token mint being bridged
 	MintToken solanago.PublicKey `json:"mintToken"`
-
-	// The batch request ID associated with this bridge request
-	BatchRequestId uint64 `json:"batchRequestId"`
 
 	// The fee amount for the relayer to process this bridge request
 	BridgeFee uint64 `json:"bridgeFee"`
@@ -68,11 +64,6 @@ func (obj BridgeRequestEvent) MarshalWithEncoder(encoder *binary.Encoder) (err e
 	err = encoder.Encode(obj.MintToken)
 	if err != nil {
 		return errors.NewField("MintToken", err)
-	}
-	// Serialize `BatchRequestId`:
-	err = encoder.Encode(obj.BatchRequestId)
-	if err != nil {
-		return errors.NewField("BatchRequestId", err)
 	}
 	// Serialize `BridgeFee`:
 	err = encoder.Encode(obj.BridgeFee)
@@ -123,11 +114,6 @@ func (obj *BridgeRequestEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (er
 	if err != nil {
 		return errors.NewField("MintToken", err)
 	}
-	// Deserialize `BatchRequestId`:
-	err = decoder.Decode(&obj.BatchRequestId)
-	if err != nil {
-		return errors.NewField("BatchRequestId", err)
-	}
 	// Deserialize `BridgeFee`:
 	err = decoder.Decode(&obj.BridgeFee)
 	if err != nil {
@@ -158,150 +144,6 @@ func UnmarshalBridgeRequestEvent(buf []byte) (*BridgeRequestEvent, error) {
 	return obj, nil
 }
 
-// Represents a bridging transaction that transfers tokens to a recipient.
-//
-// The `BridgingTransaction` account tracks a pending token transfer that requires
-// validator consensus. Once enough validators have approved the transaction (meeting
-// the threshold), the tokens are automatically transferred or minted to the recipient,
-// and the account is closed.
-//
-// # Fields
-//
-// * `id` - Unique identifier for the transaction (same as the account's key)
-// * `amount` - The amount of tokens to transfer to the recipient
-// * `receiver` - The public key of the recipient on the destination chain
-// * `mint_token` - The public key of the token mint being bridged
-// * `signers` - List of validator public keys that have approved this transaction
-// * `bump` - Bump seed for the PDA derivation
-// * `batch_id` - The batch ID of this transaction (must be greater than last_batch_id)
-type BridgingTransaction struct {
-	// Unique identifier for the transaction
-	Id solanago.PublicKey `json:"id"`
-
-	// The amount of tokens to transfer to the recipient
-	Amount uint64 `json:"amount"`
-
-	// The public key of the recipient on the destination chain
-	Receiver solanago.PublicKey `json:"receiver"`
-
-	// The public key of the token mint being bridged
-	MintToken solanago.PublicKey `json:"mintToken"`
-
-	// List of validator public keys that have approved this transaction
-	Signers []solanago.PublicKey `json:"signers"`
-
-	// Bump seed for the Program Derived Address (PDA)
-	Bump uint8 `json:"bump"`
-
-	// The batch ID of this transaction (must be greater than last_batch_id)
-	BatchId uint64 `json:"batchId"`
-}
-
-func (obj BridgingTransaction) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
-	// Serialize `Id`:
-	err = encoder.Encode(obj.Id)
-	if err != nil {
-		return errors.NewField("Id", err)
-	}
-	// Serialize `Amount`:
-	err = encoder.Encode(obj.Amount)
-	if err != nil {
-		return errors.NewField("Amount", err)
-	}
-	// Serialize `Receiver`:
-	err = encoder.Encode(obj.Receiver)
-	if err != nil {
-		return errors.NewField("Receiver", err)
-	}
-	// Serialize `MintToken`:
-	err = encoder.Encode(obj.MintToken)
-	if err != nil {
-		return errors.NewField("MintToken", err)
-	}
-	// Serialize `Signers`:
-	err = encoder.Encode(obj.Signers)
-	if err != nil {
-		return errors.NewField("Signers", err)
-	}
-	// Serialize `Bump`:
-	err = encoder.Encode(obj.Bump)
-	if err != nil {
-		return errors.NewField("Bump", err)
-	}
-	// Serialize `BatchId`:
-	err = encoder.Encode(obj.BatchId)
-	if err != nil {
-		return errors.NewField("BatchId", err)
-	}
-	return nil
-}
-
-func (obj BridgingTransaction) Marshal() ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	encoder := binary.NewBorshEncoder(buf)
-	err := obj.MarshalWithEncoder(encoder)
-	if err != nil {
-		return nil, fmt.Errorf("error while encoding BridgingTransaction: %w", err)
-	}
-	return buf.Bytes(), nil
-}
-
-func (obj *BridgingTransaction) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
-	// Deserialize `Id`:
-	err = decoder.Decode(&obj.Id)
-	if err != nil {
-		return errors.NewField("Id", err)
-	}
-	// Deserialize `Amount`:
-	err = decoder.Decode(&obj.Amount)
-	if err != nil {
-		return errors.NewField("Amount", err)
-	}
-	// Deserialize `Receiver`:
-	err = decoder.Decode(&obj.Receiver)
-	if err != nil {
-		return errors.NewField("Receiver", err)
-	}
-	// Deserialize `MintToken`:
-	err = decoder.Decode(&obj.MintToken)
-	if err != nil {
-		return errors.NewField("MintToken", err)
-	}
-	// Deserialize `Signers`:
-	err = decoder.Decode(&obj.Signers)
-	if err != nil {
-		return errors.NewField("Signers", err)
-	}
-	// Deserialize `Bump`:
-	err = decoder.Decode(&obj.Bump)
-	if err != nil {
-		return errors.NewField("Bump", err)
-	}
-	// Deserialize `BatchId`:
-	err = decoder.Decode(&obj.BatchId)
-	if err != nil {
-		return errors.NewField("BatchId", err)
-	}
-	return nil
-}
-
-func (obj *BridgingTransaction) Unmarshal(buf []byte) error {
-	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
-	if err != nil {
-		return fmt.Errorf("error while unmarshaling BridgingTransaction: %w", err)
-	}
-	return nil
-}
-
-func UnmarshalBridgingTransaction(buf []byte) (*BridgingTransaction, error) {
-	obj := new(BridgingTransaction)
-	err := obj.Unmarshal(buf)
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
-}
-
 // Stores protocol-level fee configuration.
 // Created once by the bridge authority via init_fee_config.
 // Can be updated via update_fee_config.
@@ -311,12 +153,6 @@ type FeeConfig struct {
 
 	// Estimated fee to refund the relayer for destination chain gas
 	BridgeFee uint64 `json:"bridgeFee"`
-
-	// Minimum token amount allowed per bridge request
-	MinBridgingAmount uint64 `json:"minBridgingAmount"`
-
-	// The token ID reserved for native SOL bridging
-	CurrencyTokenId uint16 `json:"currencyTokenId"`
 
 	// Treasury account where operational fees are sent
 	Treasury solanago.PublicKey `json:"treasury"`
@@ -341,16 +177,6 @@ func (obj FeeConfig) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
 	err = encoder.Encode(obj.BridgeFee)
 	if err != nil {
 		return errors.NewField("BridgeFee", err)
-	}
-	// Serialize `MinBridgingAmount`:
-	err = encoder.Encode(obj.MinBridgingAmount)
-	if err != nil {
-		return errors.NewField("MinBridgingAmount", err)
-	}
-	// Serialize `CurrencyTokenId`:
-	err = encoder.Encode(obj.CurrencyTokenId)
-	if err != nil {
-		return errors.NewField("CurrencyTokenId", err)
 	}
 	// Serialize `Treasury`:
 	err = encoder.Encode(obj.Treasury)
@@ -395,16 +221,6 @@ func (obj *FeeConfig) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) 
 	err = decoder.Decode(&obj.BridgeFee)
 	if err != nil {
 		return errors.NewField("BridgeFee", err)
-	}
-	// Deserialize `MinBridgingAmount`:
-	err = decoder.Decode(&obj.MinBridgingAmount)
-	if err != nil {
-		return errors.NewField("MinBridgingAmount", err)
-	}
-	// Deserialize `CurrencyTokenId`:
-	err = decoder.Decode(&obj.CurrencyTokenId)
-	if err != nil {
-		return errors.NewField("CurrencyTokenId", err)
 	}
 	// Deserialize `Treasury`:
 	err = decoder.Decode(&obj.Treasury)
@@ -454,9 +270,6 @@ type FeeConfigUpdatedEvent struct {
 	// Bridge fee paid to relayer (SOL lamports)
 	BridgeFee uint64 `json:"bridgeFee"`
 
-	// Minimum bridging amount
-	MinBridgingAmount uint64 `json:"minBridgingAmount"`
-
 	// Treasury address
 	Treasury solanago.PublicKey `json:"treasury"`
 
@@ -474,11 +287,6 @@ func (obj FeeConfigUpdatedEvent) MarshalWithEncoder(encoder *binary.Encoder) (er
 	err = encoder.Encode(obj.BridgeFee)
 	if err != nil {
 		return errors.NewField("BridgeFee", err)
-	}
-	// Serialize `MinBridgingAmount`:
-	err = encoder.Encode(obj.MinBridgingAmount)
-	if err != nil {
-		return errors.NewField("MinBridgingAmount", err)
 	}
 	// Serialize `Treasury`:
 	err = encoder.Encode(obj.Treasury)
@@ -513,11 +321,6 @@ func (obj *FeeConfigUpdatedEvent) UnmarshalWithDecoder(decoder *binary.Decoder) 
 	err = decoder.Decode(&obj.BridgeFee)
 	if err != nil {
 		return errors.NewField("BridgeFee", err)
-	}
-	// Deserialize `MinBridgingAmount`:
-	err = decoder.Decode(&obj.MinBridgingAmount)
-	if err != nil {
-		return errors.NewField("MinBridgingAmount", err)
 	}
 	// Deserialize `Treasury`:
 	err = decoder.Decode(&obj.Treasury)
@@ -564,6 +367,10 @@ type LockUnlockTokenRegisteredEvent struct {
 
 	// The pre-existing SPL mint being registered.
 	Mint solanago.PublicKey `json:"mint"`
+
+	// Minimum raw token amount allowed per bridge_request.
+	// Token-decimal-aware: e.g. for USDC this would be 1_000_000 (1 USDC with 6 decimals).
+	MinBridgingAmount uint64 `json:"minBridgingAmount"`
 }
 
 func (obj LockUnlockTokenRegisteredEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
@@ -576,6 +383,11 @@ func (obj LockUnlockTokenRegisteredEvent) MarshalWithEncoder(encoder *binary.Enc
 	err = encoder.Encode(obj.Mint)
 	if err != nil {
 		return errors.NewField("Mint", err)
+	}
+	// Serialize `MinBridgingAmount`:
+	err = encoder.Encode(obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
 	}
 	return nil
 }
@@ -600,6 +412,11 @@ func (obj *LockUnlockTokenRegisteredEvent) UnmarshalWithDecoder(decoder *binary.
 	err = decoder.Decode(&obj.Mint)
 	if err != nil {
 		return errors.NewField("Mint", err)
+	}
+	// Deserialize `MinBridgingAmount`:
+	err = decoder.Decode(&obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
 	}
 	return nil
 }
@@ -799,6 +616,9 @@ type TokenRegistry struct {
 	// Declared once by authority at registration — immutable thereafter.
 	IsLockUnlock bool `json:"isLockUnlock"`
 
+	// Minimum raw token amount allowed per bridge_request.
+	MinBridgingAmount uint64 `json:"minBridgingAmount"`
+
 	// Stored to avoid recomputing in CPI calls.
 	Bump uint8 `json:"bump"`
 }
@@ -818,6 +638,11 @@ func (obj TokenRegistry) MarshalWithEncoder(encoder *binary.Encoder) (err error)
 	err = encoder.Encode(obj.IsLockUnlock)
 	if err != nil {
 		return errors.NewField("IsLockUnlock", err)
+	}
+	// Serialize `MinBridgingAmount`:
+	err = encoder.Encode(obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
 	}
 	// Serialize `Bump`:
 	err = encoder.Encode(obj.Bump)
@@ -853,6 +678,11 @@ func (obj *TokenRegistry) UnmarshalWithDecoder(decoder *binary.Decoder) (err err
 	if err != nil {
 		return errors.NewField("IsLockUnlock", err)
 	}
+	// Deserialize `MinBridgingAmount`:
+	err = decoder.Decode(&obj.MinBridgingAmount)
+	if err != nil {
+		return errors.NewField("MinBridgingAmount", err)
+	}
 	// Deserialize `Bump`:
 	err = decoder.Decode(&obj.Bump)
 	if err != nil {
@@ -883,23 +713,23 @@ func UnmarshalTokenRegistry(buf []byte) (*TokenRegistry, error) {
 // This event is emitted after a bridging transaction has received sufficient
 // validator approvals and the tokens have been transferred or minted to the recipient.
 type TransactionExecutedEvent struct {
-	// The unique identifier of the transaction that was executed
-	TransactionId solanago.PublicKey `json:"transactionId"`
-
 	// The batch ID of the executed transaction
 	BatchId uint64 `json:"batchId"`
+
+	// The number of transfers in the executed transaction
+	TransferCount uint8 `json:"transferCount"`
 }
 
 func (obj TransactionExecutedEvent) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
-	// Serialize `TransactionId`:
-	err = encoder.Encode(obj.TransactionId)
-	if err != nil {
-		return errors.NewField("TransactionId", err)
-	}
 	// Serialize `BatchId`:
 	err = encoder.Encode(obj.BatchId)
 	if err != nil {
 		return errors.NewField("BatchId", err)
+	}
+	// Serialize `TransferCount`:
+	err = encoder.Encode(obj.TransferCount)
+	if err != nil {
+		return errors.NewField("TransferCount", err)
 	}
 	return nil
 }
@@ -915,15 +745,15 @@ func (obj TransactionExecutedEvent) Marshal() ([]byte, error) {
 }
 
 func (obj *TransactionExecutedEvent) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
-	// Deserialize `TransactionId`:
-	err = decoder.Decode(&obj.TransactionId)
-	if err != nil {
-		return errors.NewField("TransactionId", err)
-	}
 	// Deserialize `BatchId`:
 	err = decoder.Decode(&obj.BatchId)
 	if err != nil {
 		return errors.NewField("BatchId", err)
+	}
+	// Deserialize `TransferCount`:
+	err = decoder.Decode(&obj.TransferCount)
+	if err != nil {
+		return errors.NewField("TransferCount", err)
 	}
 	return nil
 }
@@ -945,143 +775,79 @@ func UnmarshalTransactionExecutedEvent(buf []byte) (*TransactionExecutedEvent, e
 	return obj, nil
 }
 
-// Represents a pending validator set update that requires consensus.
+// Describes a single transfer within a batched bridge transaction.
 //
-// The `ValidatorDelta` account tracks a proposed change to the validator set that
-// requires approval from the current validators. Once enough validators have approved
-// the proposal (meeting the threshold), the changes are applied to the validator set,
-// and the account is closed.
-//
-// # Fields
-//
-// * `id` - Unique identifier for the validator set change (same as the account's key)
-// * `added` - List of new validator public keys to add to the validator set
-// * `removed` - List of validator indices to remove from the validator set
-// * `bump` - Bump seed for the PDA derivation
-// * `batch_id` - The batch ID of this validator set change (must be greater than last_batch_id)
-// * `signers` - List of validator public keys that have approved this change
-// * `proposal_hash` - Hash of the proposal to ensure all validators approve the same change
-type ValidatorDelta struct {
-	// Unique identifier for the validator set change
-	Id solanago.PublicKey `json:"id"`
+// `mint_index` references into the deduplicated `mints` instruction argument,
+// which is also parallel to the mint accounts section in `remaining_accounts`.
+type TransferItem struct {
+	// The destination wallet pubkey (not the ATA — the raw owner wallet).
+	Recipient solanago.PublicKey `json:"recipient"`
 
-	// List of new validator public keys to add (max 10 per change)
-	Added []solanago.PublicKey `json:"added"`
+	// Zero-based index into the `mints: Vec<Pubkey>` instruction argument.
+	MintIndex uint8 `json:"mintIndex"`
 
-	// List of validator public keys to remove (max 10 per change)
-	Removed []solanago.PublicKey `json:"removed"`
-
-	// Bump seed for the Program Derived Address (PDA)
-	Bump uint8 `json:"bump"`
-
-	// The batch ID of this validator set change (must be greater than last_batch_id)
-	BatchId uint64 `json:"batchId"`
-
-	// List of validator public keys that have approved this change
-	Signers []solanago.PublicKey `json:"signers"`
-
-	// Hash of the proposal to ensure all validators approve the same change
-	ProposalHash [32]uint8 `json:"proposalHash"`
+	// Amount of tokens to transfer, in the mint's native base unit.
+	Amount uint64 `json:"amount"`
 }
 
-func (obj ValidatorDelta) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
-	// Serialize `Id`:
-	err = encoder.Encode(obj.Id)
+func (obj TransferItem) MarshalWithEncoder(encoder *binary.Encoder) (err error) {
+	// Serialize `Recipient`:
+	err = encoder.Encode(obj.Recipient)
 	if err != nil {
-		return errors.NewField("Id", err)
+		return errors.NewField("Recipient", err)
 	}
-	// Serialize `Added`:
-	err = encoder.Encode(obj.Added)
+	// Serialize `MintIndex`:
+	err = encoder.Encode(obj.MintIndex)
 	if err != nil {
-		return errors.NewField("Added", err)
+		return errors.NewField("MintIndex", err)
 	}
-	// Serialize `Removed`:
-	err = encoder.Encode(obj.Removed)
+	// Serialize `Amount`:
+	err = encoder.Encode(obj.Amount)
 	if err != nil {
-		return errors.NewField("Removed", err)
-	}
-	// Serialize `Bump`:
-	err = encoder.Encode(obj.Bump)
-	if err != nil {
-		return errors.NewField("Bump", err)
-	}
-	// Serialize `BatchId`:
-	err = encoder.Encode(obj.BatchId)
-	if err != nil {
-		return errors.NewField("BatchId", err)
-	}
-	// Serialize `Signers`:
-	err = encoder.Encode(obj.Signers)
-	if err != nil {
-		return errors.NewField("Signers", err)
-	}
-	// Serialize `ProposalHash`:
-	err = encoder.Encode(obj.ProposalHash)
-	if err != nil {
-		return errors.NewField("ProposalHash", err)
+		return errors.NewField("Amount", err)
 	}
 	return nil
 }
 
-func (obj ValidatorDelta) Marshal() ([]byte, error) {
+func (obj TransferItem) Marshal() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	encoder := binary.NewBorshEncoder(buf)
 	err := obj.MarshalWithEncoder(encoder)
 	if err != nil {
-		return nil, fmt.Errorf("error while encoding ValidatorDelta: %w", err)
+		return nil, fmt.Errorf("error while encoding TransferItem: %w", err)
 	}
 	return buf.Bytes(), nil
 }
 
-func (obj *ValidatorDelta) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
-	// Deserialize `Id`:
-	err = decoder.Decode(&obj.Id)
+func (obj *TransferItem) UnmarshalWithDecoder(decoder *binary.Decoder) (err error) {
+	// Deserialize `Recipient`:
+	err = decoder.Decode(&obj.Recipient)
 	if err != nil {
-		return errors.NewField("Id", err)
+		return errors.NewField("Recipient", err)
 	}
-	// Deserialize `Added`:
-	err = decoder.Decode(&obj.Added)
+	// Deserialize `MintIndex`:
+	err = decoder.Decode(&obj.MintIndex)
 	if err != nil {
-		return errors.NewField("Added", err)
+		return errors.NewField("MintIndex", err)
 	}
-	// Deserialize `Removed`:
-	err = decoder.Decode(&obj.Removed)
+	// Deserialize `Amount`:
+	err = decoder.Decode(&obj.Amount)
 	if err != nil {
-		return errors.NewField("Removed", err)
-	}
-	// Deserialize `Bump`:
-	err = decoder.Decode(&obj.Bump)
-	if err != nil {
-		return errors.NewField("Bump", err)
-	}
-	// Deserialize `BatchId`:
-	err = decoder.Decode(&obj.BatchId)
-	if err != nil {
-		return errors.NewField("BatchId", err)
-	}
-	// Deserialize `Signers`:
-	err = decoder.Decode(&obj.Signers)
-	if err != nil {
-		return errors.NewField("Signers", err)
-	}
-	// Deserialize `ProposalHash`:
-	err = decoder.Decode(&obj.ProposalHash)
-	if err != nil {
-		return errors.NewField("ProposalHash", err)
+		return errors.NewField("Amount", err)
 	}
 	return nil
 }
 
-func (obj *ValidatorDelta) Unmarshal(buf []byte) error {
+func (obj *TransferItem) Unmarshal(buf []byte) error {
 	err := obj.UnmarshalWithDecoder(binary.NewBorshDecoder(buf))
 	if err != nil {
-		return fmt.Errorf("error while unmarshaling ValidatorDelta: %w", err)
+		return fmt.Errorf("error while unmarshaling TransferItem: %w", err)
 	}
 	return nil
 }
 
-func UnmarshalValidatorDelta(buf []byte) (*ValidatorDelta, error) {
-	obj := new(ValidatorDelta)
+func UnmarshalTransferItem(buf []byte) (*TransferItem, error) {
+	obj := new(TransferItem)
 	err := obj.Unmarshal(buf)
 	if err != nil {
 		return nil, err

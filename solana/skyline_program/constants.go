@@ -11,16 +11,14 @@ package skyline_program
 // addresses for each bridging request account.
 var BRIDGING_REQUEST_SEED = []byte{98, 114, 105, 100, 103, 105, 110, 103, 95, 114, 101, 113, 117, 101, 115, 116}
 
-// Seed string used to derive BridgingTransaction Program Derived Addresses (PDAs).
-//
-// This seed is combined with the transaction id to create a unique address for the bridging transaction account.
-var BRIDGING_TRANSACTION_SEED = []byte{98, 114, 105, 100, 103, 105, 110, 103, 95, 116, 114, 97, 110, 115, 97, 99, 116, 105, 111, 110}
-
 // Size of the account discriminator in bytes.
 //
 // The discriminator is an 8-byte prefix used by Anchor to identify
 // account types and prevent account substitution attacks.
 const DISC = uint32(0x8)
+
+// Seed string used to derive FeeConfig PDA
+var FEE_CONFIG_SEED = []byte{102, 101, 101, 95, 99, 111, 110, 102, 105, 103}
 
 // Maximum number of validators allowed in the validator set.
 //
@@ -42,10 +40,11 @@ const MAX_VALIDATORS_CHANGE = uint32(0xa)
 // various attack vectors and lack proper consensus mechanisms.
 const MIN_VALIDATORS = uint32(0x4)
 
-// Seed string used to derive ValidatorSetChange Program Derived Addresses (PDAs).
-//
-// This seed is combined with the validator set change address to create a unique address for the validator set change account.
-var VALIDATOR_SET_CHANGE_SEED = []byte{118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 115, 101, 116, 95, 99, 104, 97, 110, 103, 101}
+// Seed string used to derive TokenIdGuard PDA
+var TOKEN_ID_GUARD_SEED = []byte{116, 111, 107, 101, 110, 95, 105, 100, 95, 103, 117, 97, 114, 100}
+
+// Seed string used to derive TokenRegistry PDA
+var TOKEN_REGISTRY_SEED = []byte{116, 111, 107, 101, 110, 95, 114, 101, 103, 105, 115, 116, 114, 121}
 
 // Seed string used to derive the ValidatorSet Program Derived Address (PDA).
 //
@@ -57,6 +56,3 @@ var VALIDATOR_SET_SEED = []byte{118, 97, 108, 105, 100, 97, 116, 111, 114, 45, 1
 //
 // This seed is combined with the vault address to create a unique address for the vault account.
 var VAULT_SEED = []byte{118, 97, 117, 108, 116}
-
-// "Read-only. Used solely to validate that authority == fee_config.authority.",
-var FEE_CONFIG_SEED = []byte{102, 101, 101, 95, 99, 111, 110, 102, 105, 103}
