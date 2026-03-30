@@ -30,3 +30,25 @@ func getNumberWithRoundingThreshold(
 
 	return newNumber, nil
 }
+
+func getNumberWithRoundingThresholdRoundDown(
+	number, threshold uint64, noBatchPeriodPercent float64,
+) (uint64, error) {
+	if number == 0 {
+		return 0, errors.New("cannot round a zero value")
+	}
+
+	if threshold == 0 {
+		return 0, errors.New("cannot round with a zero threshold")
+	}
+
+	newNumber := (number / threshold) * threshold
+	diffFromPrevious := number - newNumber
+
+	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
+		diffFromPrevious > uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
+		return 0, fmt.Errorf("%w: (number, rounded) = (%d, %d)", errNonActiveBatchPeriod, number, newNumber)
+	}
+
+	return newNumber, nil
+}

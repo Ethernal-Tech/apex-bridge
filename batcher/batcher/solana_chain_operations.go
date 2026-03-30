@@ -5,8 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -67,21 +70,8 @@ func NewSolanaChainOperations(
 func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	ctx context.Context, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	txProvider, err := wallet.NewProvider(sco.config.TxProviderEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	chainConfig := &sendtx.ChainConfig{
-		MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
-	}
-
-	txSender := sendtx.NewTxSender(txProvider, chainConfig)
-
-	bridgingTxs, err := sco.newSolanaSmartContractTransaction(
+	receivers, err := sco.newSolanaReceivers(
 		sco.config,
-		destinationChain,
-		batchNonceID,
 		confirmedTransactions,
 		sco.config.MinFeeForBridging,
 	)
@@ -95,53 +85,40 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	blockHash, err := sco.db.GetBlockhashBySlot(slotNumber)
+	blockHash, err := sco.getBlockhashBySlot(slotNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	tx, err := txSender.CreateTx(
-		ctx, sco.privateKey.PublicKey(), sendtx.InstructionTypeBridgeTransaction, blockHash, *bridgingTxs)
+	sco.logger.Debug("blockHash chosen for batch", "blockHash", blockHash, "slot", slotNumber)
+
+	payload := sendtx.SolanaPayload{
+		Blockhash: blockHash.String(),
+		Receivers: receivers,
+		BatchID:   batchNonceID,
+	}
+
+	payloadBytes, err := payload.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	txMsgBytes, err := tx.Message.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
+	hash := sha256.Sum256(payloadBytes)
+	payloadHash := hex.EncodeToString(hash[:])
 
-	hash := sha256.Sum256(txMsgBytes)
-	txHash := hex.EncodeToString(hash[:])
-
-	rawTx, err := wallet.MarshalTransaction(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	sco.logger.Debug("Batch transaction data has been generated",
-		"id", batchNonceID, "tx", bridgingTxs, "hash", txHash,
+	sco.logger.Debug("Batch payload data has been generated",
+		"id", batchNonceID, "payload", payload, "hash", payloadHash,
 		"slot", slotNumber)
 
 	return &core.GeneratedBatchTxData{
-		TxRaw:  rawTx,
-		TxHash: txHash,
+		TxRaw:  payloadBytes,
+		TxHash: payloadHash,
 	}, nil
 }
 
 func (sco *SolanaChainOperations) SignBatchTransaction(
 	generatedBatchData *core.GeneratedBatchTxData) (*core.BatchSignatures, error) {
-	tx, err := wallet.UnmarshalTransaction(generatedBatchData.TxRaw)
-	if err != nil {
-		return nil, err
-	}
-
-	messageBytes, err := tx.Message.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := sco.privateKey.Sign(messageBytes)
+	signature, err := sco.privateKey.Sign(generatedBatchData.TxRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -178,11 +155,34 @@ func (sco *SolanaChainOperations) IsSynchronized(
 
 func (sco *SolanaChainOperations) Submit(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch) error {
-	err := bridgeSmartContract.SubmitSignedBatch(ctx, batch, sco.gasLimiter.GetGasLimit())
+	err := bridgeSmartContract.SubmitSignedBatchSolana(ctx, batch, sco.gasLimiter.GetGasLimit())
 
 	sco.gasLimiter.Update(err)
 
 	return err
+}
+
+func (sco *SolanaChainOperations) getBlockhashBySlot(slot uint64) (solana.Hash, error) {
+	shouldWaitError := func(slot uint64, err error) bool {
+		return strings.Contains(err.Error(), fmt.Sprintf("slot %d has not been processed yet", slot))
+	}
+
+	for {
+		blockhash, err := sco.db.GetBlockhashBySlot(slot)
+		if err != nil {
+			if shouldWaitError(slot, err) {
+				time.Sleep(400 * time.Millisecond)
+
+				sco.logger.Debug("retrying to get blockhash", "slot", slot)
+
+				continue
+			}
+
+			return solana.Hash{}, err
+		}
+
+		return blockhash, nil
+	}
 }
 
 func (sco *SolanaChainOperations) getSlotNumber() (uint64, error) {
@@ -191,7 +191,7 @@ func (sco *SolanaChainOperations) getSlotNumber() (uint64, error) {
 		return 0, err
 	}
 
-	newSlot, err := getNumberWithRoundingThreshold(
+	newSlot, err := getNumberWithRoundingThresholdRoundDown(
 		slot, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent)
 	if err != nil {
 		return 0, err
@@ -202,13 +202,11 @@ func (sco *SolanaChainOperations) getSlotNumber() (uint64, error) {
 	return newSlot, nil
 }
 
-func (sco *SolanaChainOperations) newSolanaSmartContractTransaction(
+func (sco *SolanaChainOperations) newSolanaReceivers(
 	config *solanatx.SolanaChainConfig,
-	destChainID string,
-	batchNonceID uint64,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
-) (*sendtx.BridgeTransactionDto, error) {
+) ([]sendtx.BridgingTxReceiver, error) {
 	sourceAddrTxMap := map[string][]sendtx.BridgingTxReceiver{}
 	updateAmount := func(
 		mp map[string][]sendtx.BridgingTxReceiver,
@@ -319,9 +317,5 @@ func (sco *SolanaChainOperations) newSolanaSmartContractTransaction(
 		return receivers[i].TokenAmount.TokenMint < receivers[j].TokenAmount.TokenMint
 	})
 
-	return &sendtx.BridgeTransactionDto{
-		SenderAddr: sco.config.BridgingFeeAddress,
-		Receivers:  receivers,
-		BatchID:    batchNonceID,
-	}, nil
+	return receivers, nil
 }
