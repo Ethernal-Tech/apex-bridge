@@ -1,6 +1,5 @@
 package batcher
 
-/*
 import (
 	"context"
 	"crypto/sha256"
@@ -19,9 +18,7 @@ import (
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
-	solanaWallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -92,7 +89,7 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 	ctx := context.Background()
 	batchNonceID := uint64(7834)
-	minAmount := new(big.Int).SetUint64(1_000)
+	minAmount := new(big.Int).SetInt64(2_000_000)
 
 	destChainID, sco, dbMock, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
@@ -104,10 +101,14 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		solanaHash, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
 
-		slotNumber := uint64(4)
+		slotNumber := uint64(10)
+		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
+			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
+		)
+		require.NoError(t, err)
 
 		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
-		dbMock.On("GetBlockhashBySlot", slotNumber+2).Return(solana.Hash(solanaHash.PublicKey()), nil).Once()
+		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash(solanaHash.PublicKey()), nil).Once()
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
@@ -127,18 +128,22 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		require.NotNil(t, batchTxData)
 	})
 
-	t.Run("tx matches manual build", func(t *testing.T) {
+	t.Run("payload matches manual build", func(t *testing.T) {
 		dbMock.ExpectedCalls = nil
 
 		solanaHash, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
 
 		slotNumber := uint64(4)
-		expectedSlot := slotNumber + 2
+		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
+			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
+		)
+		require.NoError(t, err)
+
 		expectedBlockhash := solana.Hash(solanaHash.PublicKey())
 
 		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
-		dbMock.On("GetBlockhashBySlot", expectedSlot).Return(expectedBlockhash, nil).Once()
+		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(expectedBlockhash, nil).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
@@ -160,48 +165,29 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, gbt)
 
-		// Build expected tx data using the same building blocks as GenerateBatchTransaction.
-		txProvider, err := solanaWallet.NewProvider(rpc.LocalNet_WS)
-		require.NoError(t, err)
-
-		chainConfig := sendtx.ChainConfig{
-			MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
-		}
-		txSender := sendtx.NewTxSender(txProvider, &chainConfig)
-
-		bridgingTxs, err := sco.newSolanaSmartContractTransaction(
+		receivers, err := sco.newSolanaReceivers(
 			sco.config,
-			destChainID,
-			batchNonceID,
 			confirmedTransactions,
 			sco.config.MinFeeForBridging,
 		)
 		require.NoError(t, err)
 
-		expectedTx, err := txSender.CreateTx(
-			ctx,
-			sco.privateKey.PublicKey(),
-			sendtx.InstructionTypeBridgeTransaction,
-			expectedBlockhash,
-			*bridgingTxs,
-		)
+		payload := sendtx.SolanaPayload{
+			Blockhash: expectedBlockhash.String(),
+			Receivers: receivers,
+			BatchID:   batchNonceID,
+		}
+		expectedRaw, err := payload.Marshal()
 		require.NoError(t, err)
 
-		expectedTxMsgBytes, err := expectedTx.Message.MarshalBinary()
-		require.NoError(t, err)
+		expectedHash := sha256.Sum256(expectedRaw)
+		expectedPayloadHash := hex.EncodeToString(expectedHash[:])
 
-		expectedHash := sha256.Sum256(expectedTxMsgBytes)
-		expectedTxHash := hex.EncodeToString(expectedHash[:])
-
-		expectedRaw, err := expectedTx.MarshalBinary()
-		require.NoError(t, err)
-
-		require.Nil(t, expectedTx.Signatures)
-		require.Equal(t, expectedTxHash, gbt.TxHash)
+		require.Equal(t, expectedPayloadHash, gbt.TxHash)
 		require.Equal(t, expectedRaw, gbt.TxRaw)
 	})
 
-	t.Run("error when building solana transaction (invalid token)", func(t *testing.T) {
+	t.Run("error when token id is not in chain config", func(t *testing.T) {
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
 				Receivers: []eth.BridgeReceiver{
@@ -216,7 +202,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		}
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
+		require.Error(t, err, "token not found")
 		require.Nil(t, batchTxData)
 	})
 
@@ -232,14 +218,14 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 						DestinationAddress: receiverWallet.PublicKey().String(),
 						Amount:             minAmount,
 						AmountWrapped:      big.NewInt(0),
-						TokenId:            0,
+						TokenId:            1,
 					},
 				},
 			},
 		}
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
+		require.ErrorIs(t, err, errNonActiveBatchPeriod)
 		require.Nil(t, batchTxData)
 	})
 
@@ -253,7 +239,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 						DestinationAddress: receiverWallet.PublicKey().String(),
 						Amount:             minAmount,
 						AmountWrapped:      big.NewInt(0),
-						TokenId:            0,
+						TokenId:            1,
 					},
 				},
 			},
@@ -269,10 +255,15 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 
 	t.Run("error when getting blockhash", func(t *testing.T) {
 		dbMock.ExpectedCalls = nil
+		expectedErr := errors.New("blockhash error")
 
 		slotNumber := uint64(10)
+		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
+			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
+		)
+		require.NoError(t, err)
 		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
-		dbMock.On("GetBlockhashBySlot", slotNumber+2).Return(solana.Hash{}, errors.New("blockhash error")).Once()
+		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash{}, expectedErr).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
@@ -281,35 +272,43 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 						DestinationAddress: receiverWallet.PublicKey().String(),
 						Amount:             minAmount,
 						AmountWrapped:      big.NewInt(0),
-						TokenId:            0,
+						TokenId:            1,
 					},
 				},
 			},
 		}
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
+		require.ErrorIs(t, err, expectedErr)
 		require.Nil(t, batchTxData)
 	})
 }
 
 func TestSolanaChain_SignBatchTransaction(t *testing.T) {
-	destChainID, sco, _, cleanup := newTestSolanaChainOperations(t)
+	ctx := context.Background()
+	batchNonceID := uint64(77)
+
+	destChainID, sco, dbMock, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
 
-	buildValidTxRaw := func(t *testing.T) []byte {
+	buildGeneratedBatchData := func(t *testing.T) *batcherCore.GeneratedBatchTxData {
 		t.Helper()
-
-		txProvider, err := solanaWallet.NewProvider(rpc.LocalNet_WS)
-		require.NoError(t, err)
-
-		chainConfig := &sendtx.ChainConfig{
-			MinAmountToBridge: sco.config.MinFeeForBridging.Uint64(),
-		}
-		txSender := sendtx.NewTxSender(txProvider, chainConfig)
 
 		receiverWallet, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
+
+		slotNumber := uint64(10)
+		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
+			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
+		)
+		require.NoError(t, err)
+
+		blockHashKey, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
+		dbMock.ExpectedCalls = nil
+		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash(blockHashKey.PublicKey()), nil).Once()
 
 		confirmed := []eth.ConfirmedTransaction{
 			{
@@ -324,53 +323,32 @@ func TestSolanaChain_SignBatchTransaction(t *testing.T) {
 			},
 		}
 
-		bridgingTxs, err := sco.newSolanaSmartContractTransaction(
-			sco.config, destChainID, 1, confirmed, sco.config.MinFeeForBridging,
-		)
+		data, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmed, batchNonceID)
 		require.NoError(t, err)
+		require.NotNil(t, data)
 
-		blockHash, err := solana.NewRandomPrivateKey()
-		require.NoError(t, err)
-
-		tx, err := txSender.CreateTx(
-			context.Background(),
-			sco.privateKey.PublicKey(),
-			sendtx.InstructionTypeBridgeTransaction,
-			solana.Hash(blockHash.PublicKey()),
-			*bridgingTxs,
-		)
-		require.NoError(t, err)
-
-		raw, err := solanaWallet.MarshalTransaction(tx)
-		require.NoError(t, err)
-
-		return raw
+		return data
 	}
 
-	t.Run("success", func(t *testing.T) {
-		txRaw := buildValidTxRaw(t)
-
-		txMsgHash := sha256.Sum256(txRaw)
-		txHash := hex.EncodeToString(txMsgHash[:])
-
-		data := &batcherCore.GeneratedBatchTxData{
-			TxRaw:  txRaw,
-			TxHash: txHash,
-		}
+	t.Run("signs generated batch payload and verifies with public key", func(t *testing.T) {
+		data := buildGeneratedBatchData(t)
 
 		signatures, err := sco.SignBatchTransaction(data)
 		require.NoError(t, err)
 		require.NotNil(t, signatures)
-		require.Len(t, signatures.Multisig, 64)
+		require.Len(t, signatures.Multisig, solana.SignatureLength)
+
+		signature := solana.SignatureFromBytes(signatures.Multisig)
+		require.True(t, signature.Verify(sco.privateKey.PublicKey(), data.TxRaw))
 	})
 
-	t.Run("error on invalid TxRaw", func(t *testing.T) {
-		data := &batcherCore.GeneratedBatchTxData{
-			TxRaw:  []byte("not-a-valid-solana-transaction"),
-			TxHash: "somehash",
-		}
+	t.Run("returns error with invalid private key", func(t *testing.T) {
+		data := buildGeneratedBatchData(t)
 
-		signatures, err := sco.SignBatchTransaction(data)
+		opsWithInvalidKey := *sco
+		opsWithInvalidKey.privateKey = solana.PrivateKey{}
+
+		signatures, err := opsWithInvalidKey.SignBatchTransaction(data)
 		require.Error(t, err)
 		require.Nil(t, signatures)
 	})
@@ -431,7 +409,7 @@ func TestSolanaChain_IsSynchronized(t *testing.T) {
 		bridgeMock.On("GetLastObservedBlock", ctx, destChainID).Return(eth.CardanoBlock{}, expectedErr).Once()
 
 		synced, err := sco.IsSynchronized(ctx, bridgeMock, destChainID)
-		require.Error(t, err)
+		require.Error(t, err, expectedErr)
 		require.False(t, synced)
 
 		bridgeMock.AssertExpectations(t)
@@ -507,8 +485,8 @@ func TestSolanaChain_Submit(t *testing.T) {
 	})
 }
 
-func TestSolanaChain_newSolanaSmartContractTransaction_AggregationAndSorting(t *testing.T) {
-	destChainID, sco, _, cleanup := newTestSolanaChainOperations(t)
+func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
+	_, sco, _, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
 
 	receiver1 := "AddrA"
@@ -525,42 +503,37 @@ func TestSolanaChain_newSolanaSmartContractTransaction_AggregationAndSorting(t *
 					DestinationAddress: receiver2,
 					Amount:             amount1,
 					AmountWrapped:      big.NewInt(0),
-					TokenId:            0,
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: receiver1,
 					Amount:             amount2,
 					AmountWrapped:      big.NewInt(0),
-					TokenId:            0,
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: receiver1,
 					Amount:             big.NewInt(0),
 					AmountWrapped:      wrappedAmount,
-					TokenId:            1,
+					TokenId:            0,
 				},
 			},
 		},
 	}
 
-	dto, err := sco.newSolanaSmartContractTransaction(
+	receivers, err := sco.newSolanaReceivers(
 		sco.config,
-		destChainID,
-		42,
 		confirmed,
 		sco.config.MinFeeForBridging,
 	)
 	require.NoError(t, err)
-	require.NotNil(t, dto)
+	require.NotNil(t, receivers)
 
-	require.Equal(t, sco.config.BridgingFeeAddress, dto.SenderAddr)
-	require.Equal(t, uint64(42), dto.BatchID)
+	require.Len(t, receivers, 3)
 
-	require.Len(t, dto.Receivers, 3)
-
-	for i := 0; i < len(dto.Receivers)-1; i++ {
-		r1 := dto.Receivers[i]
-		r2 := dto.Receivers[i+1]
+	for i := 0; i < len(receivers)-1; i++ {
+		r1 := receivers[i]
+		r2 := receivers[i+1]
 
 		if r1.Address == r2.Address {
 			require.LessOrEqual(t, r1.TokenAmount.TokenMint, r2.TokenAmount.TokenMint)
@@ -569,13 +542,13 @@ func TestSolanaChain_newSolanaSmartContractTransaction_AggregationAndSorting(t *
 		}
 	}
 
-	for _, r := range dto.Receivers {
+	for _, r := range receivers {
 		require.True(t, r.TokenAmount.Amount.Cmp(big.NewInt(0)) == 1)
 	}
 }
 
-func TestSolanaChain_newSolanaSmartContractTransaction_ErrorPaths(t *testing.T) {
-	destChainID, sco, _, cleanup := newTestSolanaChainOperations(t)
+func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
+	_, sco, _, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
 
 	minFee := sco.config.MinFeeForBridging
@@ -594,15 +567,9 @@ func TestSolanaChain_newSolanaSmartContractTransaction_ErrorPaths(t *testing.T) 
 			},
 		}
 
-		dto, err := sco.newSolanaSmartContractTransaction(
-			sco.config,
-			destChainID,
-			1,
-			confirmed,
-			minFee,
-		)
+		receivers, err := sco.newSolanaReceivers(sco.config, confirmed, minFee)
 		require.Error(t, err)
-		require.Nil(t, dto)
+		require.Nil(t, receivers)
 	})
 
 	t.Run("GetWrappedTokenID error when no wrapped token configured", func(t *testing.T) {
@@ -625,15 +592,8 @@ func TestSolanaChain_newSolanaSmartContractTransaction_ErrorPaths(t *testing.T) 
 			},
 		}
 
-		dto, err := sco.newSolanaSmartContractTransaction(
-			&configCopy,
-			destChainID,
-			1,
-			confirmed,
-			minFee,
-		)
+		receivers, err := sco.newSolanaReceivers(&configCopy, confirmed, minFee)
 		require.Error(t, err)
-		require.Nil(t, dto)
+		require.Nil(t, receivers)
 	})
 }
-*/

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
@@ -44,11 +45,8 @@ func (m *mockTxSubmiter) WaitForSignature(
 	return m.Called(ctx, sig, commitment, maxWaitTime).Error(0)
 }
 
-func buildTestRawTx(t *testing.T, signerPubKey solana.PublicKey) []byte {
+func buildTestRawTx(t *testing.T, _ solana.PublicKey) []byte {
 	t.Helper()
-
-	txProvider, err := solanaWallet.NewProvider(rpc.LocalNet_WS)
-	require.NoError(t, err)
 
 	receiverWallet, err := solana.NewRandomPrivateKey()
 	require.NoError(t, err)
@@ -56,10 +54,8 @@ func buildTestRawTx(t *testing.T, signerPubKey solana.PublicKey) []byte {
 	blockHash, err := solana.NewRandomPrivateKey()
 	require.NoError(t, err)
 
-	txSender := sendtx.NewTxSender(txProvider, nil)
-
-	bridgingTxDto := sendtx.BridgeTransactionDto{
-		SenderAddr: signerPubKey.String(),
+	payload := sendtx.SolanaPayload{
+		Blockhash: solana.Hash(blockHash.PublicKey()).String(),
 		Receivers: []sendtx.BridgingTxReceiver{
 			{
 				Address: receiverWallet.PublicKey().String(),
@@ -69,26 +65,54 @@ func buildTestRawTx(t *testing.T, signerPubKey solana.PublicKey) []byte {
 				},
 			},
 		},
-		BatchID: 1,
+		BatchID: 2,
 	}
 
-	tx, err := txSender.CreateTx(
-		context.Background(),
-		signerPubKey,
-		sendtx.InstructionTypeBridgeTransaction,
-		solana.Hash(blockHash.PublicKey()),
-		bridgingTxDto,
-	)
-	require.NoError(t, err)
-
-	raw, err := solanaWallet.MarshalTransaction(tx)
+	raw, err := payload.Marshal()
 	require.NoError(t, err)
 
 	return raw
 }
 
+func buildBridgeMockWithSignatures(
+	t *testing.T, ctx context.Context, chainID string, payloadBytes []byte, signatures [][]byte,
+) *eth.BridgeSmartContractMock {
+	t.Helper()
+
+	validatorsCount := uint64(4)
+	validatorsThreashold := common.GetRequiredSignaturesForConsensus(validatorsCount)
+
+	if signatures == nil {
+		signatures = make([][]byte, validatorsThreashold)
+	}
+
+	validators := make([]eth.ValidatorChainData, validatorsCount)
+	for i := range validators {
+		priv, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
+		sig, err := priv.Sign(payloadBytes)
+		require.NoError(t, err)
+
+		if i < int(validatorsThreashold) {
+			sigBytes := make([]byte, len(sig))
+			copy(sigBytes, sig[:])
+			signatures[i] = sigBytes
+		}
+
+		validators[i] = eth.ValidatorChainData{
+			Key: [4]*big.Int{new(big.Int).SetBytes(priv.PublicKey().Bytes()), big.NewInt(0), big.NewInt(0), big.NewInt(0)},
+		}
+	}
+
+	bridgeMock := &eth.BridgeSmartContractMock{}
+	bridgeMock.On("GetValidatorsChainData", ctx, chainID).Return(validators, nil)
+
+	return bridgeMock
+}
+
 func TestNewSolanaChainOperations(t *testing.T) {
-	const chainID = "solana"
+	const chainID = common.ChainIDStrSolana
 
 	testDir, err := os.MkdirTemp("", "relayer-solana")
 	require.NoError(t, err)
@@ -178,26 +202,34 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		submiterMock := &mockTxSubmiter{}
 
 		ops := &SolanaChainOperations{
+			chainID:    common.ChainIDStrSolana,
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
 		}
 
+		rawTx := buildTestRawTx(t, privateKey.PublicKey())
+		bridgeMock := buildBridgeMockWithSignatures(t, ctx, common.ChainIDStrSolana, rawTx, nil)
+
 		batch := &eth.ConfirmedBatch{
-			RawTransaction: buildTestRawTx(t, privateKey.PublicKey()),
+			ID:             2,
+			RawTransaction: rawTx,
 			Bitmap:         new(big.Int),
 			Signatures:     [][]byte{make([]byte, 64), make([]byte, 64), make([]byte, 64)},
 		}
 
-		err := ops.SendTx(ctx, nil, batch)
+		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid signature")
+		require.Contains(t, err.Error(), "no signature pairs provided")
 	})
 
 	t.Run("invalid RawTransaction", func(t *testing.T) {
 		submiterMock := &mockTxSubmiter{}
 
 		ops := &SolanaChainOperations{
+			chainID:    common.ChainIDStrSolana,
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
@@ -215,29 +247,28 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Signatures:     validSigs,
 		}
 
-		err := ops.SendTx(ctx, nil, batch)
+		err := ops.SendTx(ctx, &eth.BridgeSmartContractMock{}, batch)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to unmarshal tx")
+		require.Contains(t, err.Error(), "failed to unmarshal payload")
 	})
 
 	t.Run("send returns error", func(t *testing.T) {
 		submiterMock := &mockTxSubmiter{}
 
 		ops := &SolanaChainOperations{
+			chainID:    common.ChainIDStrSolana,
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
 		}
 
 		rawTx := buildTestRawTx(t, privateKey.PublicKey())
-
 		validSigs := make([][]byte, 3)
-		for i := range validSigs {
-			validSigs[i] = make([]byte, 64)
-			validSigs[i][0] = 1
-		}
+		bridgeMock := buildBridgeMockWithSignatures(t, ctx, common.ChainIDStrSolana, rawTx, validSigs)
 
 		batch := &eth.ConfirmedBatch{
+			ID:             2,
 			RawTransaction: rawTx,
 			Bitmap:         new(big.Int),
 			Signatures:     validSigs,
@@ -246,7 +277,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		submiterMock.On("SendTransaction", ctx, mock.AnythingOfType("*solana.Transaction")).
 			Return(solana.Signature{}, errors.New("rpc unavailable")).Once()
 
-		err := ops.SendTx(ctx, nil, batch)
+		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to send tx")
 
@@ -257,20 +288,19 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		submiterMock := &mockTxSubmiter{}
 
 		ops := &SolanaChainOperations{
+			chainID:    common.ChainIDStrSolana,
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
 		}
 
 		rawTx := buildTestRawTx(t, privateKey.PublicKey())
-
 		validSigs := make([][]byte, 3)
-		for i := range validSigs {
-			validSigs[i] = make([]byte, 64)
-			validSigs[i][0] = 1
-		}
+		bridgeMock := buildBridgeMockWithSignatures(t, ctx, common.ChainIDStrSolana, rawTx, validSigs)
 
 		batch := &eth.ConfirmedBatch{
+			ID:             2,
 			RawTransaction: rawTx,
 			Bitmap:         new(big.Int),
 			Signatures:     validSigs,
@@ -281,7 +311,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		submiterMock.On("SendTransaction", ctx, mock.AnythingOfType("*solana.Transaction")).
 			Return(expectedSig, nil).Once()
 
-		err := ops.SendTx(ctx, nil, batch)
+		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
 
 		submiterMock.AssertExpectations(t)
@@ -324,7 +354,7 @@ func TestSolanaChainOperations_getSignaturePairs(t *testing.T) {
 	}
 
 	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-	bridgeSmartContractMock.On("GetValidatorsChainData", ctx, "solana").Return([]eth.ValidatorChainData{
+	bridgeSmartContractMock.On("GetValidatorsChainData", ctx, common.ChainIDStrSolana).Return([]eth.ValidatorChainData{
 		{
 			Key: [4]*big.Int{new(big.Int).SetBytes(validatorPublicKeys[0].Bytes()), big.NewInt(0), big.NewInt(0), big.NewInt(0)},
 		},
@@ -343,7 +373,7 @@ func TestSolanaChainOperations_getSignaturePairs(t *testing.T) {
 	require.NoError(t, err)
 
 	ops := &SolanaChainOperations{
-		chainID:    "solana",
+		chainID:    common.ChainIDStrSolana,
 		privateKey: &privateKey,
 		txSender:   sendtx.NewTxSender(nil, nil),
 		logger:     hclog.NewNullLogger(),

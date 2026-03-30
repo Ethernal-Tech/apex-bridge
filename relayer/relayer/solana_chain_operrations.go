@@ -151,8 +151,15 @@ func (sco *SolanaChainOperations) getSignaturePairs(
 	}
 
 	validatorPublicKeys := make([]solana.PublicKey, len(validatorsData))
+
 	for i, validatorData := range validatorsData {
-		validatorPublicKeys[i] = solana.PublicKeyFromBytes(validatorData.Key[0].Bytes())
+		rawPubKey := make([]byte, solana.PublicKeyLength)
+		validatorData.Key[0].FillBytes(rawPubKey)
+
+		validatorPublicKeys[i], err = wallet.PublicKeyFromBytes(rawPubKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert validator key to public key: %w", err)
+		}
 	}
 
 	sco.logger.Info("Validator public keys", "publicKeys", validatorPublicKeys)
