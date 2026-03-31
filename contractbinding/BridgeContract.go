@@ -1026,6 +1026,27 @@ func (_BridgeContract *BridgeContractTransactorSession) SubmitSignedBatchEVM(_si
 	return _BridgeContract.Contract.SubmitSignedBatchEVM(&_BridgeContract.TransactOpts, _signedBatch)
 }
 
+// SubmitSignedBatchSolana is a paid mutator transaction binding the contract method 0xb660b009.
+//
+// Solidity: function submitSignedBatchSolana((uint64,uint64,uint64,uint8,bytes,bytes,bytes,uint8,bytes) _signedBatch) returns()
+func (_BridgeContract *BridgeContractTransactor) SubmitSignedBatchSolana(opts *bind.TransactOpts, _signedBatch IBridgeStructsSignedBatch) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "submitSignedBatchSolana", _signedBatch)
+}
+
+// SubmitSignedBatchSolana is a paid mutator transaction binding the contract method 0xb660b009.
+//
+// Solidity: function submitSignedBatchSolana((uint64,uint64,uint64,uint8,bytes,bytes,bytes,uint8,bytes) _signedBatch) returns()
+func (_BridgeContract *BridgeContractSession) SubmitSignedBatchSolana(_signedBatch IBridgeStructsSignedBatch) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SubmitSignedBatchSolana(&_BridgeContract.TransactOpts, _signedBatch)
+}
+
+// SubmitSignedBatchSolana is a paid mutator transaction binding the contract method 0xb660b009.
+//
+// Solidity: function submitSignedBatchSolana((uint64,uint64,uint64,uint8,bytes,bytes,bytes,uint8,bytes) _signedBatch) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SubmitSignedBatchSolana(_signedBatch IBridgeStructsSignedBatch) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SubmitSignedBatchSolana(&_BridgeContract.TransactOpts, _signedBatch)
+}
+
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
 // Solidity: function transferOwnership(address newOwner) returns()

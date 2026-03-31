@@ -44,11 +44,12 @@ func (config SolanaChainConfig) GetTokenID(tokenMint string) (uint16, error) {
 }
 
 func (config SolanaChainConfig) GetTokenMint(tokenID uint16) (string, error) {
-	if int(tokenID) >= len(config.Tokens) {
-		return "", fmt.Errorf("tokenID not found in chain config")
+	token, ok := config.Tokens[tokenID]
+	if !ok {
+		return "", fmt.Errorf("token not found in chain config")
 	}
 
-	return config.Tokens[tokenID].ChainSpecific, nil
+	return token.ChainSpecific, nil
 }
 
 func (config SolanaChainConfig) GetWrappedTokenID() (uint16, error) {
