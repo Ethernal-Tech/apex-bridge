@@ -318,7 +318,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
@@ -382,7 +382,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	//nolint:dupl

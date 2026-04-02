@@ -8,7 +8,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	solcore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -51,9 +50,31 @@ func (ccr *ChainConfigResult) IsNone() bool {
 	return ccr.Cardano == nil && ccr.Eth == nil && ccr.Solana == nil
 }
 
+func (ccr *ChainConfigResult) GetChainType() string {
+	if ccr.Cardano != nil {
+		return common.ChainTypeCardanoStr
+	}
+
+	if ccr.Eth != nil {
+		return common.ChainTypeEVMStr
+	}
+
+	if ccr.Solana != nil {
+		return common.ChainTypeSolanaStr
+	}
+
+	return ""
+}
+
+type ProcessReceiverData struct {
+	Address string   `json:"a"`
+	Amount  *big.Int `json:"m"`
+	TokenID uint16   `json:"t"`
+}
+
 func (ccr *ChainConfigResult) ProcessReceiver(
 	destCfg *ChainConfigResult,
-	receiver *solcore.BridgingRequestSolMetadataTransaction,
+	receiver *ProcessReceiverData,
 	totalTokensAmount *core.TotalTokensAmount,
 	cardanoChainInfos map[string]*oChain.CardanoChainInfo,
 ) (*core.BridgingRequestReceiver, error) {
@@ -63,17 +84,84 @@ func (ccr *ChainConfigResult) ProcessReceiver(
 	case destCfg.Eth != nil:
 		return processReceiverEth(ccr, destCfg.Eth, receiver, totalTokensAmount)
 	case destCfg.Solana != nil:
-		// return processReceiverSolana(srcCfg, destCfg.Solana, receiver, totalTokensAmount)
-		return nil, nil
+		return processReceiverSolana(ccr, destCfg.Solana, receiver, totalTokensAmount)
 	default:
 		return nil, fmt.Errorf("unknown destination chain config")
 	}
 }
 
+func processReceiverSolana(
+	srcCfg *ChainConfigResult,
+	solanaDestCfg *core.SolanaChainConfig,
+	receiver *ProcessReceiverData,
+	totalTokensAmount *core.TotalTokensAmount,
+) (*core.BridgingRequestReceiver, error) {
+	srcDestinationChains, srcChainID, srcTokens, alwaysTrackCurrencyAndWrappedCurrency, srcCurrencyID, err :=
+		getSourceChainCommonFields(srcCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	destCurrencyID, err := solanaDestCfg.GetCurrencyID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", solanaDestCfg.ChainID, err)
+	}
+
+	tokenPair, err := GetTokenPair(
+		srcDestinationChains, srcChainID,
+		solanaDestCfg.ChainID,
+		receiver.TokenID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get token pair for source chain %s to destination chain %s: %w",
+			srcChainID, solanaDestCfg.ChainID, err,
+		)
+	}
+
+	var (
+		amount        = big.NewInt(0)
+		amountWrapped = big.NewInt(0)
+	)
+
+	if tokenPair.DestinationTokenID == destCurrencyID {
+		amount = receiver.Amount
+
+		if solanaDestCfg.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
+			totalTokensAmount.TrackDestTokenAmount(
+				receiver.Amount, big.NewInt(0),
+			)
+		}
+	} else {
+		amountWrapped = common.LamportToWei(receiver.Amount)
+
+		// wrapped token on destination
+		if (solanaDestCfg.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			solanaDestCfg.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+			totalTokensAmount.TrackDestTokenAmount(
+				big.NewInt(0), receiver.Amount,
+			)
+		}
+	}
+
+	if alwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
+		totalTokensAmount.TrackSourceTokenAmount(
+			tokenPair.SourceTokenID, srcCurrencyID, receiver.Amount, srcTokens,
+		)
+	}
+
+	return &core.BridgingRequestReceiver{
+		DestinationAddress: receiver.Address,
+		Amount:             amount,
+		AmountWrapped:      amountWrapped,
+		TokenId:            tokenPair.DestinationTokenID,
+	}, nil
+}
+
 func processReceiverCardano(
 	srcCfg *ChainConfigResult,
 	cardanoDestCfg *core.CardanoChainConfig,
-	receiver *solcore.BridgingRequestSolMetadataTransaction,
+	receiver *ProcessReceiverData,
 	totalTokensAmount *core.TotalTokensAmount,
 	cardanoChainInfos map[string]*oChain.CardanoChainInfo,
 ) (*core.BridgingRequestReceiver, error) {
@@ -106,12 +194,14 @@ func processReceiverCardano(
 		amountWrapped = big.NewInt(0)
 	)
 
+	receiverAmount := normalizeAmount(srcCfg, receiver.Amount)
+
 	if tokenPair.DestinationTokenID == destCurrencyID {
-		amount = receiver.Amount
+		amount = receiverAmount
 
 		if cardanoDestCfg.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
 			totalTokensAmount.TrackDestTokenAmount(
-				receiver.Amount,
+				receiverAmount,
 				big.NewInt(0),
 			)
 		}
@@ -156,6 +246,19 @@ func processReceiverCardano(
 		AmountWrapped:      amountWrapped,
 		TokenId:            tokenPair.DestinationTokenID,
 	}, nil
+}
+
+func normalizeAmount(srcCfg *ChainConfigResult, amount *big.Int) *big.Int {
+	switch srcCfg.GetChainType() {
+	case common.ChainTypeSolanaStr:
+		return common.LamportToWei(amount)
+	case common.ChainTypeCardanoStr:
+		return common.DfmToWei(amount)
+	case common.ChainTypeEVMStr:
+		return amount
+	}
+
+	return amount
 }
 
 func getSourceChainCommonFields(
@@ -212,7 +315,7 @@ func getSourceChainCommonFields(
 func processReceiverEth(
 	srcCfg *ChainConfigResult,
 	ethDestConfig *core.EthChainConfig,
-	receiver *solcore.BridgingRequestSolMetadataTransaction,
+	receiver *ProcessReceiverData,
 	totalTokensAmount *core.TotalTokensAmount,
 ) (*core.BridgingRequestReceiver, error) {
 	srcDestinationChains, srcChainID, srcTokens, alwaysTrackCurrencyAndWrappedCurrency, srcCurrencyID, err :=
@@ -402,7 +505,7 @@ func GetDestChainInfo(
 			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge,
 		}, nil
 	default:
-		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)
+		return nil, fmt.Errorf("destination chain not registered ovde: %s", destChainID)
 	}
 }
 

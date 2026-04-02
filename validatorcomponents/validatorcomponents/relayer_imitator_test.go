@@ -99,9 +99,9 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 5", func(t *testing.T) {
-		hash := common.NewHashFromHexString("0x1")
+		hash := []byte{1}
 		txs := []eth.TxDataInfo{
-			{ObservedTransactionHash: hash[:], SourceChainId: common.ChainIDIntPrime},
+			{ObservedTransactionHash: hash, SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
 			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, hash, false),
@@ -126,9 +126,9 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 6", func(t *testing.T) {
-		hash := common.NewHashFromHexString("0x5")
+		hash := []byte{5}
 		txs := []eth.TxDataInfo{
-			{ObservedTransactionHash: hash[:], SourceChainId: common.ChainIDIntPrime},
+			{ObservedTransactionHash: hash, SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
 			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, hash, false),
@@ -154,9 +154,9 @@ func TestRelayerImitator(t *testing.T) {
 
 	t.Run("execute 7", func(t *testing.T) {
 		ctx := context.Background()
-		hash := common.NewHashFromHexString("0x5")
+		hash := []byte{5}
 		txs := []eth.TxDataInfo{
-			{ObservedTransactionHash: hash[:], SourceChainId: common.ChainIDIntPrime},
+			{ObservedTransactionHash: hash, SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
 			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, hash, false),
@@ -181,15 +181,15 @@ func TestRelayerImitator(t *testing.T) {
 
 	t.Run("execute 8", func(t *testing.T) {
 		ctx := context.Background()
-		hash1 := common.NewHashFromHexString("0x5")
-		hash2 := common.NewHashFromHexString("0x1")
+		hash1 := []byte{5}
+		hash2 := []byte{1}
 		txs := []eth.TxDataInfo{
-			{ObservedTransactionHash: hash1[:], SourceChainId: common.ChainIDIntPrime},
-			{ObservedTransactionHash: hash2[:], SourceChainId: common.ChainIDIntVector},
+			{ObservedTransactionHash: hash1, SourceChainId: common.ChainIDIntPrime},
+			{ObservedTransactionHash: hash2, SourceChainId: common.ChainIDIntVector},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5"), false),
-			common.NewBridgingRequestStateKey(common.ChainIDStrVector, common.NewHashFromHexString("0x1"), false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, hash1, false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, hash2, false),
 		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}

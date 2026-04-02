@@ -23,6 +23,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/sha3"
@@ -139,15 +140,6 @@ func Keccak256(v ...[]byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// Safely convert ObservedTransactionHash to [32]byte
-func SafelyConvertObservedTransactionHashToHash(observedTransactionHash []byte) [32]byte {
-	if len(observedTransactionHash) == 0 {
-		return [32]byte{}
-	}
-
-	return [32]byte(observedTransactionHash)
-}
-
 const (
 	DfmDecimals     = 6
 	WeiDecimals     = 18
@@ -167,6 +159,14 @@ func WeiToDfm(wei *big.Int) *big.Int {
 	dfm.Div(dfm, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil))
 
 	return dfm
+}
+
+func WeiToLamport(wei *big.Int) *big.Int {
+	lamport := new(big.Int).Set(wei)
+	base := big.NewInt(10)
+	lamport.Div(lamport, base.Exp(base, big.NewInt(WeiDecimals-LamportDecimals), nil))
+
+	return lamport
 }
 
 func WeiToDfmCeil(wei *big.Int) *big.Int {
@@ -282,6 +282,9 @@ func IsValidAddress(chainID string, addr string, chainIDConverter *ChainIDConver
 		cardanoAddr, err := cardanowallet.NewCardanoAddressFromString(addr)
 
 		return err == nil && cardanoAddr.GetInfo().AddressType != cardanowallet.RewardAddress
+	case chainIDConverter.IsSolanaChainID(chainID):
+		return solanawallet.IsSolanaAddress(addr)
+
 	default:
 		return false
 	}

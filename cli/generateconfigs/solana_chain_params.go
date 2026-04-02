@@ -1,6 +1,7 @@
 package cligenerateconfigs
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"path/filepath"
@@ -8,8 +9,10 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	solana "github.com/Ethernal-Tech/apex-bridge/solana"
+	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	wallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
 
@@ -43,6 +46,12 @@ const (
 	defaultSolanaSlotBuffSize               = uint8(10)
 	defaultSolanaEventBuffSize              = uint8(10)
 	defaultSolanaErrorBuffSize              = uint8(10)
+
+	feeAddrBridgingFlag     = "fee-addr-bridging"
+	feeAddrBridgingFlagDesc = "fee address bridging for solana chain"
+
+	defaultSlotRoundingThresholdSolana = 20
+	defaultNoBatchPeriodPercentSolana  = 0.01
 )
 
 type solanaChainGenerateConfigsParams struct {
@@ -62,8 +71,16 @@ type solanaChainGenerateConfigsParams struct {
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
+	outputRelayerFileName             string
 
 	dbsPath string
+
+	relayerDataDir    string
+	relayerConfigPath string
+	treasuryAddress   string
+	feeAddrBridging   string
+
+	slotRoundingThreshold uint64
 }
 
 func (p *solanaChainGenerateConfigsParams) validateFlags() error {
@@ -77,6 +94,14 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 
 	if p.solanaTrackedProgram == "" {
 		return fmt.Errorf("missing %s", solanaChainTrackedProgramFlag)
+	}
+
+	if _, err := wallet.PublicKeyFromAddress(p.treasuryAddress); err != nil {
+		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
+	}
+
+	if _, err := wallet.PublicKeyFromAddress(p.feeAddrBridging); err != nil {
+		return fmt.Errorf("invalid %s: %s", feeAddrBridgingFlag, p.feeAddrBridging)
 	}
 
 	return nil
@@ -165,12 +190,55 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		outputValidatorComponentsFileNameFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.slotRoundingThreshold,
+		slotRoundingThresholdFlag,
+		defaultSlotRoundingThresholdSolana,
+		slotRoundingThresholdFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.outputRelayerFileName,
+		outputRelayerFileNameFlag,
+		defaultOutputRelayerFileName,
+		outputRelayerFileNameFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.dbsPath,
 		dbsPathFlag,
 		defaultDBsPath,
 		dbsPathFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&p.treasuryAddress,
+		treasuryAddressFlag,
+		"",
+		treasuryAddressFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.feeAddrBridging,
+		feeAddrBridgingFlag,
+		"",
+		feeAddrBridgingFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.relayerDataDir,
+		relayerDataDirFlag,
+		"",
+		relayerDataDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerConfigPath,
+		relayerConfigPathFlag,
+		"",
+		relayerConfigPathFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
 
 func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -191,9 +259,12 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 	}
 
 	vcConfig.SolanaChains[p.chainIDString] = &oCore.SolanaChainConfig{
-		SolanaChainConfig: solana.SolanaChainConfig{
-			MinFeeForBridging:  common.LamportToWei(new(big.Int).SetUint64(p.solanaMinFeeForBridging)),
-			TxProviderEndpoint: p.solanaChainNodeURL,
+		SolanaChainConfig: solanatx.SolanaChainConfig{
+			MinFeeForBridging:     common.LamportToWei(new(big.Int).SetUint64(p.solanaMinFeeForBridging)),
+			TxProviderEndpoint:    p.solanaChainNodeURL,
+			BridgingFeeAddress:    p.feeAddrBridging,
+			SlotRoundingThreshold: p.slotRoundingThreshold,
+			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
 		},
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
@@ -205,6 +276,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		SlotBuffSize:               p.solanaSlotBuffSize,
 		EventBuffSize:              p.solanaEventBuffSize,
 		ErrorBuffSize:              p.solanaErrorBuffSize,
+		TreasuryAddress:            p.treasuryAddress,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
@@ -217,7 +289,37 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
 	}
 
+	rConfigPath := filepath.Join(outputDirPath, p.outputRelayerFileName)
+
+	rConfig, err := common.LoadJSON[rCore.RelayerManagerConfiguration](rConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load relayer config json: %w", err)
+	}
+
+	chainSpecificJSONRaw, err := json.Marshal(vcConfig.SolanaChains[p.chainIDString].SolanaChainConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal chain specific config to json: %w", err)
+	}
+
+	if rConfig.Chains == nil {
+		rConfig.Chains = make(map[string]rCore.ChainConfig)
+	}
+
+	rConfig.Chains[p.chainIDString] = rCore.ChainConfig{
+		ChainID:           p.chainIDString,
+		ChainType:         common.ChainTypeSolanaStr,
+		DbsPath:           filepath.Join(p.dbsPath, "relayer"),
+		ChainSpecific:     chainSpecificJSONRaw,
+		RelayerDataDir:    cleanPath(p.relayerDataDir),
+		RelayerConfigPath: cleanPath(p.relayerConfigPath),
+	}
+
+	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {
+		return nil, fmt.Errorf("failed to update relayer config json: %w", err)
+	}
+
 	return &CmdResult{
 		validatorComponentsConfigPath: vcConfigPath,
+		relayerConfigPath:             rConfigPath,
 	}, nil
 }

@@ -26,6 +26,7 @@ import (
 	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
+	solanaOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	solanaOracle "github.com/Ethernal-Tech/apex-bridge/oracle_solana/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
@@ -172,7 +173,8 @@ func NewValidatorComponents(
 		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_cardano"))
 
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
-		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
+		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}),
+		reflect.TypeOf(ethOracleCore.EthTx{}), reflect.TypeOf(solanaOracleCore.SolanaTx{}))
 
 	bridgingAddressesManager, err := bam.NewBridgingAdressesManager(
 		ctx,

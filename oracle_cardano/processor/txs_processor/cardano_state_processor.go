@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -188,7 +189,7 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 
 				for _, batchTx := range event.TxHashes {
 					if sp.appConfig.ChainIDConverter.ToChainIDStr(batchTx.SourceChainID) == tx.GetChainID() &&
-						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
+						bytes.Equal(batchTx.ObservedTransactionHash, tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
 
@@ -308,7 +309,7 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 		tx, exists := allPendingMap[string(
 			core.ToCardanoTxKey(
 				chainIDConverter.ToChainIDStr(brc.SourceChainId),
-				common.SafelyConvertObservedTransactionHashToHash(brc.ObservedTransactionHash)))]
+				indexer.Hash(brc.ObservedTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -623,7 +624,7 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		}
 
 		updateToSubmittedToBridge := func(
-			sourceChainId uint8, observedTransactionHash [32]byte, destinationChainId uint8, isRefund bool,
+			sourceChainId uint8, observedTransactionHash indexer.Hash, destinationChainId uint8, isRefund bool,
 		) {
 			chainIDConverter := sp.appConfig.ChainIDConverter
 			srcChainID := chainIDConverter.ToChainIDStr(sourceChainId)
@@ -634,7 +635,7 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 			}
 
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
-				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
+				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash[:], isRefund),
 				chainIDConverter.ToChainIDStr(destinationChainId))
 
 			if err != nil {
@@ -648,7 +649,7 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			updateToSubmittedToBridge(
 				brClaim.SourceChainId,
-				common.SafelyConvertObservedTransactionHashToHash(brClaim.ObservedTransactionHash),
+				indexer.Hash(brClaim.ObservedTransactionHash),
 				brClaim.DestinationChainId, false)
 		}
 
@@ -665,7 +666,7 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
 			txProcessor.GetType() == common.TxTypeRefundRequest {
 			err := bridgingRequestStateUpdater.Invalid(common.NewBridgingRequestStateKey(
-				tx.OriginChainID, common.Hash(tx.Hash), false))
+				tx.OriginChainID, tx.Hash[:], false))
 
 			if err != nil {
 				sp.logger.Error(

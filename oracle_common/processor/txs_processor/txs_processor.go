@@ -179,21 +179,21 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 		}
 
 		result = append(result, core.NewDBBatchInfoEvent(
-			batchID, chainIDInt, txHash, isFailedClaim, filteredTxs))
+			batchID, chainIDInt, txHash[:], isFailedClaim, filteredTxs))
 
 		return nil
 	}
 
 	for _, x := range claims.BatchExecutedClaims {
 		if err := addInfo(x.BatchNonceId, x.ChainId,
-			common.SafelyConvertObservedTransactionHashToHash(x.ObservedTransactionHash), false); err != nil {
+			common.Hash(x.ObservedTransactionHash), false); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, x := range claims.BatchExecutionFailedClaims {
 		if err := addInfo(x.BatchNonceId, x.ChainId,
-			common.SafelyConvertObservedTransactionHashToHash(x.ObservedTransactionHash), true); err != nil {
+			common.Hash(x.ObservedTransactionHash), true); err != nil {
 			return nil, err
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
@@ -142,11 +143,14 @@ func (p *BridgingRequestedProcessorImpl) validateReceiver(
 		return fmt.Errorf("invalid receiver. metadata: %v, receiver: %v, err: %w", ctx.metadata, receiver, err)
 	}
 
-	if ctx.CardanoDestConfig != nil {
+	switch {
+	case ctx.CardanoDestConfig != nil:
 		return p.validateReceiverCardano(ctx, receiver, tokenPair)
+	case ctx.EthDestConfig != nil:
+		return p.validateReceiverEth(ctx, receiver, tokenPair)
+	default:
+		return fmt.Errorf("invalid destination chain config")
 	}
-
-	return p.validateReceiverEth(ctx, receiver, tokenPair)
 }
 
 func (p *BridgingRequestedProcessorImpl) validateReceiverCardano(
@@ -266,13 +270,46 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	receivers := make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	totalTokensAmount := oCore.NewTotalTokensAmount()
 
+	currencySrcID, err := originChainConfig.Solana.GetCurrencyID()
+	if err != nil {
+		return err
+	}
+
+	destChainInfo, err := oUtils.GetDestChainInfoResult(metadata.DestinationChainID, destinationChainConfig, appConfig)
+	if err != nil {
+		return err
+	}
+
+	processReceiver := func(
+		receiver *core.BridgingRequestSolMetadataTransaction,
+	) (*oCore.BridgingRequestReceiver, error) {
+		switch destinationChainConfig.GetChainType() {
+		case common.ChainTypeCardanoStr:
+			return p.processReceiverCardano(
+				originChainConfig.Solana,
+				destinationChainConfig.Cardano,
+				receiver,
+				currencySrcID,
+				destChainInfo.CurrencyTokenID,
+				totalTokensAmount,
+			)
+		case common.ChainTypeEVMStr:
+			return p.processReceiverEth(
+				originChainConfig.Solana,
+				destinationChainConfig.Eth,
+				metadata.DestinationChainID,
+				receiver,
+				currencySrcID,
+				destChainInfo.CurrencyTokenID,
+				totalTokensAmount,
+			)
+		default:
+			return nil, fmt.Errorf("unknown destination chain type: %s", destinationChainConfig.GetChainType())
+		}
+	}
+
 	for _, receiver := range metadata.Transactions {
-		brReceiver, err := originChainConfig.ProcessReceiver(
-			&destinationChainConfig,
-			&receiver,
-			totalTokensAmount,
-			p.cardanoChainInfos,
-		)
+		brReceiver, err := processReceiver(&receiver)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to process receiver (chain %s, receiver address: %v): %w",
@@ -303,4 +340,173 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		"txHash", tx.TxSignature, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim, chainIDConverter))
 
 	return nil
+}
+
+func (p *BridgingRequestedProcessorImpl) processReceiverCardano(
+	solanaSrcConfig *oCore.SolanaChainConfig,
+	cardanoDestConfig *oCore.CardanoChainConfig,
+	receiver *core.BridgingRequestSolMetadataTransaction,
+	currencySrcID, currencyDestID uint16,
+	totalTokensAmount *oCore.TotalTokensAmount,
+) (*oCore.BridgingRequestReceiver, error) {
+	var (
+		receiverCurrency *big.Int
+		receiverTokens   = big.NewInt(0)
+	)
+
+	tokenPair, err := oUtils.GetTokenPair(
+		solanaSrcConfig.DestinationChains, solanaSrcConfig.ChainID,
+		cardanoDestConfig.ChainID, receiver.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	receiverAmountWei := receiver.Amount
+
+	if tokenPair.DestinationTokenID == currencyDestID {
+		// currency on destination
+		receiverCurrency = receiverAmountWei
+
+		if cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
+			totalTokensAmount.TrackDestTokenAmount(receiverAmountWei, big.NewInt(0))
+		}
+	} else {
+		nativeTokensSum := map[uint16]*big.Int{
+			tokenPair.DestinationTokenID: receiver.Amount,
+		}
+
+		dstMinUtxo, err := p.calculateMinUtxo(cardanoDestConfig, receiver.Address, nativeTokensSum)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate destination minUtxo for chainID: %s. err: %w",
+				cardanoDestConfig.ChainID, err)
+		}
+
+		receiverCurrency = common.DfmToWei(new(big.Int).SetUint64(dstMinUtxo))
+		totalTokensAmount.TrackDestTokenAmount(receiverCurrency, big.NewInt(0))
+
+		receiverTokens = receiverAmountWei
+
+		// wrapped token on destination
+		if (cardanoDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			cardanoDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+			totalTokensAmount.TrackDestTokenAmount(big.NewInt(0), receiverAmountWei)
+		}
+	}
+
+	if solanaSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
+		totalTokensAmount.TrackSourceTokenAmount(
+			tokenPair.SourceTokenID,
+			currencySrcID,
+			receiverAmountWei,
+			solanaSrcConfig.Tokens,
+		)
+	}
+
+	return &oCore.BridgingRequestReceiver{
+		DestinationAddress: receiver.Address,
+		Amount:             receiverCurrency,
+		AmountWrapped:      receiverTokens,
+		TokenId:            tokenPair.DestinationTokenID,
+	}, nil
+}
+
+func (p *BridgingRequestedProcessorImpl) processReceiverEth(
+	solanaSrcConfig *oCore.SolanaChainConfig,
+	ethDestConfig *oCore.EthChainConfig,
+	destinationChainID string,
+	receiver *core.BridgingRequestSolMetadataTransaction,
+	currencySrcID, currencyDestID uint16,
+	totalTokensAmount *oCore.TotalTokensAmount,
+) (*oCore.BridgingRequestReceiver, error) {
+	tokenPair, err := oUtils.GetTokenPair(
+		solanaSrcConfig.DestinationChains, solanaSrcConfig.ChainID,
+		destinationChainID, receiver.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	amount := big.NewInt(0)
+	amountWrapped := big.NewInt(0)
+	receiverAmountWei := receiver.Amount
+
+	// currency on destination
+	if tokenPair.DestinationTokenID == currencyDestID {
+		amount = receiverAmountWei
+
+		if ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
+			totalTokensAmount.TrackDestTokenAmount(
+				receiverAmountWei, big.NewInt(0),
+			)
+		}
+	} else {
+		amountWrapped = receiverAmountWei
+
+		// wrapped token on destination
+		if (ethDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+			totalTokensAmount.TrackDestTokenAmount(
+				big.NewInt(0),
+				receiverAmountWei,
+			)
+		}
+	}
+
+	if solanaSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
+		totalTokensAmount.TrackSourceTokenAmount(
+			tokenPair.SourceTokenID,
+			currencySrcID,
+			receiverAmountWei,
+			solanaSrcConfig.Tokens,
+		)
+	}
+
+	return &oCore.BridgingRequestReceiver{
+		DestinationAddress: receiver.Address,
+		Amount:             amount,
+		AmountWrapped:      amountWrapped,
+		TokenId:            tokenPair.DestinationTokenID,
+	}, nil
+}
+
+func (p *BridgingRequestedProcessorImpl) calculateMinUtxo(
+	config *oCore.CardanoChainConfig, receiverAddr string, nativeTokensSum map[uint16]*big.Int,
+) (uint64, error) {
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+	if err != nil {
+		return 0, err
+	}
+
+	defer builder.Dispose()
+
+	chainInfo, exists := p.cardanoChainInfos[config.ChainID]
+	if !exists {
+		return 0, fmt.Errorf("chain info not found for chainID: %s", config.ChainID)
+	}
+
+	builder.SetProtocolParameters(chainInfo.ProtocolParams)
+
+	tokenAmounts := make([]cardanowallet.TokenAmount, 0, len(nativeTokensSum))
+
+	for tokenID, tokenAmount := range nativeTokensSum {
+		tokenName := config.Tokens[tokenID].ChainSpecific
+
+		nativeToken, err := cardanowallet.NewTokenWithFullNameTry(tokenName)
+		if err != nil {
+			return 0, err
+		}
+
+		tokenAmounts = append(tokenAmounts, cardanowallet.NewTokenAmount(nativeToken, tokenAmount.Uint64()))
+	}
+
+	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
+		builder,
+		receiverAddr,
+		cardanowallet.GetTokensSumMap(tokenAmounts...),
+		nil,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return max(config.UtxoMinAmount, potentialTokenCost), nil
 }

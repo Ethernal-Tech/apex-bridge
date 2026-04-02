@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -258,28 +259,27 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 			return nil, fmt.Errorf("failed to create serialized signature: %w", err)
 		}
 	case common.ChainTypeSolana:
-		// TODO: implement solana wallet loading
-		// tbd after solana keys are added to sc
-		privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, ip.chainID)
+		privateKey, err := solanatx.LoadBatcherSolanaPrivateKey(secretsManager, ip.chainID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load eth wallet: %w", err)
+			return nil, fmt.Errorf("failed to load solana wallet: %w", err)
 		}
 
-		bigInts := privateKey.PublicKey().ToBigInt()
-		validatorChainData.Key[0] = bigInts[0]
-		validatorChainData.Key[1] = bigInts[1]
-		validatorChainData.Key[2] = bigInts[2]
-		validatorChainData.Key[3] = bigInts[3]
+		// Solana uses Ed25519: only key[0] holds the 32-byte public key as uint256.
+		// The contract's isSolanaSignatureValid uses validatorChainData.key[0] only.
+		pubKeyBytes := privateKey.PublicKey().Bytes()
+		validatorChainData.Key[0] = new(big.Int).SetBytes(pubKeyBytes)
+		validatorChainData.Key[1] = big.NewInt(0)
+		validatorChainData.Key[2] = big.NewInt(0)
+		validatorChainData.Key[3] = big.NewInt(0)
 
-		sign, err := privateKey.Sign(messageHash, eth.BN256Domain)
+		sign, err := privateKey.Sign(messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create signature: %w", err)
 		}
 
-		signatureMultisig, err = sign.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create serialized signature: %w", err)
-		}
+		// Ed25519 signature is 64 bytes; Solana validation does not use keyFeeSignature.
+		signatureMultisig = sign[:]
+		signatureFee = nil
 	default:
 		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}

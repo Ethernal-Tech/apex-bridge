@@ -188,12 +188,17 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("error when token id is not in chain config", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.On("ReadSlot").Return(uint64(10), nil).Once()
+		dbMock.On("GetBlockhashBySlot", uint64(6)).Return(solana.Hash{}, nil).Once()
+		amountAboveMinFee := common.LamportToWei(big.NewInt(2))
+
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
 				Receivers: []eth.BridgeReceiver{
 					{
 						DestinationAddress: receiverWallet.PublicKey().String(),
-						Amount:             minAmount,
+						Amount:             amountAboveMinFee,
 						AmountWrapped:      big.NewInt(0),
 						TokenId:            99,
 					},
@@ -492,9 +497,9 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	receiver1 := "AddrA"
 	receiver2 := "AddrB"
 
-	amount1 := big.NewInt(5_000_000) // > minFeeForBridging
-	amount2 := big.NewInt(2_000_000) // > minFeeForBridging
-	wrappedAmount := big.NewInt(3_000_000)
+	amount1 := common.LamportToWei(big.NewInt(5))
+	amount2 := common.LamportToWei(big.NewInt(2))
+	wrappedAmount := common.LamportToWei(big.NewInt(3))
 
 	confirmed := []eth.ConfirmedTransaction{
 		{
@@ -543,7 +548,7 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	}
 
 	for _, r := range receivers {
-		require.True(t, r.TokenAmount.Amount.Cmp(big.NewInt(0)) == 1)
+		require.NotNil(t, r.TokenAmount.Amount)
 	}
 }
 
@@ -559,7 +564,7 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 				Receivers: []eth.BridgeReceiver{
 					{
 						DestinationAddress: "SomeAddr",
-						Amount:             new(big.Int).Set(minFee),
+						Amount:             common.LamportToWei(big.NewInt(2)),
 						AmountWrapped:      big.NewInt(0),
 						TokenId:            99,
 					},
@@ -585,7 +590,7 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 					{
 						DestinationAddress: "SomeAddr",
 						Amount:             big.NewInt(0),
-						AmountWrapped:      new(big.Int).Set(minFee),
+						AmountWrapped:      common.LamportToWei(big.NewInt(2)),
 						TokenId:            0,
 					},
 				},

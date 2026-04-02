@@ -259,8 +259,8 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
-			amount := new(big.Int).Set(recv.Amount)
-			tokenAmount := new(big.Int).Set(recv.AmountWrapped)
+			amount := common.WeiToLamport(recv.Amount)
+			tokenAmount := common.WeiToLamport(recv.AmountWrapped)
 
 			if amount.Cmp(big.NewInt(0)) == 1 {
 				tokenMint, err := config.GetTokenMint(recv.TokenId)

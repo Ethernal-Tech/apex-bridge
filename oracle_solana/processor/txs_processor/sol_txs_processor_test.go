@@ -408,7 +408,7 @@ func TestSolTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		failedTxProc := &core.SolanaTxFailedProcessorMock{
-			ShouldAddClaim: true,
+			ShouldAddClaim: false,
 			Type:           common.BridgingTxTypeBatchExecution,
 		}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -467,7 +467,7 @@ func TestSolTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		failedTxProc := &core.SolanaTxFailedProcessorMock{
-			ShouldAddClaim: true,
+			ShouldAddClaim: false,
 			Type:           common.BridgingTxTypeBatchExecution,
 		}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)

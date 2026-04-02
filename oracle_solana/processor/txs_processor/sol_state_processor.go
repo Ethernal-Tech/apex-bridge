@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -63,7 +64,10 @@ func (s *SolStateProcessor) GetChainType() string {
 }
 
 func (s *SolStateProcessor) Reset() {
-	s.state = &perTickState{updateData: &core.SolanaUpdateTxsData{}}
+	s.state = &perTickState{
+		updateData:                    &core.SolanaUpdateTxsData{},
+		innerActionHashToActualTxHash: make(map[string]solana.Signature),
+	}
 }
 
 func (s *SolStateProcessor) ProcessSavedEvents() {
@@ -189,7 +193,7 @@ func (s *SolStateProcessor) processBatchExecutionInfoEvents(
 
 				for _, batchTx := range event.TxHashes {
 					if s.appConfig.ChainIDConverter.ToChainIDStr(batchTx.SourceChainID) == tx.GetChainID() &&
-						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
+						bytes.Equal(batchTx.ObservedTransactionHash, tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
 
@@ -241,7 +245,7 @@ func (s *SolStateProcessor) getTxsFromBatchEvent(
 		tx, err := s.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: s.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
-				DBKey:   hash.ObservedTransactionHash[:],
+				DBKey:   hash.ObservedTransactionHash,
 			},
 		)
 		if err != nil {
@@ -466,12 +470,18 @@ func (s *SolStateProcessor) checkUnprocessedTxs(
 			txProcessor.GetType() == common.TxTypeRefundRequest {
 			pendingTxs = append(pendingTxs, unprocessedTx)
 		} else {
-			key := string(unprocessedTx.ToExpectedSolanaTxKey())
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				key := string(unprocessedTx.ToExpectedSolanaTxKey())
 
-			if expectedTx, exists := s.state.expectedTxsMap[key]; exists {
-				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+				if expectedTx, exists := s.state.expectedTxsMap[key]; exists {
+					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-				delete(s.state.expectedTxsMap, key)
+					delete(s.state.expectedTxsMap, key)
+				}
+
+				s.state.innerActionHashToActualTxHash[string(core.ToSolanaTxKey(
+					unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash[:],
+				))] = unprocessedTx.TxSignature
 			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
@@ -628,21 +638,13 @@ func (s *SolStateProcessor) UpdateBridgingRequestStates(
 		) {
 			srcChainID := chainIDConverter.ToChainIDStr(sourceChainId)
 
-			var sig solana.Signature
-
-			copy(sig[:], observedTransactionHash)
-
-			key := core.ToSolanaTxKey(srcChainID, sig[:])
+			key := core.ToSolanaTxKey(srcChainID, observedTransactionHash)
 			if !notRejectedMap[string(key)] {
 				return
 			}
 
-			var txHash common.Hash
-
-			copy(txHash[:], observedTransactionHash)
-
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
-				common.NewBridgingRequestStateKey(srcChainID, txHash, isRefund),
+				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
 				chainIDConverter.ToChainIDStr(destinationChainId))
 
 			if err != nil {
@@ -670,12 +672,8 @@ func (s *SolStateProcessor) UpdateBridgingRequestStates(
 			s.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
 		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
 			txProcessor.GetType() == common.TxTypeRefundRequest {
-			var txHash common.Hash
-
-			copy(txHash[:], tx.TxSignature[:])
-
 			err := bridgingRequestStateUpdater.Invalid(common.NewBridgingRequestStateKey(
-				tx.OriginChainID, txHash, false))
+				tx.OriginChainID, tx.TxSignature[:], false))
 			if err != nil {
 				s.logger.Error(
 					"error while updating a bridging request state to Invalid",

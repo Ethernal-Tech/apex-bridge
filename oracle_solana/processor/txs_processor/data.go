@@ -6,13 +6,15 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solana "github.com/gagliardetto/solana-go"
 )
 
 type perTickState struct {
 	updateData *core.SolanaUpdateTxsData
 
 	// duplicated data, used for easier marking of invalid state for bridging request history
-	allProcessedInvalid []*core.SolanaTx
+	allProcessedInvalid           []*core.SolanaTx
+	innerActionHashToActualTxHash map[string]solana.Signature
 
 	expectedTxsMap map[string]*core.BridgeExpectedSolanaTx
 	unprocessedTxs []*core.SolanaTx

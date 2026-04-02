@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -77,7 +78,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	chainID := chainIDArr[0]
 	txHash := common.NewHashFromHexString(txHashArr[0])
 
-	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
+	state, err := c.bridgingRequestStateManager.Get(chainID, txHash[:])
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
@@ -124,10 +125,11 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 	chainID := chainIDArr[0]
 
 	txHashesStrs := queryValues["txHash"]
-	txHashes := make([]common.Hash, len(txHashesStrs))
+	txHashes := make([][]byte, len(txHashesStrs))
 
 	for i, x := range txHashesStrs {
-		txHashes[i] = common.NewHashFromHexString(x)
+		hash := common.NewHashFromHexString(x)
+		txHashes[i] = hash[:]
 	}
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
@@ -141,7 +143,7 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	statesResponse := make(map[string]*response.BridgingRequestStateResponse, len(states))
 	for _, state := range states {
-		statesResponse[state.SourceTxHash.String()] = response.NewBridgingRequestStateResponse(state)
+		statesResponse[hex.EncodeToString(state.SourceTxHash)] = response.NewBridgingRequestStateResponse(state)
 	}
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)

@@ -19,7 +19,7 @@ func (m *BridgingRequestStateDBMock) AddBridgingRequestState(state *common.Bridg
 
 // GetBridgingRequestState implements core.BridgingRequestStateDb.
 func (m *BridgingRequestStateDBMock) GetBridgingRequestState(
-	sourceChainID string, sourceTxHash common.Hash,
+	sourceChainID string, sourceTxHash []byte,
 ) (*common.BridgingRequestState, error) {
 	args := m.Called(sourceChainID, sourceTxHash)
 	if args.Get(0) == nil {

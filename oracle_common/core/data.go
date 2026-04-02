@@ -24,6 +24,7 @@ type DBTxID struct {
 
 func NewTypeRegisterWithChains(
 	appConfig *AppConfig, cardanoType reflect.Type, ethType reflect.Type,
+	solanaType reflect.Type,
 ) common.TypeRegister {
 	reg := common.NewTypeRegister()
 
@@ -36,6 +37,12 @@ func NewTypeRegisterWithChains(
 	if ethType != nil {
 		for _, chain := range appConfig.EthChains {
 			reg.SetType(chain.ChainID, ethType)
+		}
+	}
+
+	if solanaType != nil {
+		for _, chain := range appConfig.SolanaChains {
+			reg.SetType(chain.ChainID, solanaType)
 		}
 	}
 
@@ -79,27 +86,27 @@ func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
 }
 
 type DBBatchTx struct {
-	SourceChainID           uint8       `json:"s_chain"`
-	ObservedTransactionHash common.Hash `json:"s_tx_hash"`
-	TransactionType         uint8       `json:"tx_type"`
+	SourceChainID           uint8  `json:"s_chain"`
+	ObservedTransactionHash []byte `json:"s_tx_hash"`
+	TransactionType         uint8  `json:"tx_type"`
 }
 
 type DBBatchInfoEvent struct {
 	BatchID       uint64      `json:"batch"`
 	DstChainID    uint8       `json:"chain"`
-	DstTxHash     common.Hash `json:"tx_hash"`
+	DstTxHash     []byte      `json:"tx_hash"`
 	IsFailedClaim bool        `json:"failed"`
 	TxHashes      []DBBatchTx `json:"txs"`
 }
 
 func NewDBBatchInfoEvent(
-	batchID uint64, chainID uint8, txHash common.Hash, isFailedClaim bool, txs []eth.TxDataInfo,
+	batchID uint64, chainID uint8, txHash []byte, isFailedClaim bool, txs []eth.TxDataInfo,
 ) *DBBatchInfoEvent {
 	dbBatchTxs := make([]DBBatchTx, len(txs))
 	for i, tx := range txs {
 		dbBatchTxs[i] = DBBatchTx{
 			SourceChainID:           tx.SourceChainId,
-			ObservedTransactionHash: common.SafelyConvertObservedTransactionHashToHash(tx.ObservedTransactionHash),
+			ObservedTransactionHash: tx.ObservedTransactionHash,
 			TransactionType:         tx.TransactionType,
 		}
 	}
@@ -145,6 +152,7 @@ type BlocksSubmitterInfo struct {
 type ReceiverValidationContext struct {
 	CardanoDestConfig *CardanoChainConfig
 	EthDestConfig     *EthChainConfig
+	SolanaDestConfig  *SolanaChainConfig
 
 	BridgingSettings           *BridgingSettings
 	MinColCoinsAllowedToBridge *big.Int

@@ -85,7 +85,7 @@ func (r *SolEventReceiverImpl) NewUnprocessedEvent(originChainID string, event t
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: common.Hash(tx.TxSignature[:]),
+					SourceTxHash: tx.TxSignature[:],
 					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
 				},
 			)

@@ -239,7 +239,10 @@ func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
 	if m.AddClaimCallback != nil {
 		m.AddClaimCallback(claims)
 	} else if m.ShouldAddClaim {
-		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{})
+		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
+			SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID),
+			ObservedTransactionHash: tx.Hash[:],
+		})
 	}
 
 	args := m.Called(claims, tx, appConfig)
@@ -317,7 +320,11 @@ func (m *EthTxFailedProcessorMock) ValidateAndAddClaim(
 ) error {
 	if m.ShouldAddClaim {
 		claims.BatchExecutionFailedClaims = append(
-			claims.BatchExecutionFailedClaims, oCore.BatchExecutionFailedClaim{BatchNonceId: 1})
+			claims.BatchExecutionFailedClaims, oCore.BatchExecutionFailedClaim{
+				BatchNonceId:            1,
+				ChainId:                 0,
+				ObservedTransactionHash: tx.Hash[:],
+			})
 	}
 
 	args := m.Called(claims, tx, appConfig)

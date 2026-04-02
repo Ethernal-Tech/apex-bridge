@@ -9,9 +9,9 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	sendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
-	wallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
-	binary "github.com/gagliardetto/binary"
+	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -57,28 +57,16 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 				return nil, nil
 			}
 
-			unmarshaledTx, err := wallet.UnmarshalTransaction(lastBatchRawTx)
+			var payload sendtx.SolanaPayload
+
+			err := payload.Unmarshal(lastBatchRawTx)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal transaction. err: %w", err)
-			}
-
-			if len(unmarshaledTx.Message.Instructions) != 1 {
-				return nil, fmt.Errorf("expected 1 instruction, got %d", len(unmarshaledTx.Message.Instructions))
-			}
-
-			// 1. Batch ID
-			decoder := binary.NewBorshDecoder(unmarshaledTx.Message.Instructions[0].Data[8:])
-
-			var batchNonceID uint64
-
-			err = decoder.Decode(&batchNonceID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to decode batchID. err: %w", err)
+				return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
 			}
 
 			expectedTxMetadata := core.BatchExecutedSolMetadata{
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
-				BatchNonceID:   batchNonceID,
+				BatchNonceID:   payload.BatchID,
 			}
 
 			txMetadata, err := core.MarshalSolMetadata(expectedTxMetadata)
@@ -92,7 +80,12 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 				return nil, fmt.Errorf("indexer db not found for chainID: %s", chainID)
 			}
 
-			slot, err := indexerDB.GetSlotByBlockhash(unmarshaledTx.Message.RecentBlockhash)
+			blockhash, err := solana.HashFromBase58(payload.Blockhash)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
+			}
+
+			slot, err := indexerDB.GetSlotByBlockhash(blockhash)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get block by hash. err: %w", err)
 			}
