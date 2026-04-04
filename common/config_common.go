@@ -110,6 +110,12 @@ var (
 			MinUtxoAmount:              uint64(1_000_000),
 			MinColCoinsAllowedToBridge: uint64(1),
 		},
+		ChainIDStrPolygon: {
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          uint64(340_000),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: uint64(1),
+		},
 		"default": {
 			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
 			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
