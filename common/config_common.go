@@ -72,10 +72,10 @@ type Token struct {
 }
 
 type MinConfig struct {
-	MinOperationFee            uint64
-	MinFeeForBridging          uint64
+	MinOperationFee            *big.Int
+	MinFeeForBridging          *big.Int
 	MinUtxoAmount              uint64
-	MinColCoinsAllowedToBridge uint64
+	MinColCoinsAllowedToBridge *big.Int
 }
 
 const (
@@ -93,40 +93,70 @@ var (
 var (
 	ChainMinConfig = map[string]MinConfig{
 		ChainIDStrPrime: {
-			MinOperationFee:            uint64(0),
-			MinFeeForBridging:          uint64(1_000_010),
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(1_000_010)),
 			MinUtxoAmount:              uint64(1_000_000),
-			MinColCoinsAllowedToBridge: uint64(1),
+			MinColCoinsAllowedToBridge: DfmToWei(big.NewInt(1)),
 		},
 		ChainIDStrCardano: {
-			MinOperationFee:            uint64(0),
-			MinFeeForBridging:          uint64(1_000_010),
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(1_000_010)),
 			MinUtxoAmount:              uint64(1_000_000),
-			MinColCoinsAllowedToBridge: uint64(1),
+			MinColCoinsAllowedToBridge: DfmToWei(big.NewInt(1)),
 		},
 		ChainIDStrVector: {
-			MinOperationFee:            uint64(0),
-			MinFeeForBridging:          uint64(1_000_010),
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(1_000_010)),
 			MinUtxoAmount:              uint64(1_000_000),
-			MinColCoinsAllowedToBridge: uint64(1),
+			MinColCoinsAllowedToBridge: DfmToWei(big.NewInt(1)),
 		},
 		ChainIDStrPolygon: {
-			MinOperationFee:            uint64(0),
-			MinFeeForBridging:          uint64(340_000),
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(264_000)),
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
-			MinColCoinsAllowedToBridge: uint64(1),
+			MinColCoinsAllowedToBridge: big.NewInt(1),
+		},
+		ChainIDStrEthereum: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(1_240)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: big.NewInt(1),
 		},
 		ChainIDStrKatana: {
-			MinOperationFee:            uint64(0),
-			MinFeeForBridging:          uint64(160),
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(160)),
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
-			MinColCoinsAllowedToBridge: uint64(1),
+			MinColCoinsAllowedToBridge: big.NewInt(1),
+		},
+		ChainIDStrSei: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(160_000)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: big.NewInt(1),
+		},
+		ChainIDStrArbitrum: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(60)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: big.NewInt(1),
+		},
+		ChainIDStrScroll: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(40)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: big.NewInt(1),
+		},
+		ChainIDStrUnichain: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          DfmToWei(big.NewInt(1)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: big.NewInt(1),
 		},
 		"default": {
-			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
-			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
+			MinOperationFee:            MinOperationFeeDefault,
+			MinFeeForBridging:          MinFeeForBridgingDefault,
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
-			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDfmCardano,
+			MinColCoinsAllowedToBridge: DfmToWei(new(big.Int).SetUint64(MinColCoinsAllowedToBridgeDfmCardano)),
 		},
 	}
 )

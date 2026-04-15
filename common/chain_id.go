@@ -12,20 +12,30 @@ const (
 	ChainTypeEVMStr     = "evm"
 
 	// Used for tests only
-	ChainIDStrPrime   = "prime"
-	ChainIDStrVector  = "vector"
-	ChainIDStrCardano = "cardano"
-	ChainIDStrNexus   = "nexus"
-	ChainIDStrPolygon = "polygon"
-	ChainIDStrKatana  = "katana"
+	ChainIDStrPrime    = "prime"
+	ChainIDStrVector   = "vector"
+	ChainIDStrCardano  = "cardano"
+	ChainIDStrNexus    = "nexus"
+	ChainIDStrPolygon  = "polygon"
+	ChainIDStrEthereum = "ethereum"
+	ChainIDStrKatana   = "katana"
+	ChainIDStrSei      = "sei"
+	ChainIDStrArbitrum = "arbitrum"
+	ChainIDStrScroll   = "scroll"
+	ChainIDStrUnichain = "unichain"
 
 	// Used for tests only
-	ChainIDIntPrime   = ChainIDNum(1)
-	ChainIDIntVector  = ChainIDNum(2)
-	ChainIDIntNexus   = ChainIDNum(3)
-	ChainIDIntCardano = ChainIDNum(4)
-	ChainIDIntPolygon = ChainIDNum(5)
-	ChainIDIntKatana  = ChainIDNum(7)
+	ChainIDIntPrime    = ChainIDNum(1)
+	ChainIDIntVector   = ChainIDNum(2)
+	ChainIDIntNexus    = ChainIDNum(3)
+	ChainIDIntCardano  = ChainIDNum(4)
+	ChainIDIntPolygon  = ChainIDNum(5)
+	ChainIDIntEthereum = ChainIDNum(6)
+	ChainIDIntKatana   = ChainIDNum(7)
+	ChainIDIntSei      = ChainIDNum(8)
+	ChainIDIntArbitrum = ChainIDNum(9)
+	ChainIDIntScroll   = ChainIDNum(10)
+	ChainIDIntUnichain = ChainIDNum(11)
 )
 
 type ChainIDConverter struct {
