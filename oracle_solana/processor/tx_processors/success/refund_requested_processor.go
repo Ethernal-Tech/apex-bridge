@@ -5,14 +5,14 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-	goEthCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solana "github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.EthTxSuccessRefundProcessor = (*RefundRequestProcessorSkylineImpl)(nil)
+var _ core.SolanaTxSuccessRefundProcessor = (*RefundRequestProcessorSkylineImpl)(nil)
 
 type RefundRequestProcessorSkylineImpl struct {
 	logger hclog.Logger
@@ -28,12 +28,12 @@ func (*RefundRequestProcessorSkylineImpl) GetType() common.BridgingTxType {
 	return common.TxTypeRefundRequest
 }
 
-func (*RefundRequestProcessorSkylineImpl) PreValidate(tx *core.EthTx, appConfig *cCore.AppConfig) error {
+func (*RefundRequestProcessorSkylineImpl) PreValidate(tx *core.SolanaTx, appConfig *oCore.AppConfig) error {
 	return nil
 }
 
 func (*RefundRequestProcessorSkylineImpl) HandleBridgingProcessorPreValidate(
-	tx *core.EthTx, appConfig *cCore.AppConfig) error {
+	tx *core.SolanaTx, appConfig *oCore.AppConfig) error {
 	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
 		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
 		return fmt.Errorf(
@@ -46,7 +46,7 @@ func (*RefundRequestProcessorSkylineImpl) HandleBridgingProcessorPreValidate(
 }
 
 func (p *RefundRequestProcessorSkylineImpl) HandleBridgingProcessorError(
-	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
+	claims *oCore.BridgeClaims, tx *core.SolanaTx, appConfig *oCore.AppConfig,
 	err error, errContext string,
 ) error {
 	p.logger.Warn(fmt.Sprintf("%s. handing over to refund processor", errContext),
@@ -56,10 +56,9 @@ func (p *RefundRequestProcessorSkylineImpl) HandleBridgingProcessorError(
 }
 
 func (p *RefundRequestProcessorSkylineImpl) ValidateAndAddClaim(
-	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
+	claims *oCore.BridgeClaims, tx *core.SolanaTx, appConfig *oCore.AppConfig,
 ) error {
-	metadata, err := core.UnmarshalEthMetadata[core.RefundBridgingRequestEthMetadata](
-		tx.Metadata)
+	metadata, err := core.UnmarshalSolMetadata[core.RefundBridgingRequestSolMetadata](tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
@@ -74,21 +73,21 @@ func (p *RefundRequestProcessorSkylineImpl) ValidateAndAddClaim(
 }
 
 func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
-	claims *cCore.BridgeClaims, tx *core.EthTx,
-	metadata *core.RefundBridgingRequestEthMetadata,
-	appConfig *cCore.AppConfig,
+	claims *oCore.BridgeClaims, tx *core.SolanaTx,
+	metadata *core.RefundBridgingRequestSolMetadata,
+	appConfig *oCore.AppConfig,
 ) {
-	chainConfig := appConfig.EthChains[tx.OriginChainID]
+	chainConfig := appConfig.SolanaChains[tx.OriginChainID]
 	currencyID, _ := chainConfig.GetCurrencyID()
 	chainIDConverter := appConfig.ChainIDConverter
 
 	tokenAmounts, totalCurrency, totalWrapped :=
-		buildRefundTokenAmounts(chainConfig, tx.Value, metadata, currencyID)
+		buildSolRefundTokenAmounts(chainConfig, metadata, currencyID)
 
-	claim := cCore.RefundRequestClaim{
+	claim := oCore.RefundRequestClaim{
 		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
 		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
-		OriginTransactionHash:    tx.Hash[:],
+		OriginTransactionHash:    tx.TxSignature[:],
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             totalCurrency,
 		OriginWrappedAmount:      totalWrapped,
@@ -101,32 +100,33 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
 
 	p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim, chainIDConverter))
+		"txHash", tx.TxSignature, "claim", oCore.RefundRequestClaimString(claim, chainIDConverter))
 }
 
-func (p *RefundRequestProcessorSkylineImpl) validate(
-	tx *core.EthTx, metadata *core.RefundBridgingRequestEthMetadata, appConfig *cCore.AppConfig,
+func (*RefundRequestProcessorSkylineImpl) validate(
+	tx *core.SolanaTx, metadata *core.RefundBridgingRequestSolMetadata, appConfig *oCore.AppConfig,
 ) error {
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
 		return fmt.Errorf("try count exceeded. RefundTryCount: (current, max)=(%d, %d)",
 			tx.RefundTryCount, appConfig.TryCountLimits.MaxRefundTryCount)
 	}
 
-	chainConfig := appConfig.EthChains[tx.OriginChainID]
+	chainConfig := appConfig.SolanaChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if !goEthCommon.IsHexAddress(metadata.SenderAddr) {
+	if _, err := solana.PublicKeyFromBase58(metadata.SenderAddr); err != nil {
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	minFeeForBridging := chainConfig.MinFeeForBridging
-	if tx.Value.Cmp(minFeeForBridging) == -1 {
-		return fmt.Errorf(
-			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, new(big.Int).Add(minFeeForBridging, big.NewInt(1)),
-		)
+	if chainConfig.MinFeeForBridging != nil && chainConfig.MinFeeForBridging.Sign() > 0 {
+		if tx.Value.Cmp(chainConfig.MinFeeForBridging) == -1 {
+			return fmt.Errorf(
+				"tx.Value: %v is less than the minimum required for refund: %v",
+				tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)),
+			)
+		}
 	}
 
 	for _, receiver := range metadata.Transactions {
@@ -142,17 +142,14 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	return nil
 }
 
-func buildRefundTokenAmounts(
-	chainConfig *cCore.EthChainConfig,
-	txValue *big.Int,
-	metadata *core.RefundBridgingRequestEthMetadata,
+func buildSolRefundTokenAmounts(
+	chainConfig *oCore.SolanaChainConfig,
+	metadata *core.RefundBridgingRequestSolMetadata,
 	currencyID uint16,
-) (tokenAmounts []cCore.RefundTokenAmount, totalCurrency, totalWrapped *big.Int) {
-	tokenAmounts = make([]cCore.RefundTokenAmount, 0)
+) (tokenAmounts []oCore.RefundTokenAmount, totalCurrency, totalWrapped *big.Int) {
+	tokenAmounts = make([]oCore.RefundTokenAmount, 0)
 	totalCurrency = big.NewInt(0)
 	totalWrapped = big.NewInt(0)
-
-	currencyAdded := false
 
 	for _, receiver := range metadata.Transactions {
 		tokenPair, _ := oUtils.GetTokenPair(
@@ -162,42 +159,29 @@ func buildRefundTokenAmounts(
 			receiver.TokenID,
 		)
 
-		// handle currency
 		if receiver.TokenID == currencyID {
 			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalCurrency.Add(totalCurrency, receiver.Amount)
 			}
 
-			if !currencyAdded {
-				tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
-					TokenId:        receiver.TokenID,
-					AmountCurrency: txValue,
-					AmountTokens:   big.NewInt(0),
-				})
-
-				currencyAdded = true
-			}
+			tokenAmounts = append(tokenAmounts, oCore.RefundTokenAmount{
+				TokenId:        receiver.TokenID,
+				AmountCurrency: receiver.Amount,
+				AmountTokens:   big.NewInt(0),
+			})
 
 			continue
 		}
 
-		// handle wrapped token
 		if chainConfig.Tokens[receiver.TokenID].IsWrappedCurrency {
 			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalWrapped.Add(totalWrapped, receiver.Amount)
 			}
 		}
 
-		// build RefundTokenAmount entry
-		currencyAmount := big.NewInt(0)
-		if !currencyAdded {
-			currencyAmount = txValue
-			currencyAdded = true
-		}
-
-		tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
+		tokenAmounts = append(tokenAmounts, oCore.RefundTokenAmount{
 			TokenId:        receiver.TokenID,
-			AmountCurrency: currencyAmount,
+			AmountCurrency: big.NewInt(0),
 			AmountTokens:   receiver.Amount,
 		})
 	}

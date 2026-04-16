@@ -186,18 +186,18 @@ func (sco *SolanaChainOperations) getBlockhashBySlot(slot uint64) (solana.Hash, 
 }
 
 func (sco *SolanaChainOperations) getSlotNumber() (uint64, error) {
-	slot, err := sco.db.ReadSlot()
+	latestBlockPoint, err := sco.db.GetLatestBlockPoint()
 	if err != nil {
 		return 0, err
 	}
 
 	newSlot, err := getNumberWithRoundingThresholdRoundDown(
-		slot, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent)
+		latestBlockPoint.BlockSlot, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent)
 	if err != nil {
 		return 0, err
 	}
 
-	sco.logger.Debug("calculate slotNumber with rounding", "slot", slot, "newSlot", newSlot)
+	sco.logger.Debug("calculate slotNumber with rounding", "slot", latestBlockPoint.BlockSlot, "newSlot", newSlot)
 
 	return newSlot, nil
 }

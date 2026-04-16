@@ -18,7 +18,8 @@ import (
 var _ core.SolanaTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	logger hclog.Logger
+	refundRequestProcessor core.SolanaTxSuccessRefundProcessor
+	logger                 hclog.Logger
 
 	cardanoChainInfos map[string]*oChain.CardanoChainInfo
 }
@@ -31,12 +32,14 @@ type receiverValidationCtxSolanaSrc struct {
 }
 
 func NewSolanaBridgingRequestedProcessor(
+	refundRequestProcessor core.SolanaTxSuccessRefundProcessor,
 	logger hclog.Logger,
 	cardanoChainInfos map[string]*oChain.CardanoChainInfo,
 ) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
-		logger:            logger.Named("solana_bridging_requested_processor"),
-		cardanoChainInfos: cardanoChainInfos,
+		refundRequestProcessor: refundRequestProcessor,
+		logger:                 logger.Named("solana_bridging_requested_processor"),
+		cardanoChainInfos:      cardanoChainInfos,
 	}
 }
 
@@ -53,12 +56,13 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 ) error {
 	metadata, err := core.UnmarshalSolMetadata[core.BridgingRequestSolMetadata](tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal sol metadata: %w", err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal sol metadata")
 	}
 
 	if metadata.BridgingTxType != p.GetType() {
-		// wTODO: Refund
-		return fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.TxSignature, "metadata", metadata)
@@ -66,15 +70,19 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
 		return p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
-	} else {
-		// wTODO: Refund
-		return err
 	}
+
+	return p.refundRequestProcessor.HandleBridgingProcessorError(
+		claims, tx, appConfig, err, "validation failed for tx")
 }
 
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.SolanaTx, metadata *core.BridgingRequestSolMetadata, appConfig *oCore.AppConfig,
 ) error {
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
+		return err
+	}
+
 	originChainConfig := oUtils.GetChainConfigResult(appConfig, tx.OriginChainID)
 	if originChainConfig.IsNone() {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)

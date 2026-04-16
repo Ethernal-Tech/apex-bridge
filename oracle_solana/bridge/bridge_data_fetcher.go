@@ -19,11 +19,10 @@ const (
 	MaxRetries = 5
 
 	// Solana slot target is 400ms
-	// TTL for solana tx is caped to 150 blocks ~ 60-90 seconds
-	// we take 150 seconds as TTL offset => 150s/400ms = 375 slots
-
+	// TTL for solana tx is caped to 150 blocks
 	// source: https://solana.com/developers/guides/advanced/confirmation#how-does-transaction-expiration-work
-	TTLOfset = 375
+
+	TTLOfset = 150
 )
 
 type SolanaBridgeDataFetcherImpl struct {
@@ -85,7 +84,7 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 				return nil, fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
 			}
 
-			slot, err := indexerDB.GetSlotByBlockhash(blockhash)
+			blockNumber, err := indexerDB.GetBlockNumberByBlockhash(blockhash)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get block by hash. err: %w", err)
 			}
@@ -95,7 +94,7 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 			expectedTx := &core.BridgeExpectedSolanaTx{
 				ChainID:  chainID,
 				Hash:     hash,
-				TTL:      slot + TTLOfset,
+				TTL:      blockNumber + TTLOfset,
 				Metadata: txMetadata,
 				Priority: 0,
 			}

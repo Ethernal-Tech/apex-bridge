@@ -55,10 +55,21 @@ func NewSolanaOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("solana_expected_txs_fetcher"))
 
-	successProcessors := []core.SolanaTxSuccessProcessor{
-		successtxprocessors.NewSolanaBridgingRequestedProcessor(logger, cardanoChainInfos),
-		successtxprocessors.NewSolanaBatchExecutedProcessor(logger),
+	var (
+		refundRequestProcessor core.SolanaTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
+
+		successProcessors = []core.SolanaTxSuccessProcessor{}
+	)
+
+	if appConfig.RefundEnabled {
+		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger)
+		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
+
+	successProcessors = append(successProcessors,
+		successtxprocessors.NewSolanaBatchExecutedProcessor(logger),
+		successtxprocessors.NewSolanaBridgingRequestedProcessor(refundRequestProcessor, logger, cardanoChainInfos),
+	)
 
 	failedProcessors := []core.SolanaTxFailedProcessor{
 		failedtxprocessors.NewSolanaBatchExecutionFailedProcessor(logger),

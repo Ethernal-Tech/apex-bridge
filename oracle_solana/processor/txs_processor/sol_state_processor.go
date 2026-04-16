@@ -333,7 +333,7 @@ func (s *SolStateProcessor) findRejectedTxInPending(
 
 		var sig solana.Signature
 
-		copy(sig[:], rrc.OriginTransactionHash[:])
+		copy(sig[:], rrc.OriginTransactionHash)
 
 		tx, exists := allPendingMap[string(
 			core.ToSolanaTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), sig[:]))]
@@ -366,13 +366,13 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	prevBlockInfo *core.BridgeClaimsSlotInfo,
 ) *core.BridgeClaimsSlotInfo {
 	found := false
-	minSlot := uint64(math.MaxUint64)
+	minBlockNumber := uint64(math.MaxUint64)
 
 	if len(unprocessedTxs) > 0 {
 		// unprocessed are ordered by slot number, so first in collection is min
 		for _, tx := range unprocessedTxs {
 			if prevBlockInfo == nil || prevBlockInfo.Number < tx.SlotNumber {
-				minSlot = tx.SlotNumber
+				minBlockNumber = tx.SlotNumber
 				found = true
 
 				break
@@ -387,15 +387,15 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 		} else {
 			// expected are ordered by ttl, so first in collection is min
 			for _, tx := range expectedTxs {
-				fromSlot := tx.TTL + TTLInsuranceOffset
+				fromBlockNumber := tx.TTL + TTLInsuranceOffset
 
-				lastProcessedSlot, err := soDB.ReadSlot()
+				latestProcessedBlockPoint, err := soDB.GetLatestProcessedBlockPoint()
 				if err != nil {
-					s.logger.Error("Failed to get last processed slot",
+					s.logger.Error("Failed to get latest block point",
 						"chainId", chainID, "err", err)
-				} else if lastProcessedSlot >= fromSlot && fromSlot < minSlot &&
-					(prevBlockInfo == nil || prevBlockInfo.Number < fromSlot) {
-					minSlot = fromSlot
+				} else if latestProcessedBlockPoint.BlockNumber >= fromBlockNumber && fromBlockNumber < minBlockNumber &&
+					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
+					minBlockNumber = fromBlockNumber
 					found = true
 
 					break
@@ -407,7 +407,7 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	if found {
 		return &core.BridgeClaimsSlotInfo{
 			ChainID: chainID,
-			Number:  minSlot,
+			Number:  minBlockNumber,
 		}
 	}
 
@@ -540,17 +540,18 @@ func (s *SolStateProcessor) checkExpectedTxs(
 		for _, key := range keys {
 			expectedTx := s.state.expectedTxsMap[key]
 
-			fromSlot := expectedTx.TTL + TTLInsuranceOffset
+			fromBlockNumber := expectedTx.TTL + TTLInsuranceOffset
 
-			lastProcessedSlot, err := soDB.ReadSlot()
+			latestProcessedBlockPoint, err := soDB.GetLatestProcessedBlockPoint()
 			if err != nil {
-				s.logger.Error("Failed to get last processed slot",
+				s.logger.Error("Failed to get latest block point",
 					"chainId", expectedTx.ChainID, "err", err)
 
 				break
 			}
 
-			if lastProcessedSlot >= fromSlot && s.state.blockInfo.EqualWithExpected(expectedTx, fromSlot) {
+			if latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
+				s.state.blockInfo.EqualWithExpected(expectedTx, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}
 		}
@@ -662,7 +663,7 @@ func (s *SolStateProcessor) UpdateBridgingRequestStates(
 
 		for _, rrClaim := range bridgeClaims.RefundRequestClaims {
 			updateToSubmittedToBridge(
-				rrClaim.OriginChainId, rrClaim.OriginTransactionHash[:], rrClaim.OriginChainId, true)
+				rrClaim.OriginChainId, rrClaim.OriginTransactionHash, rrClaim.OriginChainId, true)
 		}
 	}
 

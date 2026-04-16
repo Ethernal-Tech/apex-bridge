@@ -99,7 +99,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		return config
 	}
 
-	proc := NewSolanaBridgingRequestedProcessor(hclog.NewNullLogger(), nil)
+	proc := NewSolanaBridgingRequestedProcessor(NewRefundDisabledProcessor(), hclog.NewNullLogger(), nil)
 
 	t.Run("GetType", func(t *testing.T) {
 		require.Equal(t, common.BridgingTxTypeBridgingRequest, proc.GetType())

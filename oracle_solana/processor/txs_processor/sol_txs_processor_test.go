@@ -420,7 +420,7 @@ func TestSolTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		indexerMock := &solanaTxsStore.MockStorageHandler{}
-		indexerMock.On("ReadSlot").Return(uint64(100), nil)
+		indexerMock.On("GetLatestProcessedBlockPoint").Return(&solanaTxsStore.BlockPoint{BlockSlot: 100}, nil)
 		indexerDbs := map[string]solanaTxsStore.StorageHandler{common.ChainIDStrSolana: indexerMock}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -479,7 +479,7 @@ func TestSolTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		indexerMock := &solanaTxsStore.MockStorageHandler{}
-		indexerMock.On("ReadSlot").Return(uint64(1000), nil)
+		indexerMock.On("GetLatestProcessedBlockPoint").Return(&solanaTxsStore.BlockPoint{BlockNumber: 1000}, nil)
 		indexerDbs := map[string]solanaTxsStore.StorageHandler{common.ChainIDStrSolana: indexerMock}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())

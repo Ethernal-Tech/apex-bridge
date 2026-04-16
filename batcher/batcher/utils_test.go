@@ -105,7 +105,7 @@ func Test_getNumberWithRoundingThresholdRoundDown(t *testing.T) {
 }
 
 func Test_getNumberWithRoundingThresholdRoundDown_OurConfig_WindowBehavior(t *testing.T) {
-	threshold := uint64(20)
+	threshold := uint64(5)
 	noBatchPeriodPercent := 0.01
 	lowCut := uint64(float64(threshold) * noBatchPeriodPercent)          // 1
 	highCut := uint64(float64(threshold) * (1.0 - noBatchPeriodPercent)) // 9

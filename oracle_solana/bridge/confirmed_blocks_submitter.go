@@ -40,17 +40,14 @@ func NewConfirmedBlocksSubmitter(
 	}
 
 	if appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB {
-		slotNum, err := indexerDB.ReadSlot()
+		latestBlockPoint, err := indexerDB.GetLatestBlockPoint()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create block submitter for %s: %w", chainID, err)
 		}
 
-		if slotNum > 0 {
-			lastProcessedSlot := slotNum - 1
-			if latestInfo.BlockNumOrSlot < lastProcessedSlot {
-				latestInfo.BlockNumOrSlot = lastProcessedSlot
-				latestInfo.CounterEmpty = 0
-			}
+		if latestBlockPoint.BlockNumber > 0 {
+			latestInfo.BlockNumOrSlot = latestBlockPoint.BlockSlot
+			latestInfo.CounterEmpty = 0
 		}
 	}
 
@@ -116,18 +113,16 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 
 	latestInfo = bs.latestInfo
 
-	lastProcessedSlot, err := bs.indexerDB.ReadSlot()
+	latestBlockPoint, err := bs.indexerDB.GetLatestBlockPoint()
 	if err != nil {
-		return result, latestInfo, fmt.Errorf("error reading slot from indexer: %w", err)
+		return result, latestInfo, fmt.Errorf("error getting latest block point: %w", err)
 	}
 
-	if lastProcessedSlot == 0 {
+	if latestBlockPoint.BlockNumber == 0 {
 		return result, latestInfo, nil
 	}
 
-	lastProcessedSlot-- // ReadSlot returns the next slot to process
-
-	if lastProcessedSlot < from {
+	if latestBlockPoint.BlockSlot < from {
 		return result, latestInfo, nil
 	}
 
@@ -136,10 +131,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		return result, latestInfo, err
 	}
 
-	//nolint:gosec
-	to := min(lastProcessedSlot, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)-1)
-
-	for slotNum := from; slotNum <= to; slotNum++ {
+	for slotNum := from; slotNum <= latestBlockPoint.BlockSlot; slotNum++ {
 		if unprocessedSlots[slotNum] {
 			latestInfo.CounterEmpty = 0
 
@@ -166,6 +158,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 
 		result = append(result, eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(slotNum),
+			BlockHash: latestBlockPoint.BlockHash,
 		})
 	}
 

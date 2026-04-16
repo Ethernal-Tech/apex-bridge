@@ -66,6 +66,17 @@ type SolanaTxSuccessProcessor interface {
 	ValidateAndAddClaim(claims *oCore.BridgeClaims, tx *SolanaTx, appConfig *oCore.AppConfig) error
 }
 
+type SolanaTxSuccessRefundProcessor interface {
+	SolanaTxSuccessProcessor
+
+	HandleBridgingProcessorError(
+		claims *oCore.BridgeClaims, tx *SolanaTx, appConfig *oCore.AppConfig,
+		err error, errContext string) error
+
+	HandleBridgingProcessorPreValidate(
+		tx *SolanaTx, appConfig *oCore.AppConfig) error
+}
+
 type SolanaTxFailedProcessor interface {
 	GetType() common.BridgingTxType
 	PreValidate(tx *BridgeExpectedSolanaTx, appConfig *oCore.AppConfig) error

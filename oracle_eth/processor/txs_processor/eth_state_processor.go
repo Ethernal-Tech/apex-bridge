@@ -329,7 +329,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		rrc := claims.RefundRequestClaims[rrcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), rrc.OriginTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), ethgo.Hash(rrc.OriginTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -659,7 +659,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 
 		for _, rrClaim := range bridgeClaims.RefundRequestClaims {
 			updateToSubmittedToBridge(
-				rrClaim.OriginChainId, rrClaim.OriginTransactionHash, rrClaim.OriginChainId, true)
+				rrClaim.OriginChainId, ethgo.Hash(rrClaim.OriginTransactionHash), rrClaim.OriginChainId, true)
 		}
 	}
 

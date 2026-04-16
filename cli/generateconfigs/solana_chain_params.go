@@ -38,7 +38,7 @@ const (
 	solanaErrorBuffSizeFlagDesc       = "error buffer size for solana chain tracker"
 
 	defaultSolanaPoolIntervalMiliseconds    = time.Duration(1500)
-	defaultSolanaBlockFetchDelay            = uint64(500)
+	defaultSolanaBlockFetchDelay            = uint64(250)
 	defaultSolanaMinFeeForBridging          = uint64(1_000_010)
 	defaultSolanaMinOperationFee            = uint64(0)
 	defaultSolanaFeeAddrBridging            = uint64(1_000_000)
@@ -50,7 +50,7 @@ const (
 	feeAddrBridgingFlag     = "fee-addr-bridging"
 	feeAddrBridgingFlagDesc = "fee address bridging for solana chain"
 
-	defaultSlotRoundingThresholdSolana = 20
+	defaultSlotRoundingThresholdSolana = 10
 	defaultNoBatchPeriodPercentSolana  = 0.01
 )
 

@@ -203,8 +203,8 @@ func (bi *BridgeClaimsSlotInfo) EqualWithProcessed(tx *ProcessedSolanaTx) bool {
 	return bi.ChainID == tx.OriginChainID && bi.Number == tx.SlotNumber
 }
 
-func (bi *BridgeClaimsSlotInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, slotNumber uint64) bool {
-	return bi.ChainID == tx.ChainID && bi.Number == slotNumber
+func (bi *BridgeClaimsSlotInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, blockNumber uint64) bool {
+	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
 }
 
 // toUnprocessedSolanaTxKey builds a sortable composite DB key: priority(1B) | slotNumber(8B BigEndian) | signature(64B)

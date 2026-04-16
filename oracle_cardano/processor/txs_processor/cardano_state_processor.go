@@ -326,7 +326,7 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 		rrc := claims.RefundRequestClaims[rrcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToCardanoTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), rrc.OriginTransactionHash))]
+			core.ToCardanoTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), indexer.Hash(rrc.OriginTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -655,7 +655,7 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 
 		for _, rrClaim := range bridgeClaims.RefundRequestClaims {
 			updateToSubmittedToBridge(
-				rrClaim.OriginChainId, rrClaim.OriginTransactionHash, rrClaim.OriginChainId, true)
+				rrClaim.OriginChainId, indexer.Hash(rrClaim.OriginTransactionHash), rrClaim.OriginChainId, true)
 		}
 	}
 
