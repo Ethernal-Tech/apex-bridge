@@ -24,6 +24,7 @@ const (
 	evmChainMinFeeForBridgingFlag      = "evm-min-fee-for-bridging"
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
 	evmChainFeeAddrBridgingFlag        = "evm-fee-addr-bridging"
+	evmNumBlockConfirmationsFlag       = "evm-num-block-confirmations"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
@@ -32,6 +33,7 @@ const (
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
+	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer"
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
@@ -57,6 +59,7 @@ type evmChainGenerateConfigsParams struct {
 	minOperationFee                *big.Int
 	evmChainFeeAddrBridgingStr     string
 	evmChainFeeAddrBridging        *big.Int
+	evmNumBlockConfirmations       uint64
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
@@ -175,6 +178,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultEvmFeeAddrBridgingAmount,
 		evmChainFeeAddrBridgingDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.evmNumBlockConfirmations,
+		evmNumBlockConfirmationsFlag,
+		defaultEvmBlockConfirmationCount,
+		evmNumBlockConfirmationsFlagDesc,
+	)
 
 	// Output params
 	cmd.Flags().StringVar(
@@ -239,7 +248,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
 		NodeURL:                    p.evmChainNodeURL,
 		SyncBatchSize:              defaultEvmSyncBatchSize,
-		NumBlockConfirmations:      defaultEvmBlockConfirmationCount,
+		NumBlockConfirmations:      p.evmNumBlockConfirmations,
 		StartBlockNumber:           p.evmChainStartingBlock,
 		PoolIntervalMiliseconds:    defaultEvmPoolIntervalMiliseconds,
 		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
