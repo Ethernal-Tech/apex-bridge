@@ -17,6 +17,7 @@ const (
 	ChainIDStrCardano = "cardano"
 	ChainIDStrNexus   = "nexus"
 	ChainIDStrPolygon = "polygon"
+	ChainIDStrKatana  = "katana"
 
 	// Used for tests only
 	ChainIDIntPrime   = ChainIDNum(1)
@@ -24,6 +25,7 @@ const (
 	ChainIDIntNexus   = ChainIDNum(3)
 	ChainIDIntCardano = ChainIDNum(4)
 	ChainIDIntPolygon = ChainIDNum(5)
+	ChainIDIntKatana  = ChainIDNum(7)
 )
 
 type ChainIDConverter struct {

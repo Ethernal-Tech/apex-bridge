@@ -215,6 +215,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-ttl-block-inc <ttl block increment> \
         --evm-block-rounding-threshold <block rounding threshold> \
         --evm-starting-block <block number> \
+        --evm-num-block-confirmations <num> \
         --evm-min-fee-for-bridging <minimal bridging fee> \
         --min-operation-fee <minimal operation fee> \
         --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \

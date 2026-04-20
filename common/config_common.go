@@ -116,6 +116,12 @@ var (
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
 			MinColCoinsAllowedToBridge: uint64(1),
 		},
+		ChainIDStrKatana: {
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          uint64(160),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: uint64(1),
+		},
 		"default": {
 			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
 			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
