@@ -102,11 +102,32 @@ func (sco *SolanaChainOperations) SendTx(
 		return fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
 	}
 
+	var options []sendtx.CreateTxOption
+
+	if sco.config.ALTPublicKey != "" {
+		altPublicKey, err := solana.PublicKeyFromBase58(sco.config.ALTPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to convert alt public key to solana.PublicKey: %w", err)
+		}
+
+		altResolver := wallet.NewAddressLookupTableResolver(txProvider)
+
+		lookupTables, err := altResolver.Resolve(ctx, altPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to resolve alt lookup table: %w", err)
+		}
+
+		sco.logger.Info("Lookup tables", "lookupTables", lookupTables)
+
+		options = append(options, sendtx.WithAddressLookupTables(lookupTables))
+	}
+
 	tx, err := txSender.CreateTx(
 		ctx, sco.privateKey.PublicKey(),
 		sendtx.InstructionTypeBridgeTransaction,
 		blockhash,
 		bridgingTxDto,
+		options...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create tx: %w", err)

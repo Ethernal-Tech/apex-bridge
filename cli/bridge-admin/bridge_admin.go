@@ -10,6 +10,7 @@ const skylineUse = "skyline"
 var (
 	getChainTokenQuantityParamsData      = &getChainTokenQuantityParams{}
 	updateChainTokenQuantityParamsData   = &updateChainTokenQuantityParams{}
+	updateChainMaxTxCountParamsData      = &updateChainMaxNumberOfTransactionsParams{}
 	defundParamsData                     = &defundParams{}
 	setAdditionalDataParamsData          = &setAdditionalDataParams{}
 	setMinAmountsParamsData              = &setMinAmountsParams{}
@@ -43,6 +44,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 			return updateChainTokenQuantityParamsData.ValidateFlags()
 		},
 		Run: common.GetCliRunCommand(updateChainTokenQuantityParamsData),
+	}
+	updateChainMaxTxCountCmd := &cobra.Command{
+		Use:   "update-chain-max-number-of-transactions",
+		Short: "update max number of transactions for chain",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return updateChainMaxTxCountParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(updateChainMaxTxCountParamsData),
 	}
 	defundCmd := &cobra.Command{
 		Use:   "defund",
@@ -153,6 +162,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
+	updateChainMaxTxCountParamsData.RegisterFlags(updateChainMaxTxCountCmd)
 	defundParamsData.RegisterFlags(defundCmd)
 	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
 	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
@@ -177,6 +187,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	cmd.AddCommand(
 		getChainTokenQuantityCmd,
 		updateChainTokenQuantityCmd,
+		updateChainMaxTxCountCmd,
 		defundCmd,
 		setAdditionalDataCmd,
 		setMinAmountsCmd,

@@ -49,6 +49,8 @@ const (
 
 	feeAddrBridgingFlag     = "fee-addr-bridging"
 	feeAddrBridgingFlagDesc = "fee address bridging for solana chain"
+	altPublicKeyFlag        = "alt-public-key"
+	altPublicKeyFlagDesc    = "alt public key for solana chain"
 
 	defaultSlotRoundingThresholdSolana = 10
 	defaultNoBatchPeriodPercentSolana  = 0.01
@@ -79,6 +81,7 @@ type solanaChainGenerateConfigsParams struct {
 	relayerConfigPath string
 	treasuryAddress   string
 	feeAddrBridging   string
+	altPublicKey      string
 
 	slotRoundingThreshold uint64
 }
@@ -226,6 +229,13 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.altPublicKey,
+		altPublicKeyFlag,
+		"",
+		altPublicKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.relayerDataDir,
 		relayerDataDirFlag,
 		"",
@@ -265,6 +275,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 			BridgingFeeAddress:    p.feeAddrBridging,
 			SlotRoundingThreshold: p.slotRoundingThreshold,
 			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
+			ALTPublicKey:          p.altPublicKey,
 		},
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec

@@ -18,6 +18,7 @@ type SolanaChainConfig struct {
 	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
 	BridgingFeeAddress                    string                       `json:"bridgingFeeAddress"`
 	TxProviderEndpoint                    string                       `json:"txProviderEndpoint"`
+	ALTPublicKey                          string                       `json:"altPublicKey"`
 }
 
 func NewSolanaChainConfig(rawMessage json.RawMessage) (*SolanaChainConfig, error) {
