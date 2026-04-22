@@ -38,7 +38,7 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *commo
 	}
 
 	m.logger.Debug("New BridgingRequestState", "srcChainID", state.SourceChainID,
-		"srcTxHash", state.SourceTxHash, "Status", state.StatusStr())
+		"srcTxHash", common.TxHashBytesToString(state.SourceTxHash), "Status", state.StatusStr())
 
 	return nil
 }
@@ -262,10 +262,10 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 		err = m.db.UpdateBridgingRequestState(state)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to save updated BridgingRequestState (%s, %s) with status %s: %w",
-				state.SourceChainID, state.SourceTxHash, oldStatus, err))
+				state.SourceChainID, common.TxHashBytesToString(state.SourceTxHash), oldStatus, err))
 		} else {
 			m.logger.Debug("Updated BridgingRequestState",
-				"srcChainID", state.SourceChainID, "srcTxHash", state.SourceTxHash,
+				"srcChainID", state.SourceChainID, "srcTxHash", common.TxHashBytesToString(state.SourceTxHash),
 				"Old Status", oldStatus, "New Status", state.StatusStr())
 		}
 	}
