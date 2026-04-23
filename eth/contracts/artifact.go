@@ -13,8 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
-const HardhatNodeVersionErr1 = "You are currently using Node"
-const HardhatNodeVersionErr2 = "which is not supported by Hardhat"
+const (
+	npmInstallDeprecatedErr = "npm warn deprecated inflight"
+	hardhatNodeVersionErr1  = "You are currently using Node"
+	hardhatNodeVersionErr2  = "which is not supported by Hardhat"
+)
 
 // DecodeArtifact unmarshals provided raw json content into an Artifact instance
 func DecodeArtifact(data []byte) (*Artifact, error) {
@@ -124,13 +127,13 @@ func CloneAndBuildContracts(
 	_, _ = common.ExecuteCLICommand("git", []string{"pull", "origin"}, dir)
 
 	_, err := common.ExecuteCLICommand("npm", []string{"install"}, dir)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), npmInstallDeprecatedErr) {
 		return "", fmt.Errorf("failed to install npm dependencies: %w", err)
 	}
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
-		if !(strings.Contains(err.Error(), HardhatNodeVersionErr1) &&
-			strings.Contains(err.Error(), HardhatNodeVersionErr2)) {
+		if !(strings.Contains(err.Error(), hardhatNodeVersionErr1) &&
+			strings.Contains(err.Error(), hardhatNodeVersionErr2)) {
 			return "", err
 		}
 	}
