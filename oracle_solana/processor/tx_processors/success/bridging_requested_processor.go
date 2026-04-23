@@ -130,7 +130,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		}
 	}
 
-	if err := p.validateTokenAmounts(tx.Value, receiverCtx); err != nil {
+	if err := p.validateTokenAmounts(receiverCtx); err != nil {
 		return err
 	}
 
@@ -213,7 +213,7 @@ func (p *BridgingRequestedProcessorImpl) validateReceiverEth(
 }
 
 func (p *BridgingRequestedProcessorImpl) validateTokenAmounts(
-	txValue *big.Int, receiverCtx *receiverValidationCtxSolanaSrc,
+	receiverCtx *receiverValidationCtxSolanaSrc,
 ) error {
 	nativeCurrencySum, ok := receiverCtx.AmountsSums[receiverCtx.CurrencySrcID]
 	if !ok {
