@@ -122,7 +122,11 @@ func CloneAndBuildContracts(
 	// do not listen for errors on following commands
 	_, _ = common.ExecuteCLICommand("git", []string{"checkout", branchName}, dir)
 	_, _ = common.ExecuteCLICommand("git", []string{"pull", "origin"}, dir)
-	_, _ = common.ExecuteCLICommand("npm", []string{"install"}, dir)
+
+	_, err := common.ExecuteCLICommand("npm", []string{"install"}, dir)
+	if err != nil {
+		return "", fmt.Errorf("failed to install npm dependencies: %w", err)
+	}
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
 		if !(strings.Contains(err.Error(), HardhatNodeVersionErr1) &&
