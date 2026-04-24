@@ -15,8 +15,8 @@ import (
 
 const (
 	npmInstallDeprecatedErr = "npm warn deprecated inflight"
-	hardhatNodeVersionErr1  = "You are currently using Node"
-	hardhatNodeVersionErr2  = "which is not supported by Hardhat"
+	HardhatNodeVersionErr1  = "You are currently using Node"
+	HardhatNodeVersionErr2  = "which is not supported by Hardhat"
 )
 
 // DecodeArtifact unmarshals provided raw json content into an Artifact instance
@@ -132,8 +132,8 @@ func CloneAndBuildContracts(
 	}
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
-		if !(strings.Contains(err.Error(), hardhatNodeVersionErr1) &&
-			strings.Contains(err.Error(), hardhatNodeVersionErr2)) {
+		if !(strings.Contains(err.Error(), HardhatNodeVersionErr1) &&
+			strings.Contains(err.Error(), HardhatNodeVersionErr2)) {
 			return "", err
 		}
 	}
