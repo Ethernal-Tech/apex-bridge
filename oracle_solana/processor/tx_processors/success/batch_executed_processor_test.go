@@ -98,7 +98,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
 		require.Len(t, claims.BatchExecutedClaims, 1)
-		require.Equal(t, txSig[:], claims.BatchExecutedClaims[0].ObservedTransactionHash[:])
+		require.Equal(t, txSig[:], claims.BatchExecutedClaims[0].ObservedTransactionHash)
 		require.Equal(t, batchNonceID, claims.BatchExecutedClaims[0].BatchNonceId)
 		require.Equal(
 			t,

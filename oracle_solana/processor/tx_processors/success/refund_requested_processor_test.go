@@ -80,6 +80,7 @@ func TestRefundRequestProcessorSkyline(t *testing.T) {
 
 	t.Run("Refund disabled processor paths", func(t *testing.T) {
 		cfg := testRefundAppConfig()
+
 		require.Equal(t, common.TxTypeRefundRequest, disabledProc.GetType())
 		require.NoError(t, disabledProc.PreValidate(&solCore.SolanaTx{}, cfg))
 

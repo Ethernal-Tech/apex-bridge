@@ -714,3 +714,70 @@ apex-bridge deploy-solana deploy-program \
         --build-path ./solana-program.so \
         --commitment confirmed
 ```
+
+# How to initialize deployed Solana Skyline program
+```shell
+apex-bridge deploy-solana initialize-program \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --validator 5fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --validator 6fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --validator 7fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --last-id 0 \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --min-amount-to-bridge 1000000 \
+        --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --relayer-address 9fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --confirmation-timeout-seconds 120
+```
+
+# How to create Solana ALT (Address Lookup Table)
+```shell
+apex-bridge deploy-solana create-alt \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --confirmation-timeout-seconds 120
+```
+
+# How to extend Solana ALT for bridge transaction
+```shell
+apex-bridge deploy-solana extend-alt \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --alt-address <ALT_PUBLIC_KEY_FROM_CREATE_ALT> \
+        --token-mint <TOKEN_MINT_1> \
+        --token-mint <TOKEN_MINT_2> \
+        --token-mint <TOKEN_MINT_3> \
+        --confirmation-timeout-seconds 120
+```
+- run `extend-alt` again with new `--token-mint` values when new tokens are registered.
+
+# How to register lock/unlock Solana token
+```shell
+apex-bridge deploy-solana register-lock-unlock-token \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --treasury-address <TREASURY_ADDRESS> \
+        --relayer-address <RELAYER_ADDRESS> \
+        --token-id 1 \
+        --token-mint <EXISTING_TOKEN_MINT> \
+        --min-bridging-amount 1000000 \
+        --confirmation-timeout-seconds 120
+```
+
+# How to register mint/burn Solana token
+```shell
+apex-bridge deploy-solana register-mint-burn-token \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --treasury-address <TREASURY_ADDRESS> \
+        --relayer-address <RELAYER_ADDRESS> \
+        --token-id 2 \
+        --token-name TOKEN2 \
+        --token-symbol TOKEN2 \
+        --token-uri "" \
+        --token-decimals 9 \
+        --min-bridging-amount 1000000 \
+        --confirmation-timeout-seconds 120
+```

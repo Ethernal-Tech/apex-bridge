@@ -1,3 +1,4 @@
+//nolint:dupl
 package clibridgeadmin
 
 import (
@@ -54,7 +55,9 @@ func (params *updateChainMaxNumberOfTransactionsParams) ValidateFlags() error {
 }
 
 // Execute implements common.CliCommandExecutor.
-func (params *updateChainMaxNumberOfTransactionsParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (params *updateChainMaxNumberOfTransactionsParams) Execute(
+	outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	ctx := context.Background()
 
 	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
