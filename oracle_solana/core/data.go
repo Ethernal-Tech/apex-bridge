@@ -13,6 +13,7 @@ const (
 	BridgeRequestEvent       = "BridgeRequestEvent"
 	TransactionExecutedEvent = "TransactionExecutedEvent"
 	ValidatorSetUpdatedEvent = "ValidatorSetUpdatedEvent"
+	HotWalletIncrementEvent  = "HotWalletIncrementEvent"
 )
 
 type SolanaUpdateTxsData = oCore.UpdateTxsData[*SolanaTx, *ProcessedSolanaTx, *BridgeExpectedSolanaTx]

@@ -781,3 +781,14 @@ apex-bridge deploy-solana register-mint-burn-token \
         --min-bridging-amount 1000000 \
         --confirmation-timeout-seconds 120
 ```
+
+# How to submit Solana hot wallet increment tx
+```shell
+apex-bridge deploy-solana hot-wallet-increment \
+        --url http://127.0.0.1:8899 \
+        --key ./admin-keypair.json \
+        --mint <TOKEN_MINT_ADDRESS> \
+        --amount 1000000 \
+        --program <SKYLINE_PROGRAM_ADDRESS> \
+        --confirmation-timeout-seconds 120
+```

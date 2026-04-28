@@ -87,6 +87,8 @@ func (c *txProcessorsCollection) getSuccess(tx *core.SolanaTx, appConfig *oCore.
 				return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
 			}
 		}
+	} else {
+		txProcessor = c.successTxProcessors[string(common.TxTypeHotWalletFund)]
 	}
 
 	if err := txProcessor.PreValidate(tx, appConfig); err != nil {

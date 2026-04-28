@@ -68,6 +68,7 @@ func NewSolanaOracle(
 
 	successProcessors = append(successProcessors,
 		successtxprocessors.NewSolanaBatchExecutedProcessor(logger),
+		successtxprocessors.NewSolanaHotWalletIncrementProcessor(logger),
 		successtxprocessors.NewSolanaBridgingRequestedProcessor(refundRequestProcessor, logger, cardanoChainInfos),
 	)
 

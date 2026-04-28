@@ -11,6 +11,7 @@ const createALTCommandUse = "create-alt"
 const extendALTCommandUse = "extend-alt"
 const registerLockUnlockTokenCommandUse = "register-lock-unlock-token"
 const registerMintBurnTokenCommandUse = "register-mint-burn-token"
+const hotWalletIncrementCommandUse = "hot-wallet-increment"
 
 var deployProgramParamsData = &deployProgramParams{}
 var initializeProgramParamsData = &initializeProgramParams{}
@@ -18,6 +19,7 @@ var createALTParamsData = &createALTParams{}
 var extendALTParamsData = &extendALTParams{}
 var registerLockUnlockTokenParamsData = &registerLockUnlockTokenParams{}
 var registerMintBurnTokenParamsData = &registerMintBurnTokenParams{}
+var hotWalletIncrementParamsData = &hotWalletIncrementParams{}
 
 func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana := &cobra.Command{
@@ -61,6 +63,12 @@ func GetDeploySolanaCommand() *cobra.Command {
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(registerMintBurnTokenParamsData),
 	}
+	cmdHotWalletIncrement := &cobra.Command{
+		Use:     hotWalletIncrementCommandUse,
+		Short:   "submit hot wallet increment tx for skyline Solana program",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(hotWalletIncrementParamsData),
+	}
 
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	initializeProgramParamsData.setFlags(cmdInitializeProgram)
@@ -68,12 +76,14 @@ func GetDeploySolanaCommand() *cobra.Command {
 	extendALTParamsData.setFlags(cmdExtendALT)
 	registerLockUnlockTokenParamsData.setFlags(cmdRegisterLockUnlockToken)
 	registerMintBurnTokenParamsData.setFlags(cmdRegisterMintBurnToken)
+	hotWalletIncrementParamsData.setFlags(cmdHotWalletIncrement)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdInitializeProgram)
 	cmdDeploySolana.AddCommand(cmdCreateALT)
 	cmdDeploySolana.AddCommand(cmdExtendALT)
 	cmdDeploySolana.AddCommand(cmdRegisterLockUnlockToken)
 	cmdDeploySolana.AddCommand(cmdRegisterMintBurnToken)
+	cmdDeploySolana.AddCommand(cmdHotWalletIncrement)
 
 	return cmdDeploySolana
 }
@@ -101,6 +111,10 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == registerMintBurnTokenCommandUse {
 		return registerMintBurnTokenParamsData.validateFlags()
+	}
+
+	if cb.Use == hotWalletIncrementCommandUse {
+		return hotWalletIncrementParamsData.validateFlags()
 	}
 
 	return nil

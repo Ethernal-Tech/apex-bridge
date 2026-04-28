@@ -125,6 +125,8 @@ func (r *SolEventReceiverImpl) parseEvent(
 		return r.parseBridgeRequestEvent(originChainID, event)
 	case core.TransactionExecutedEvent:
 		return r.parseTransactionExecutedEvent(originChainID, event)
+	case core.HotWalletIncrementEvent:
+		return r.parseHotWalletIncrementEvent(originChainID, event)
 	case core.ValidatorSetUpdatedEvent:
 		panic("not implemented") //nolint:gocritic
 	default:
@@ -174,6 +176,29 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 		TxSignature: event.TxSignature,
 		Value:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.Amount)),
 		Metadata:    metadata,
+	}, nil
+}
+
+func (r *SolEventReceiverImpl) parseHotWalletIncrementEvent(
+	originChainID string, event tracker.EventNotification,
+) (*core.SolanaTx, error) {
+	hotWalletIncrementEvent, ok := event.EventData.(*skyline.HotWalletIncrementEvent)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse hot wallet increment event")
+	}
+
+	if _, err := r.appConfig.SolanaChains[originChainID].GetTokenIDByName(hotWalletIncrementEvent.Mint.String()); err != nil {
+		return nil, fmt.Errorf("failed to get token id by mint: %w", err)
+	}
+
+	return &core.SolanaTx{
+		OriginChainID: originChainID,
+		Priority:      1,
+
+		SlotNumber:  event.SlotNumber,
+		TxSignature: event.TxSignature,
+		Value:       common.LamportToWei(new(big.Int).SetUint64(hotWalletIncrementEvent.Amount)),
+		Metadata:    []byte{},
 	}, nil
 }
 
