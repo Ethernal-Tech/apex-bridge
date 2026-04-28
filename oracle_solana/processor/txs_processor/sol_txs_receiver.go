@@ -187,7 +187,8 @@ func (r *SolEventReceiverImpl) parseHotWalletIncrementEvent(
 		return nil, fmt.Errorf("failed to parse hot wallet increment event")
 	}
 
-	if _, err := r.appConfig.SolanaChains[originChainID].GetTokenIDByName(hotWalletIncrementEvent.Mint.String()); err != nil {
+	if _, err := r.appConfig.SolanaChains[originChainID].GetTokenIDByName(
+		hotWalletIncrementEvent.Mint.String()); err != nil {
 		return nil, fmt.Errorf("failed to get token id by mint: %w", err)
 	}
 

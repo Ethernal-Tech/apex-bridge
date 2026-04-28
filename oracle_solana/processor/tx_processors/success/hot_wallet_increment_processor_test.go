@@ -65,8 +65,7 @@ func TestSolanaHotWalletIncrementProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
 		txSig := solana.Signature{1, 20}
-		var expectedTxHash [32]byte
-		copy(expectedTxHash[:], txSig[:])
+
 		tx := &core.SolanaTx{
 			TxSignature:   txSig,
 			OriginChainID: common.ChainIDStrSolana,
@@ -84,6 +83,6 @@ func TestSolanaHotWalletIncrementProcessor(t *testing.T) {
 		require.Equal(t, common.ChainIDIntSolana, claims.HotWalletIncrementClaims[0].ChainId)
 		require.Equal(t, tx.Value, claims.HotWalletIncrementClaims[0].Amount)
 		require.Equal(t, big.NewInt(0), claims.HotWalletIncrementClaims[0].AmountWrapped)
-		require.Equal(t, expectedTxHash, claims.HotWalletIncrementClaims[0].TxHash)
+		require.Equal(t, txSig[:], claims.HotWalletIncrementClaims[0].TxHash)
 	})
 }

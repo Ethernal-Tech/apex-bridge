@@ -10,7 +10,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	solsendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
-	"github.com/Ethernal-Tech/solana-infrastructure/sendtx/skyline_program"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
 	"github.com/spf13/cobra"
@@ -27,7 +26,7 @@ const (
 	hotWalletIncrementRPCURLFlagDesc                     = "Solana RPC URL"
 	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file"
 	hotWalletIncrementMintFlagDesc                       = "token mint public key"
-	hotWalletIncrementAmountFlagDesc                     = "hot wallet increment amount in token base units (lamports for SOL)"
+	hotWalletIncrementAmountFlagDesc                     = "hot wallet increment amount in token base units (lamports for SOL)" //nolint:lll
 	hotWalletIncrementProgramFlagDesc                    = "skyline program public key"
 	hotWalletIncrementConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
 
@@ -161,12 +160,6 @@ func (p *hotWalletIncrementParams) Execute(outputter common.OutputFormatter) (co
 	if err != nil {
 		return nil, fmt.Errorf("get latest blockhash: %w", err)
 	}
-
-	prevProgramID := skyline_program.ProgramID
-	skyline_program.ProgramID = p.programPublicKey
-	defer func() {
-		skyline_program.ProgramID = prevProgramID
-	}()
 
 	txSender := solsendtx.NewTxSender(provider, nil)
 

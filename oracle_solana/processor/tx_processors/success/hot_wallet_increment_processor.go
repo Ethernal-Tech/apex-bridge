@@ -43,14 +43,11 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	var txHash [32]byte
-	copy(txHash[:], tx.TxSignature[:])
-
 	claims.HotWalletIncrementClaims = append(claims.HotWalletIncrementClaims, oCore.HotWalletIncrementClaim{
 		ChainId:       appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID),
 		Amount:        tx.Value,
 		AmountWrapped: big.NewInt(0),
-		TxHash:        txHash,
+		TxHash:        tx.TxSignature[:],
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",
