@@ -266,7 +266,7 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.minOperationFee,
 		minOperationFeeFlag,
-		common.ChainMinConfig["default"].MinOperationFee,
+		common.WeiToDfm(common.ChainMinConfig["default"].MinOperationFee).Uint64(),
 		minOperationFeeFlagDesc,
 	)
 	cmd.Flags().StringVar(

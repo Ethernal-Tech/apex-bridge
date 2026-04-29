@@ -185,9 +185,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	if p.txType == common.ChainTypeEVMStr {
 		srcChainConfig := common.GetChainConfig(p.chainIDSrc)
-		minFeeForBridging, minOperationFee :=
-			common.DfmToWei(new(big.Int).SetUint64(srcChainConfig.MinFeeForBridging)),
-			common.DfmToWei(new(big.Int).SetUint64(srcChainConfig.MinOperationFee))
+		minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
 
 		if p.feeAmount.Cmp(minFeeForBridging) == -1 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
@@ -206,13 +204,15 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		}
 	} else {
 		srcChainConfig := common.GetChainConfig(p.chainIDSrc)
-		minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
+		minFeeForBridging, minOperationFee :=
+			common.WeiToDfm(srcChainConfig.MinFeeForBridging),
+			common.WeiToDfm(srcChainConfig.MinOperationFee)
 
-		if p.feeAmount.Uint64() < minFeeForBridging {
+		if p.feeAmount.Cmp(minFeeForBridging) == -1 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 		}
 
-		if p.operationFeeAmount.Uint64() < minOperationFee {
+		if p.operationFeeAmount.Cmp(minOperationFee) == -1 {
 			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 		}
 
@@ -496,19 +496,19 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 				TxProvider:                 cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
 				TestNetMagic:               p.testnetMagicSrc,
 				TTLSlotNumberInc:           ttlSlotNumberInc,
-				DefaultMinFeeForBridging:   srcConfig.MinFeeForBridging,
-				MinFeeForBridgingTokens:    srcConfig.MinFeeForBridging,
-				MinOperationFeeAmount:      srcConfig.MinOperationFee,
+				DefaultMinFeeForBridging:   common.WeiToDfm(srcConfig.MinFeeForBridging).Uint64(),
+				MinFeeForBridgingTokens:    common.WeiToDfm(srcConfig.MinFeeForBridging).Uint64(),
+				MinOperationFeeAmount:      common.WeiToDfm(srcConfig.MinOperationFee).Uint64(),
 				MinUtxoValue:               srcConfig.MinUtxoAmount,
-				MinColCoinsAllowedToBridge: srcConfig.MinColCoinsAllowedToBridge,
+				MinColCoinsAllowedToBridge: common.WeiToDfm(srcConfig.MinColCoinsAllowedToBridge).Uint64(),
 				Tokens:                     srcTokens,
 				TreasuryAddress:            p.treasuryAddrSrc,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,
-				DefaultMinFeeForBridging: dstConfig.MinFeeForBridging,
-				MinFeeForBridgingTokens:  dstConfig.MinFeeForBridging,
-				MinOperationFeeAmount:    dstConfig.MinOperationFee,
+				DefaultMinFeeForBridging: common.WeiToDfm(dstConfig.MinFeeForBridging).Uint64(),
+				MinFeeForBridgingTokens:  common.WeiToDfm(dstConfig.MinFeeForBridging).Uint64(),
+				MinOperationFeeAmount:    common.WeiToDfm(dstConfig.MinOperationFee).Uint64(),
 			},
 		},
 		sendtx.WithMinAmountToBridge(srcConfig.MinUtxoAmount),
