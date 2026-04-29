@@ -39,7 +39,7 @@ const (
 	ChainIDIntArbitrum = ChainIDNum(9)
 	ChainIDIntScroll   = ChainIDNum(10)
 	ChainIDIntUnichain = ChainIDNum(11)
-	ChainIDIntSolana   = ChainIDNum(6)
+	ChainIDIntSolana   = ChainIDNum(12)
 )
 
 type ChainIDConverter struct {
