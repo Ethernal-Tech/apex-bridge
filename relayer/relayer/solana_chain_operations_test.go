@@ -27,6 +27,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DecodePayload(t *testing.T) {
+	payloadString := "2b0000000000000036694e6b6d74484a455757644568344d384a43547964535059547048324c3738667a563979445162627677012c000000000000003735627673687851445034597966783763447346624765525455463650695341664a716f613931344c5944392b00000000000000536f31313131313131313131313131313131313131313131313131313131313131313131313131313131320a00000000000000323030303030303030303000000000000000"
+	payloadBytes, err := hex.DecodeString(payloadString)
+	require.NoError(t, err)
+
+	var payload sendtx.SolanaPayload
+	err = payload.Unmarshal(payloadBytes)
+	require.NoError(t, err)
+
+	// fmt.Println(payload)
+
+	require.Equal(t, payload.BatchID, uint64(48))
+	require.Equal(t, payload.Blockhash, "6iNkmtHJEWWdEh4M8JCTydSPYTpH2L78fzV9yDQbbvw")
+	require.Equal(t, payload.Receivers[0].Address, "75bvshxQDP4Yyfx7cDsFbGeRTUF6PiSAfJqoa914LYD9")
+	require.Equal(t, payload.Receivers[0].TokenAmount.Amount, big.NewInt(2000000000))
+	require.Equal(t, payload.Receivers[0].TokenAmount.TokenMint, "So11111111111111111111111111111111111111112")
+}
+
 type mockTxSubmiter struct {
 	mock.Mock
 }

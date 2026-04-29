@@ -38,7 +38,7 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *commo
 	}
 
 	m.logger.Debug("New BridgingRequestState", "srcChainID", state.SourceChainID,
-		"srcTxHash", state.SourceTxHash, "Status", state.StatusStr())
+		"srcTxHash", common.TxHashBytesToString(state.SourceTxHash), "Status", state.StatusStr())
 
 	return nil
 }
@@ -160,7 +160,7 @@ func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
-	txs []common.BridgingRequestStateKey, dstTxHash common.Hash, dstChainID string,
+	txs []common.BridgingRequestStateKey, dstTxHash []byte, dstChainID string,
 ) error {
 	return m.updateStates(txs,
 		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
@@ -179,7 +179,7 @@ func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
 
 // Get implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Get(
-	srcChainID string, srcTxHash common.Hash,
+	srcChainID string, srcTxHash []byte,
 ) (*common.BridgingRequestState, error) {
 	state, err := m.db.GetBridgingRequestState(srcChainID, srcTxHash)
 	if err != nil {
@@ -192,7 +192,7 @@ func (m *BridgingRequestStateManagerImpl) Get(
 
 // GetAllForUser implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) GetMultiple(
-	srcChainID string, srcTxHashes []common.Hash,
+	srcChainID string, srcTxHashes [][]byte,
 ) ([]*common.BridgingRequestState, error) {
 	var (
 		result = make([]*common.BridgingRequestState, 0, len(srcTxHashes))
@@ -262,10 +262,10 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 		err = m.db.UpdateBridgingRequestState(state)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to save updated BridgingRequestState (%s, %s) with status %s: %w",
-				state.SourceChainID, state.SourceTxHash, oldStatus, err))
+				state.SourceChainID, common.TxHashBytesToString(state.SourceTxHash), oldStatus, err))
 		} else {
 			m.logger.Debug("Updated BridgingRequestState",
-				"srcChainID", state.SourceChainID, "srcTxHash", state.SourceTxHash,
+				"srcChainID", state.SourceChainID, "srcTxHash", common.TxHashBytesToString(state.SourceTxHash),
 				"Old Status", oldStatus, "New Status", state.StatusStr())
 		}
 	}

@@ -50,6 +50,13 @@ func initDB(filePath string, appConfig *core.AppConfig) (*bbolt.DB, error) {
 		)
 	}
 
+	for _, chain := range appConfig.SolanaChains {
+		allBuckets = append(
+			append(allBuckets, defaultChainBuckets(chain.ChainID)...),
+			ChainBucket(ProcessedTxsByInnerActionBucket, chain.ChainID),
+		)
+	}
+
 	err = db.Update(func(tx *bbolt.Tx) error {
 		for _, bn := range allBuckets {
 			_, err := tx.CreateBucketIfNotExists(bn)

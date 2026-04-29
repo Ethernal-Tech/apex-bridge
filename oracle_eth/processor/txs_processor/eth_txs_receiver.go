@@ -89,7 +89,7 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: common.Hash(tx.Hash),
+					SourceTxHash: tx.Hash[:],
 					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
 				},
 			)

@@ -47,7 +47,7 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		ChainId:       appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID),
 		Amount:        tx.Value,
 		AmountWrapped: big.NewInt(0),
-		TxHash:        tx.Hash,
+		TxHash:        tx.Hash[:],
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",

@@ -69,8 +69,6 @@ func (sco *SolanaChainOperations) SendTx(
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	sco.logger.Info("Sending tx", "payload", payload)
-
 	if payload.BatchID != smartContractData.ID {
 		return fmt.Errorf("batch ID mismatch: %d != %d", payload.BatchID, smartContractData.ID)
 	}
@@ -79,8 +77,6 @@ func (sco *SolanaChainOperations) SendTx(
 	if err != nil {
 		return fmt.Errorf("failed to get signature pairs: %w", err)
 	}
-
-	sco.logger.Info("Signature pairs", "signaturePairs", signaturePairs)
 
 	txProvider, err := wallet.NewProvider(sco.config.TxProviderEndpoint)
 	if err != nil {
@@ -102,11 +98,30 @@ func (sco *SolanaChainOperations) SendTx(
 		return fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
 	}
 
+	var options []sendtx.CreateTxOption
+
+	if sco.config.ALTPublicKey != "" {
+		altPublicKey, err := solana.PublicKeyFromBase58(sco.config.ALTPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to convert alt public key to solana.PublicKey: %w", err)
+		}
+
+		altResolver := wallet.NewAddressLookupTableResolver(txProvider)
+
+		lookupTables, err := altResolver.Resolve(ctx, altPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to resolve alt lookup table: %w", err)
+		}
+
+		options = append(options, sendtx.WithAddressLookupTables(lookupTables))
+	}
+
 	tx, err := txSender.CreateTx(
 		ctx, sco.privateKey.PublicKey(),
 		sendtx.InstructionTypeBridgeTransaction,
 		blockhash,
 		bridgingTxDto,
+		options...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create tx: %w", err)
@@ -161,8 +176,6 @@ func (sco *SolanaChainOperations) getSignaturePairs(
 			return nil, fmt.Errorf("failed to convert validator key to public key: %w", err)
 		}
 	}
-
-	sco.logger.Info("Validator public keys", "publicKeys", validatorPublicKeys)
 
 	signaturePairs := make(map[solana.PublicKey]solana.Signature)
 

@@ -14,7 +14,7 @@ type BridgingRequestStateUpdater interface {
 	IncludedInBatch(txs []BridgingRequestStateKey, dstChainID string) error
 	SubmittedToDestination(txs []BridgingRequestStateKey, dstChainID string) error
 	FailedToExecuteOnDestination(txs []BridgingRequestStateKey, dstChainID string) error
-	ExecutedOnDestination(txs []BridgingRequestStateKey, dstTxHash Hash, dstChainID string) error
+	ExecutedOnDestination(txs []BridgingRequestStateKey, dstTxHash []byte, dstChainID string) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

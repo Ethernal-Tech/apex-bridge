@@ -11,6 +11,7 @@ import (
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
@@ -80,47 +81,70 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	claims *oCore.BridgeClaims, tx *core.EthTx,
 	metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
-	_, ethSrcConfig := oUtils.GetChainConfig(appConfig, tx.OriginChainID)
-	cardanoDestConfig, ethDestConfig := oUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	srcChain := oUtils.GetChainConfigResult(appConfig, tx.OriginChainID)
+	if srcChain.IsNone() || srcChain.Eth == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	destChain := oUtils.GetChainConfigResult(appConfig, metadata.DestinationChainID)
+	if destChain.IsNone() {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", metadata.DestinationChainID)
+	}
+
 	chainIDConverter := appConfig.ChainIDConverter
 
-	destChainInfo, err := oUtils.GetDestChainInfo(
-		metadata.DestinationChainID, appConfig, cardanoDestConfig, ethDestConfig)
+	destChainInfo, err := oUtils.GetDestChainInfoResult(
+		metadata.DestinationChainID, destChain, appConfig)
 	if err != nil {
 		return err
 	}
 
-	srcCurrencyID, err := ethSrcConfig.GetCurrencyID()
+	srcCurrencyID, err := srcChain.Eth.GetCurrencyID()
 	if err != nil {
 		return err
 	}
 
-	receivers := make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
-	totalTokensAmount := oCore.NewTotalTokensAmount()
+	var (
+		receivers         = make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
+		totalTokensAmount = oCore.NewTotalTokensAmount()
+	)
 
 	processReceiver := func(
 		receiver *core.BridgingRequestEthMetadataTransaction,
 	) (*oCore.BridgingRequestReceiver, error) {
-		if cardanoDestConfig != nil {
+		switch destChain.GetChainType() {
+		case common.ChainTypeCardanoStr:
 			return p.processReceiverCardano(
-				ethSrcConfig,
-				cardanoDestConfig,
+				srcChain.Eth,
+				destChain.Cardano,
 				receiver,
 				srcCurrencyID,
 				destChainInfo.CurrencyTokenID,
 				totalTokensAmount,
 			)
+		case common.ChainTypeEVMStr:
+			return p.processReceiverEth(
+				srcChain.Eth,
+				destChain.Eth,
+				metadata.DestinationChainID,
+				receiver,
+				srcCurrencyID,
+				destChainInfo.CurrencyTokenID,
+				totalTokensAmount,
+			)
+		case common.ChainTypeSolanaStr:
+			return p.processReceiverSolana(
+				srcChain.Eth,
+				destChain.Solana,
+				metadata.DestinationChainID,
+				receiver,
+				srcCurrencyID,
+				destChainInfo.CurrencyTokenID,
+				totalTokensAmount,
+			)
+		default:
+			return nil, fmt.Errorf("unknown destination chain type: %s", destChain.GetChainType())
 		}
-
-		return p.processReceiverEth(
-			ethSrcConfig,
-			ethDestConfig,
-			metadata.DestinationChainID,
-			receiver,
-			srcCurrencyID,
-			destChainInfo.CurrencyTokenID,
-			totalTokensAmount,
-		)
 	}
 
 	for _, receiver := range metadata.Transactions {
@@ -150,15 +174,18 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	totalTokensAmount.TotalAmountCurrencyDst = new(big.Int).Add(
 		totalTokensAmount.TotalAmountCurrencyDst, destChainInfo.FeeAddrBridgingWei)
 
-	receivers = append(receivers, oCore.BridgingRequestReceiver{
-		DestinationAddress: destChainInfo.FeeAddress,
-		Amount:             destChainInfo.FeeAddrBridgingWei,
-		AmountWrapped:      big.NewInt(0),
-		TokenId:            0,
-	})
+	// On solana chain we don't need to add fee address receiver
+	if metadata.DestinationChainID != common.ChainIDStrSolana {
+		receivers = append(receivers, oCore.BridgingRequestReceiver{
+			DestinationAddress: destChainInfo.FeeAddress,
+			Amount:             destChainInfo.FeeAddrBridgingWei,
+			AmountWrapped:      big.NewInt(0),
+			TokenId:            0,
+		})
+	}
 
 	claim := oCore.BridgingRequestClaim{
-		ObservedTransactionHash:         tx.Hash,
+		ObservedTransactionHash:         tx.Hash[:],
 		SourceChainId:                   chainIDConverter.ToChainIDNum(tx.OriginChainID),
 		DestinationChainId:              chainIDConverter.ToChainIDNum(metadata.DestinationChainID),
 		Receivers:                       receivers,
@@ -184,37 +211,41 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	_, ethSrcConfig := oUtils.GetChainConfig(appConfig, tx.OriginChainID)
-	if ethSrcConfig == nil {
-		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
+	srcChain := oUtils.GetChainConfigResult(appConfig, tx.OriginChainID)
+	if srcChain.IsNone() || srcChain.Eth == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	cardanoDestConfig, ethDestConfig := oUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	destChain := oUtils.GetChainConfigResult(appConfig, metadata.DestinationChainID)
+	if destChain.IsNone() {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", metadata.DestinationChainID)
+	}
 
-	destChainInfo, err := oUtils.GetDestChainInfo(metadata.DestinationChainID, appConfig, cardanoDestConfig, ethDestConfig)
+	destChainInfo, err := oUtils.GetDestChainInfoResult(metadata.DestinationChainID, destChain, appConfig)
 	if err != nil {
 		return err
 	}
 
-	if err := p.validateOperationAndReceiverLimits(metadata, ethSrcConfig, appConfig); err != nil {
+	if err := p.validateOperationAndReceiverLimits(metadata, srcChain.Eth, appConfig); err != nil {
 		return err
 	}
 
-	srcCurrencyID, err := ethSrcConfig.GetCurrencyID()
+	srcCurrencyID, err := srcChain.Eth.GetCurrencyID()
 	if err != nil {
 		return err
 	}
 
 	receiverCtx := &receiverValidationCtxEthSrc{
-		ethSrcConfig: ethSrcConfig,
+		ethSrcConfig: srcChain.Eth,
 		metadata:     metadata,
 		feeSum:       big.NewInt(0),
 		ReceiverValidationContext: oCore.ReceiverValidationContext{
-			CardanoDestConfig: cardanoDestConfig,
-			EthDestConfig:     ethDestConfig,
+			CardanoDestConfig: destChain.Cardano,
+			EthDestConfig:     destChain.Eth,
+			SolanaDestConfig:  destChain.Solana,
 			DestFeeAddress:    destChainInfo.FeeAddress,
 			BridgingSettings:  &appConfig.BridgingSettings,
-			MinColCoinsAllowedToBridge: oUtils.MaxBigInt(ethSrcConfig.MinColCoinsAllowedToBridge,
+			MinColCoinsAllowedToBridge: oUtils.MaxBigInt(srcChain.Eth.MinColCoinsAllowedToBridge,
 				destChainInfo.MinColCoinsAllowedToBridge),
 
 			AmountsSums:    make(map[uint16]*big.Int),
@@ -279,11 +310,39 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiver(
 		return fmt.Errorf("invalid receiver. metadata: %v, receiver: %v, err: %w", ctx.metadata, receiver, err)
 	}
 
-	if ctx.CardanoDestConfig != nil {
+	switch {
+	case ctx.CardanoDestConfig != nil:
 		return p.validateReceiverCardano(ctx, receiver, tokenPair)
+	case ctx.EthDestConfig != nil:
+		return p.validateReceiverEth(ctx, receiver, tokenPair)
+	case ctx.SolanaDestConfig != nil:
+		return p.validateReceiverSolana(ctx, receiver, tokenPair)
+	default:
+		return fmt.Errorf("invalid destination chain config")
+	}
+}
+
+func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverSolana(
+	ctx *receiverValidationCtxEthSrc,
+	receiver *core.BridgingRequestEthMetadataTransaction,
+	tokenPair *common.TokenPair,
+) error {
+	if !solanawallet.IsSolanaAddress(receiver.Address) {
+		return fmt.Errorf(
+			"found an invalid receiver addr in metadata. metadata: %v, receiver: %v", ctx.metadata, receiver)
 	}
 
-	return p.validateReceiverEth(ctx, receiver, tokenPair)
+	if tokensSum, ok := ctx.AmountsSums[tokenPair.SourceTokenID]; ok {
+		tokensSum.Add(tokensSum, receiver.Amount)
+	} else {
+		ctx.AmountsSums[tokenPair.SourceTokenID] = new(big.Int).Set(receiver.Amount)
+	}
+
+	if receiver.Amount.Cmp(ctx.MinColCoinsAllowedToBridge) < 0 {
+		return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", ctx.metadata)
+	}
+
+	return nil
 }
 
 func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
@@ -501,6 +560,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 	}, nil
 }
 
+//nolint:dupl
 func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	ethSrcConfig *oCore.EthChainConfig,
 	ethDestConfig *oCore.EthChainConfig,
@@ -543,6 +603,60 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	if ethSrcConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
 		totalTokensAmount.TrackSourceTokenAmount(
 			tokenPair.SourceTokenID, currencySrcID, receiver.Amount, ethSrcConfig.Tokens,
+		)
+	}
+
+	return &oCore.BridgingRequestReceiver{
+		DestinationAddress: receiver.Address,
+		Amount:             amount,
+		AmountWrapped:      amountWrapped,
+		TokenId:            tokenPair.DestinationTokenID,
+	}, nil
+}
+
+//nolint:dupl
+func (p *BridgingRequestedProcessorSkylineImpl) processReceiverSolana(
+	srcChain *oCore.EthChainConfig,
+	solanaDestConfig *oCore.SolanaChainConfig,
+	destinationChainID string,
+	receiver *core.BridgingRequestEthMetadataTransaction,
+	currencySrcID, currencyDestID uint16,
+	totalTokensAmount *oCore.TotalTokensAmount,
+) (*oCore.BridgingRequestReceiver, error) {
+	tokenPair, err := oUtils.GetTokenPair(
+		srcChain.DestinationChains, srcChain.ChainID,
+		destinationChainID, receiver.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	amount := big.NewInt(0)
+	amountWrapped := big.NewInt(0)
+
+	// currency on destination
+	if tokenPair.DestinationTokenID == currencyDestID {
+		amount = receiver.Amount
+
+		if solanaDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken {
+			totalTokensAmount.TrackDestTokenAmount(
+				receiver.Amount, big.NewInt(0),
+			)
+		}
+	} else {
+		amountWrapped = receiver.Amount
+
+		// wrapped token on destination
+		if (solanaDestConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackDestinationToken) &&
+			solanaDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+			totalTokensAmount.TrackDestTokenAmount(
+				big.NewInt(0), receiver.Amount,
+			)
+		}
+	}
+
+	if srcChain.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken {
+		totalTokensAmount.TrackSourceTokenAmount(
+			tokenPair.SourceTokenID, currencySrcID, receiver.Amount, srcChain.Tokens,
 		)
 	}
 

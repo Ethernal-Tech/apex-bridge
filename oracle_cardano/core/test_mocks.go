@@ -285,7 +285,10 @@ func (m *CardanoTxSuccessProcessorMock) ValidateAndAddClaim(
 	if m.AddClaimCallback != nil {
 		m.AddClaimCallback(claims)
 	} else if m.ShouldAddClaim {
-		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{})
+		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
+			SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID),
+			ObservedTransactionHash: tx.Hash[:],
+		})
 	}
 
 	args := m.Called(claims, tx, appConfig)
@@ -367,7 +370,11 @@ func (m *CardanoTxFailedProcessorMock) ValidateAndAddClaim(
 ) error {
 	if m.ShouldAddClaim {
 		claims.BatchExecutionFailedClaims = append(
-			claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{BatchNonceId: 1})
+			claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{
+				BatchNonceId:            1,
+				ChainId:                 0,
+				ObservedTransactionHash: tx.Hash[:],
+			})
 	}
 
 	args := m.Called(claims, tx, appConfig)

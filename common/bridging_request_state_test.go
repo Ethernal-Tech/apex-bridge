@@ -9,7 +9,7 @@ import (
 func TestBridgingRequestState(t *testing.T) {
 	const chainID = ChainIDStrPrime
 
-	txHash := Hash{1, 88, 208}
+	txHash := []byte{1, 88, 208}
 	dstTxHash := NewHashFromHexString("0xFF")
 
 	t.Run("NewBridgingRequestState", func(t *testing.T) {
@@ -29,7 +29,7 @@ func TestBridgingRequestState(t *testing.T) {
 
 	t.Run("IsTransitionPossible BridgingRequestStatusInvalidRequest", func(t *testing.T) {
 		state := NewBridgingRequestState(ChainIDStrNexus, txHash, false)
-		state.ToExecutedOnDestination(dstTxHash)
+		state.ToExecutedOnDestination(dstTxHash[:])
 		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
 		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
 		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusSubmittedToBridge))

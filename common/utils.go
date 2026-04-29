@@ -23,7 +23,9 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/gagliardetto/solana-go"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/exp/constraints"
@@ -139,9 +141,20 @@ func Keccak256(v ...[]byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+func TxHashBytesToString(hash []byte) string {
+	if len(hash) > HashSize {
+		sig := solana.SignatureFromBytes(hash)
+
+		return sig.String()
+	}
+
+	return NewHashFromBytes(hash).String()
+}
+
 const (
-	DfmDecimals = 6
-	WeiDecimals = 18
+	DfmDecimals     = 6
+	WeiDecimals     = 18
+	LamportDecimals = 9
 )
 
 func DfmToWei(dfm *big.Int) *big.Int {
@@ -159,6 +172,14 @@ func WeiToDfm(wei *big.Int) *big.Int {
 	return dfm
 }
 
+func WeiToLamport(wei *big.Int) *big.Int {
+	lamport := new(big.Int).Set(wei)
+	base := big.NewInt(10)
+	lamport.Div(lamport, base.Exp(base, big.NewInt(WeiDecimals-LamportDecimals), nil))
+
+	return lamport
+}
+
 func WeiToDfmCeil(wei *big.Int) *big.Int {
 	dfm := new(big.Int).Set(wei)
 	base := big.NewInt(10)
@@ -170,6 +191,13 @@ func WeiToDfmCeil(wei *big.Int) *big.Int {
 	}
 
 	return dfm
+}
+
+func LamportToWei(lamport *big.Int) *big.Int {
+	wei := new(big.Int).Set(lamport)
+	base := big.NewInt(10)
+
+	return wei.Mul(wei, base.Exp(base, big.NewInt(WeiDecimals-LamportDecimals), nil))
 }
 
 type IsRecoverableErrorFn func(err error) bool
@@ -265,6 +293,9 @@ func IsValidAddress(chainID string, addr string, chainIDConverter *ChainIDConver
 		cardanoAddr, err := cardanowallet.NewCardanoAddressFromString(addr)
 
 		return err == nil && cardanoAddr.GetInfo().AddressType != cardanowallet.RewardAddress
+	case chainIDConverter.IsSolanaChainID(chainID):
+		return solanawallet.IsSolanaAddress(addr)
+
 	default:
 		return false
 	}

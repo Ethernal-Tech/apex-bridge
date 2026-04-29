@@ -40,6 +40,17 @@ func NewTxsProcessorSettings(appConfig *core.AppConfig, chainType string) *txsPr
 			gasLimitMultiplier[chain.ChainID] = defaultGasLimitMultiplier
 		}
 
+	case common.ChainTypeSolanaStr:
+		maxBridgingClaimsToGroup = make(map[string]int, len(appConfig.SolanaChains))
+		for _, chain := range appConfig.SolanaChains {
+			maxBridgingClaimsToGroup[chain.ChainID] = defaultMaxClaimsToGroup
+		}
+
+		gasLimitMultiplier = make(map[string]float32, len(appConfig.SolanaChains))
+		for _, chain := range appConfig.SolanaChains {
+			gasLimitMultiplier[chain.ChainID] = defaultGasLimitMultiplier
+		}
+
 	default:
 		maxBridgingClaimsToGroup = make(map[string]int, len(appConfig.CardanoChains))
 		for _, chain := range appConfig.CardanoChains {

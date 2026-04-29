@@ -330,7 +330,7 @@ func (c *OracleStateControllerImpl) findBridgingRequestState(
 		return nil, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
 	}
 
-	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
+	state, err := c.bridgingRequestStateManager.Get(chainID, hashBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bridging request state. err: %w", err)
 	}

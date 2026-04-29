@@ -7,6 +7,7 @@ type ChainIDNum = uint8
 const (
 	ChainTypeCardano = iota
 	ChainTypeEVM
+	ChainTypeSolana
 
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"
@@ -56,4 +57,8 @@ func (c *ChainIDConverter) IsCardanoChainID(chainIDStr string) bool {
 
 func (c *ChainIDConverter) IsEVMChainID(chainIDStr string) bool {
 	return slices.Contains(c.EvmChains, chainIDStr)
+}
+
+func (c *ChainIDConverter) IsSolanaChainID(chainIDStr string) bool {
+	return ChainIDStrSolana == chainIDStr
 }

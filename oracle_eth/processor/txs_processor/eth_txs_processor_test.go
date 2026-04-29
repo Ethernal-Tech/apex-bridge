@@ -120,7 +120,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			return nil, err
 		}
 
-		typeRegister := oCore.NewTypeRegisterWithChains(appConfig, nil, reflect.TypeOf(ethcore.EthTx{}))
+		typeRegister := oCore.NewTypeRegisterWithChains(appConfig, nil, reflect.TypeOf(ethcore.EthTx{}), nil)
 
 		oracleDB := &databaseaccess.BBoltDatabase{}
 		oracleDB.Init(boltDB, appConfig, typeRegister)
@@ -293,7 +293,19 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		txHash := ethgo.Hash{1}
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{
+			ShouldAddClaim: true,
+			Type:           "batch",
+			AddClaimCallback: func(claims *oCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
+					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(originChainID),
+					DestinationChainId:      appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime),
+					ObservedTransactionHash: txHash[:],
+				})
+			},
+		}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
@@ -302,8 +314,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
-
-		txHash := ethgo.Hash{1}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -427,7 +437,19 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{
+			ShouldAddClaim: true,
+			Type:           "batch",
+			AddClaimCallback: func(claims *oCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
+					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(originChainID),
+					DestinationChainId:      appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime),
+					ObservedTransactionHash: txHash[:],
+				})
+			},
+		}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
@@ -436,8 +458,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
-
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1240,7 +1260,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash,
+					ObservedTransactionHash: txHash[:],
 					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1457,7 +1477,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		brcProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash1,
+					ObservedTransactionHash: txHash1[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1468,12 +1488,12 @@ func TestEthTxsProcessor(t *testing.T) {
 		becProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, oCore.BatchExecutionFailedClaim{
-					ObservedTransactionHash: txHashBatch1,
+					ObservedTransactionHash: txHashBatch1[:],
 					BatchNonceId:            1,
 					ChainId:                 common.ChainIDIntPrime,
 				})
 				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oCore.BatchExecutedClaim{
-					ObservedTransactionHash: txHashBatch2,
+					ObservedTransactionHash: txHashBatch2[:],
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntPrime,
 				})
@@ -1487,14 +1507,14 @@ func TestEthTxsProcessor(t *testing.T) {
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: txHash1,
+					ObservedTransactionHash: txHash1[:],
 				},
 			}, error(nil))
 		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: txHash2,
+					ObservedTransactionHash: txHash2[:],
 				},
 			}, error(nil))
 

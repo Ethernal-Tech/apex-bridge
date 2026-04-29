@@ -44,7 +44,8 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
 
 	for chainID, directionConfig := range directionConfig.Directions {
-		if appConfig.ChainIDConverter.IsEVMChainID(chainID) { //nolint:gocritic
+		switch {
+		case appConfig.ChainIDConverter.IsEVMChainID(chainID):
 			if _, ok := appConfig.EthChains[chainID]; !ok {
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
@@ -54,7 +55,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.DestinationChains = directionConfig.DestinationChains
 			data.Tokens = directionConfig.Tokens
 			appConfig.EthChains[chainID] = data
-		} else if appConfig.ChainIDConverter.IsCardanoChainID(chainID) {
+		case appConfig.ChainIDConverter.IsCardanoChainID(chainID):
 			if _, ok := appConfig.CardanoChains[chainID]; !ok {
 				return fmt.Errorf("invalid cardano chain while setting up direction config. %s", chainID)
 			}
@@ -64,16 +65,17 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.CardanoChainConfig.Tokens = directionConfig.Tokens
 			data.CardanoChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			appConfig.CardanoChains[chainID] = data
-		} else {
+		case appConfig.ChainIDConverter.IsSolanaChainID(chainID):
 			if _, ok := appConfig.SolanaChains[chainID]; !ok {
 				return fmt.Errorf("invalid solana chain while setting up direction config. %s", chainID)
 			}
 
 			data := appConfig.SolanaChains[chainID]
-			data.SolanaChainConfig.DestinationChains = directionConfig.DestinationChains
-			data.SolanaChainConfig.Tokens = directionConfig.Tokens
-			data.SolanaChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
+			data.DestinationChains = directionConfig.DestinationChains
+			data.Tokens = directionConfig.Tokens
 			appConfig.SolanaChains[chainID] = data
+		default:
+			return fmt.Errorf("invalid chain while setting up direction config. %s", chainID)
 		}
 	}
 
@@ -172,13 +174,17 @@ func (appConfig *AppConfig) ValidateDirectionConfig() error {
 		ecosystemTokensMap[tok.ID] = tok.Name
 	}
 
-	allChains := make([]string, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	allChains := make([]string, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains)+len(appConfig.SolanaChains))
 	for _, cc := range appConfig.CardanoChains {
 		allChains = append(allChains, cc.ChainID)
 	}
 
 	for _, ec := range appConfig.EthChains {
 		allChains = append(allChains, ec.ChainID)
+	}
+
+	for _, sc := range appConfig.SolanaChains {
+		allChains = append(allChains, sc.ChainID)
 	}
 
 	for _, chainID := range allChains {

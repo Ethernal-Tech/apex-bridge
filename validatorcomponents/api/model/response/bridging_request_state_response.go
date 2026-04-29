@@ -1,6 +1,8 @@
 package response
 
 import (
+	"encoding/hex"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
@@ -22,9 +24,9 @@ type BridgingRequestStateResponse struct {
 func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
 		SourceChainID:      state.SourceChainID,
-		SourceTxHash:       state.SourceTxHash.String(),
+		SourceTxHash:       hex.EncodeToString(state.SourceTxHash),
 		DestinationChainID: state.DestinationChainID,
-		DestinationTxHash:  state.DestinationTxHash.String(),
+		DestinationTxHash:  hex.EncodeToString(state.DestinationTxHash),
 		Status:             state.Status,
 		IsRefund:           state.IsRefund,
 	}

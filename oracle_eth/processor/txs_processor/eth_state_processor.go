@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -13,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -191,7 +193,7 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 
 				for _, batchTx := range event.TxHashes {
 					if sp.appConfig.ChainIDConverter.ToChainIDStr(batchTx.SourceChainID) == tx.GetChainID() &&
-						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
+						bytes.Equal(batchTx.ObservedTransactionHash, tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
 
@@ -309,7 +311,8 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		brc := claims.BridgingRequestClaims[brcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId), brc.ObservedTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId),
+				ethgo.Hash(brc.ObservedTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -326,7 +329,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		rrc := claims.RefundRequestClaims[rrcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), rrc.OriginTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), ethgo.Hash(rrc.OriginTransactionHash)))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -636,7 +639,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 			}
 
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
-				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
+				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash[:], isRefund),
 				chainIDConverter.ToChainIDStr(destinationChainId))
 
 			if err != nil {
@@ -649,12 +652,14 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			updateToSubmittedToBridge(
-				brClaim.SourceChainId, brClaim.ObservedTransactionHash, brClaim.DestinationChainId, false)
+				brClaim.SourceChainId,
+				ethgo.Hash(brClaim.ObservedTransactionHash),
+				brClaim.DestinationChainId, false)
 		}
 
 		for _, rrClaim := range bridgeClaims.RefundRequestClaims {
 			updateToSubmittedToBridge(
-				rrClaim.OriginChainId, rrClaim.OriginTransactionHash, rrClaim.OriginChainId, true)
+				rrClaim.OriginChainId, ethgo.Hash(rrClaim.OriginTransactionHash), rrClaim.OriginChainId, true)
 		}
 	}
 
@@ -665,7 +670,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
 			txProcessor.GetType() == common.TxTypeRefundRequest {
 			err := bridgingRequestStateUpdater.Invalid(common.NewBridgingRequestStateKey(
-				tx.OriginChainID, common.Hash(tx.Hash), false))
+				tx.OriginChainID, tx.Hash[:], false))
 			if err != nil {
 				sp.logger.Error(
 					"error while updating a bridging request state to Invalid",

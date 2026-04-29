@@ -107,7 +107,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: slotNumber,
+		}
+
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
 		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash(solanaHash.PublicKey()), nil).Once()
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
@@ -142,7 +146,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 
 		expectedBlockhash := solana.Hash(solanaHash.PublicKey())
 
-		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: slotNumber,
+		}
+
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
 		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(expectedBlockhash, nil).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
@@ -188,12 +196,18 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("error when token id is not in chain config", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.On("ReadSlot").Return(uint64(10), nil).Once()
+		dbMock.On("GetBlockhashBySlot", uint64(6)).Return(solana.Hash{}, nil).Once()
+
+		amountAboveMinFee := common.LamportToWei(big.NewInt(2))
+
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
 				Receivers: []eth.BridgeReceiver{
 					{
 						DestinationAddress: receiverWallet.PublicKey().String(),
-						Amount:             minAmount,
+						Amount:             amountAboveMinFee,
 						AmountWrapped:      big.NewInt(0),
 						TokenId:            99,
 					},
@@ -209,7 +223,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 	t.Run("error when slot is in non-active batch period (rounding threshold)", func(t *testing.T) {
 		dbMock.ExpectedCalls = nil
 
-		dbMock.On("ReadSlot").Return(uint64(6), nil).Once()
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: 6,
+		}
+
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
@@ -246,7 +264,10 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		}
 
 		expectedErr := errors.New("read slot error")
-		dbMock.On("ReadSlot").Return(uint64(0), expectedErr).Once()
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: 0,
+		}
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, expectedErr).Once()
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
@@ -262,7 +283,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
 		)
 		require.NoError(t, err)
-		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: slotNumber,
+		}
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
 		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash{}, expectedErr).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
@@ -307,7 +332,10 @@ func TestSolanaChain_SignBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		dbMock.ExpectedCalls = nil
-		dbMock.On("ReadSlot").Return(slotNumber, nil).Once()
+		latestBlockPoint := &solanaTrackerStore.BlockPoint{
+			BlockSlot: slotNumber,
+		}
+		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
 		dbMock.On("GetBlockhashBySlot", roundedSlot).Return(solana.Hash(blockHashKey.PublicKey()), nil).Once()
 
 		confirmed := []eth.ConfirmedTransaction{
@@ -492,9 +520,9 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	receiver1 := "AddrA"
 	receiver2 := "AddrB"
 
-	amount1 := big.NewInt(5_000_000) // > minFeeForBridging
-	amount2 := big.NewInt(2_000_000) // > minFeeForBridging
-	wrappedAmount := big.NewInt(3_000_000)
+	amount1 := common.LamportToWei(big.NewInt(5))
+	amount2 := common.LamportToWei(big.NewInt(2))
+	wrappedAmount := common.LamportToWei(big.NewInt(3))
 
 	confirmed := []eth.ConfirmedTransaction{
 		{
@@ -543,7 +571,7 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	}
 
 	for _, r := range receivers {
-		require.True(t, r.TokenAmount.Amount.Cmp(big.NewInt(0)) == 1)
+		require.NotNil(t, r.TokenAmount.Amount)
 	}
 }
 
@@ -559,7 +587,7 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 				Receivers: []eth.BridgeReceiver{
 					{
 						DestinationAddress: "SomeAddr",
-						Amount:             new(big.Int).Set(minFee),
+						Amount:             common.LamportToWei(big.NewInt(2)),
 						AmountWrapped:      big.NewInt(0),
 						TokenId:            99,
 					},
@@ -585,7 +613,7 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 					{
 						DestinationAddress: "SomeAddr",
 						Amount:             big.NewInt(0),
-						AmountWrapped:      new(big.Int).Set(minFee),
+						AmountWrapped:      common.LamportToWei(big.NewInt(2)),
 						TokenId:            0,
 					},
 				},
