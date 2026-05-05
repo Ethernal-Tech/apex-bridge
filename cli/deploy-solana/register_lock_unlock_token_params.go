@@ -87,6 +87,7 @@ func (p *registerLockUnlockTokenParams) Execute(outputter common.OutputFormatter
 	})
 
 	txDto := solsendtx.RegisterTokenLockUnlockDto{
+		ProgramID:         p.programPublicKey,
 		AuthorityAddr:     p.adminPrivateKey.PublicKey().String(),
 		TokenMint:         p.tokenMint,
 		TokenID:           p.tokenID,

@@ -18,6 +18,7 @@ import (
 
 const (
 	initializeProgramRPCURLFlag                     = "url"
+	initializeProgramProgramIDFlag                  = "program-id"
 	initializeProgramAdminKeyPathFlag               = "admin-key"
 	initializeProgramValidatorFlag                  = "validator"
 	initializeProgramLastIDFlag                     = "last-id"
@@ -29,6 +30,7 @@ const (
 	initializeProgramConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	initializeProgramRPCURLFlagDesc                     = "Solana RPC URL"
+	initializeProgramProgramIDFlagDesc                  = "skyline program ID"
 	initializeProgramAdminKeyPathFlagDesc               = "path to Solana admin keypair file"
 	initializeProgramValidatorFlagDesc                  = "validator public key (repeat flag for multiple validators)"
 	initializeProgramLastIDFlagDesc                     = "initial batch last id"
@@ -58,6 +60,8 @@ type initializeProgramParams struct {
 	treasuryPublicKey   solana.PublicKey
 	relayerPublicKey    solana.PublicKey
 	confirmationTimeout time.Duration
+	programID           string
+	programPublicKey    solana.PublicKey
 }
 
 func (p *initializeProgramParams) setFlags(cmd *cobra.Command) {
@@ -67,6 +71,13 @@ func (p *initializeProgramParams) setFlags(cmd *cobra.Command) {
 		"",
 		initializeProgramRPCURLFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.programID,
+		initializeProgramProgramIDFlag,
+		"",
+		initializeProgramProgramIDFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.adminKeyPath,
 		initializeProgramAdminKeyPathFlag,
@@ -171,6 +182,17 @@ func (p *initializeProgramParams) validateFlags() error {
 
 	p.validators = validators
 
+	if p.programID == "" {
+		return fmt.Errorf("program ID not specified: --%s", initializeProgramProgramIDFlag)
+	}
+
+	programID, err := solanawallet.PublicKeyFromAddress(p.programID)
+	if err != nil {
+		return fmt.Errorf("invalid program ID: %w", err)
+	}
+
+	p.programPublicKey = programID
+
 	if p.treasuryAddress == "" {
 		return fmt.Errorf("treasury address not specified: --%s", initializeProgramTreasuryAddressFlag)
 	}
@@ -225,6 +247,7 @@ func (p *initializeProgramParams) Execute(outputter common.OutputFormatter) (com
 	})
 
 	txDto := solsendtx.InitializeDto{
+		ProgramID:     p.programPublicKey,
 		AuthorityAddr: p.adminPrivateKey.PublicKey().String(),
 		Validators:    p.validators,
 		LastID:        p.lastID,

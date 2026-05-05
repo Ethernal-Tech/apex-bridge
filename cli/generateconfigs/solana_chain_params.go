@@ -43,8 +43,8 @@ const (
 	defaultSolanaMinOperationFee            = uint64(0)
 	defaultSolanaFeeAddrBridging            = uint64(1_000_000)
 	defaultSolanaMinColCoinsAllowedToBridge = uint64(1)
-	defaultSolanaSlotBuffSize               = uint8(10)
-	defaultSolanaEventBuffSize              = uint8(10)
+	defaultSolanaSlotBuffSize               = uint8(20)
+	defaultSolanaEventBuffSize              = uint8(100)
 	defaultSolanaErrorBuffSize              = uint8(10)
 
 	feeAddrBridgingFlag     = "fee-addr-bridging"
@@ -276,6 +276,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 			SlotRoundingThreshold: p.slotRoundingThreshold,
 			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
 			ALTPublicKey:          p.altPublicKey,
+			ProgramID:             p.solanaTrackedProgram,
 		},
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec

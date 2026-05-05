@@ -95,7 +95,7 @@ func (p *extendALTParams) Execute(outputter common.OutputFormatter) (common.ICom
 	txSender := solsendtx.NewTxSender(provider, nil)
 	altAdmin := solanawallet.NewALTAdmin(provider)
 
-	altPubKeys, err := txSender.BridgeTransactionALTAddresses(p.tokenMintsParsed)
+	altPubKeys, err := txSender.BridgeTransactionALTAddresses(p.programPublicKey, p.tokenMintsParsed)
 	if err != nil {
 		return nil, fmt.Errorf("get bridge transaction ALT addresses: %w", err)
 	}

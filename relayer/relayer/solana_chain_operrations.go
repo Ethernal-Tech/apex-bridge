@@ -85,7 +85,13 @@ func (sco *SolanaChainOperations) SendTx(
 
 	txSender := sendtx.NewTxSender(txProvider, nil)
 
+	programID, err := solana.PublicKeyFromBase58(sco.config.ProgramID)
+	if err != nil {
+		return fmt.Errorf("failed to convert program ID to solana.PublicKey: %w", err)
+	}
+
 	bridgingTxDto := sendtx.BridgeTransactionDto{
+		ProgramID:      programID,
 		SenderAddr:     sco.privateKey.PublicKey().String(),
 		Receivers:      payload.Receivers,
 		BatchID:        payload.BatchID,

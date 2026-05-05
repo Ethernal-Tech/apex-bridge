@@ -247,6 +247,44 @@ $ apex-bridge generate-configs evm-chain \
         --output-validator-components-file-name "vc_config.json"
 ```
 
+Solana chain config all options
+``` shell
+$ apex-bridge generate-configs solana-chain \
+        --chain-id <solana chain id> \
+        --sol-node-url <solana RPC URL (http or https)> \
+        --sol-tracked-program <bridge program id to track> \
+        --sol-block-fetch-delay <delay in ms between block fetches> \
+        --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
+        --sol-min-operation-fee <minimal operation fee> \
+        --sol-fee-addr-bridging <minimal addr fee bridging amount> \
+        --slot-rounding-threshold <slot rounding threshold> \
+        --sol-slot-buff-size <tracker slot buffer size> \
+        --sol-event-buff-size <tracker event buffer size> \
+        --sol-error-buff-size <tracker error buffer size> \
+        --treasury-address <solana treasury public key> \
+        --fee-addr-bridging <solana public key used as bridging fee address> \
+        --alt-public-key <address lookup table public key> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
+        --output-validator-components-file-name <validator components config json output file name> \
+        --output-relayer-file-name <relayer config json output file name> \
+        --dbs-path <path to where databases will be stored> \
+        --relayer-config <path to relayer secrets manager config file> \
+        --relayer-data-dir <path to relayer secret directory when using local secrets manager> \
+        --output-dir <path to config jsons output directory>
+```
+
+Add solana chain config minimal example
+``` shell
+$ apex-bridge generate-configs solana-chain \
+        --chain-id "solana" \
+        --sol-node-url https://api.devnet.solana.com \
+        --sol-tracked-program F3rcR9BR4hnyHyPWKh3PotJrtLa7AiAo4YVtki9LC2xC \
+        --treasury-address Ggc6De36VRJrgDQG8KFkGPTDbQBKQ1PSpyP9JLappixz \
+        --fee-addr-bridging 75bvshxQDP4Yyfx7cDsFbGeRTUF6PiSAfJqoa914LYD9 \
+        --output-validator-components-file-name "vc_config.json"
+```
+The keys and program id above are valid-format placeholders from tests; substitute your deployment values. Use `--relayer-data-dir` or `--relayer-config` when the generated relayer config must reference your secrets layout (same semantics as EVM). `--sol-node-url` must be a valid `http` or `https` URL.
+
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
@@ -720,6 +758,7 @@ apex-bridge deploy-solana deploy-program \
 ```shell
 apex-bridge deploy-solana initialize-program \
         --url http://127.0.0.1:8899 \
+        --program-id <> \
         --admin-key ./admin-keypair.json \
         --validator 5fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
         --validator 6fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
@@ -737,6 +776,7 @@ apex-bridge deploy-solana initialize-program \
 ```shell
 apex-bridge deploy-solana create-alt \
         --url http://127.0.0.1:8899 \
+        --program-id <> \
         --admin-key ./admin-keypair.json \
         --confirmation-timeout-seconds 120
 ```
@@ -745,6 +785,7 @@ apex-bridge deploy-solana create-alt \
 ```shell
 apex-bridge deploy-solana extend-alt \
         --url http://127.0.0.1:8899 \
+        --program-id <> \
         --admin-key ./admin-keypair.json \
         --alt-address <ALT_PUBLIC_KEY_FROM_CREATE_ALT> \
         --token-mint <TOKEN_MINT_1> \
@@ -759,6 +800,7 @@ apex-bridge deploy-solana extend-alt \
 apex-bridge deploy-solana register-lock-unlock-token \
         --url http://127.0.0.1:8899 \
         --admin-key ./admin-keypair.json \
+        --program-id <> \
         --treasury-address <TREASURY_ADDRESS> \
         --relayer-address <RELAYER_ADDRESS> \
         --token-id 1 \
@@ -771,6 +813,7 @@ apex-bridge deploy-solana register-lock-unlock-token \
 ```shell
 apex-bridge deploy-solana register-mint-burn-token \
         --url http://127.0.0.1:8899 \
+        --program-id <> \
         --admin-key ./admin-keypair.json \
         --treasury-address <TREASURY_ADDRESS> \
         --relayer-address <RELAYER_ADDRESS> \
@@ -788,6 +831,7 @@ apex-bridge deploy-solana register-mint-burn-token \
 apex-bridge deploy-solana hot-wallet-increment \
         --url http://127.0.0.1:8899 \
         --key ./admin-keypair.json \
+        --program-id <> \
         --mint <TOKEN_MINT_ADDRESS> \
         --amount 1000000 \
         --program <SKYLINE_PROGRAM_ADDRESS> \

@@ -19,6 +19,7 @@ type SolanaChainConfig struct {
 	BridgingFeeAddress                    string                       `json:"bridgingFeeAddress"`
 	TxProviderEndpoint                    string                       `json:"txProviderEndpoint"`
 	ALTPublicKey                          string                       `json:"altPublicKey"`
+	ProgramID                             string                       `json:"trackedProgram"`
 }
 
 func NewSolanaChainConfig(rawMessage json.RawMessage) (*SolanaChainConfig, error) {

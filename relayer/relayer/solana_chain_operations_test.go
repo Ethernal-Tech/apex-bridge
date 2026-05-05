@@ -221,7 +221,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
@@ -247,7 +247,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
@@ -275,7 +275,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
@@ -307,7 +307,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS},
+			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),

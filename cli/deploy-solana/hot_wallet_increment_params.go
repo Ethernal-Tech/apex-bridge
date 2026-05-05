@@ -20,14 +20,14 @@ const (
 	hotWalletIncrementKeyPathFlag                    = "key"
 	hotWalletIncrementMintFlag                       = "mint"
 	hotWalletIncrementAmountFlag                     = "amount"
-	hotWalletIncrementProgramFlag                    = "program"
+	hotWalletIncrementProgramIDFlag                  = "program-id"
 	hotWalletIncrementConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	hotWalletIncrementRPCURLFlagDesc                     = "Solana RPC URL"
 	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file"
 	hotWalletIncrementMintFlagDesc                       = "token mint public key"
 	hotWalletIncrementAmountFlagDesc                     = "hot wallet increment amount in token base units (lamports for SOL)" //nolint:lll
-	hotWalletIncrementProgramFlagDesc                    = "skyline program public key"
+	hotWalletIncrementProgramIDFlagDesc                  = "skyline program ID"
 	hotWalletIncrementConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
 
 	defaultHotWalletIncrementConfirmationTimeoutSeconds = uint64(120)
@@ -38,7 +38,7 @@ type hotWalletIncrementParams struct {
 	keyPath                    string
 	mintAddress                string
 	amount                     uint64
-	programAddress             string
+	programID                  string
 	confirmationTimeoutSeconds uint64
 
 	senderPrivateKey    solana.PrivateKey
@@ -72,10 +72,10 @@ func (p *hotWalletIncrementParams) setFlags(cmd *cobra.Command) {
 		hotWalletIncrementAmountFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.programAddress,
-		hotWalletIncrementProgramFlag,
+		&p.programID,
+		hotWalletIncrementProgramIDFlag,
 		"",
-		hotWalletIncrementProgramFlagDesc,
+		hotWalletIncrementProgramIDFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.confirmationTimeoutSeconds,
@@ -125,16 +125,16 @@ func (p *hotWalletIncrementParams) validateFlags() error {
 		return fmt.Errorf("amount must be greater than 0: --%s", hotWalletIncrementAmountFlag)
 	}
 
-	if p.programAddress == "" {
-		return fmt.Errorf("program not specified: --%s", hotWalletIncrementProgramFlag)
+	if p.programID == "" {
+		return fmt.Errorf("program not specified: --%s", hotWalletIncrementProgramIDFlag)
 	}
 
-	programPublicKey, err := solanawallet.PublicKeyFromAddress(p.programAddress)
+	programID, err := solanawallet.PublicKeyFromAddress(p.programID)
 	if err != nil {
-		return fmt.Errorf("invalid program address: %w", err)
+		return fmt.Errorf("invalid program ID: %w", err)
 	}
 
-	p.programPublicKey = programPublicKey
+	p.programPublicKey = programID
 
 	if p.confirmationTimeoutSeconds == 0 {
 		return fmt.Errorf(
@@ -164,6 +164,7 @@ func (p *hotWalletIncrementParams) Execute(outputter common.OutputFormatter) (co
 	txSender := solsendtx.NewTxSender(provider, nil)
 
 	txDto := solsendtx.HotWalletIncrementDto{
+		ProgramID:  p.programPublicKey,
 		SenderAddr: p.senderPrivateKey.PublicKey().String(),
 		TokenMint:  p.mintAddress,
 		Amount:     p.amount,

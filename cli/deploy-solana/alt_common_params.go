@@ -7,15 +7,18 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
 )
 
 const (
 	altRPCURLFlag                     = "url"
+	altProgramIDFlag                  = "program-id"
 	altAdminKeyPathFlag               = "admin-key"
 	altConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	altRPCURLFlagDesc                     = "Solana RPC URL"
+	altProgramIDFlagDesc                  = "skyline program ID"
 	altAdminKeyPathFlagDesc               = "path to Solana admin keypair file"
 	altConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
 
@@ -24,11 +27,13 @@ const (
 
 type altCommonParams struct {
 	rpcURL                     string
+	programID                  string
 	adminKeyPath               string
 	confirmationTimeoutSeconds uint64
 
 	adminPrivateKey     solana.PrivateKey
 	confirmationTimeout time.Duration
+	programPublicKey    solana.PublicKey
 }
 
 func (p *altCommonParams) setCommonFlags(cmd commonFlagSetter) {
@@ -37,6 +42,12 @@ func (p *altCommonParams) setCommonFlags(cmd commonFlagSetter) {
 		altRPCURLFlag,
 		"",
 		altRPCURLFlagDesc,
+	)
+	cmd.StringVar(
+		&p.programID,
+		altProgramIDFlag,
+		"",
+		altProgramIDFlagDesc,
 	)
 	cmd.StringVar(
 		&p.adminKeyPath,
@@ -64,6 +75,10 @@ func (p *altCommonParams) validateCommonFlags() error {
 		return fmt.Errorf("admin key path not specified: --%s", altAdminKeyPathFlag)
 	}
 
+	if p.programID == "" {
+		return fmt.Errorf("program ID not specified: --%s", altProgramIDFlag)
+	}
+
 	p.adminKeyPath = filepath.Clean(p.adminKeyPath)
 
 	if _, err := os.Stat(p.adminKeyPath); err != nil {
@@ -89,6 +104,17 @@ func (p *altCommonParams) validateCommonFlags() error {
 	}
 
 	p.confirmationTimeout = time.Duration(p.confirmationTimeoutSeconds) * time.Second //nolint:gosec
+
+	if p.programID == "" {
+		return fmt.Errorf("program ID not specified: --%s", altProgramIDFlag)
+	}
+
+	programID, err := solanawallet.PublicKeyFromAddress(p.programID)
+	if err != nil {
+		return fmt.Errorf("invalid program ID: %w", err)
+	}
+
+	p.programPublicKey = programID
 
 	return nil
 }

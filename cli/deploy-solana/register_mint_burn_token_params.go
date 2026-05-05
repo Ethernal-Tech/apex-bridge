@@ -168,6 +168,7 @@ func (p *registerMintBurnTokenParams) Execute(outputter common.OutputFormatter) 
 	}
 
 	txDto := solsendtx.RegisterTokenMintBurnDto{
+		ProgramID:         p.programPublicKey,
 		AuthorityAddr:     p.adminPrivateKey.PublicKey().String(),
 		TokenMint:         tokenKeyPair.PublicKey.String(),
 		TokenID:           p.tokenID,
