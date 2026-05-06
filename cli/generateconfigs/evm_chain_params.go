@@ -37,7 +37,7 @@ const (
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
-	defaultEvmPoolIntervalMiliseconds   = 1500
+	defaultEvmPoolIntervalMiliseconds   = 5000
 	defaultEvmNoBatchPeriodPercent      = 0.2
 	defaultEvmTTLBlockRoundingThreshold = 10
 	defaultEvmTTLBlockNumberInc         = 20

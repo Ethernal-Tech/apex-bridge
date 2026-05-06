@@ -127,7 +127,7 @@ func CloneAndBuildContracts(
 	_, _ = common.ExecuteCLICommand("git", []string{"pull", "origin"}, dir)
 
 	_, err := common.ExecuteCLICommand("npm", []string{"install"}, dir)
-	if err != nil && !strings.Contains(err.Error(), npmInstallDeprecatedErr) {
+	if err != nil && !strings.Contains(strings.ToLower(err.Error()), npmInstallDeprecatedErr) {
 		return "", fmt.Errorf("failed to install npm dependencies: %w", err)
 	}
 

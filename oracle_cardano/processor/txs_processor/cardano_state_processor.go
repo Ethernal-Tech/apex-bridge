@@ -235,23 +235,44 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	event *cCore.DBBatchInfoEvent,
 ) ([]cCore.BaseTx, error) {
-	result := make([]cCore.BaseTx, len(event.TxHashes))
+	resultPending := make([]cCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
-		tx, err := sp.db.GetPendingTx(
+	for _, hash := range event.TxHashes {
+		// try pending first
+		pendingTx, errPending := sp.db.GetPendingTx(
 			cCore.DBTxID{
 				ChainID: sp.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-		if err != nil {
-			return nil, err
+		if errPending == nil {
+			// pending exists — append and continue
+			resultPending = append(resultPending, pendingTx)
+
+			continue
 		}
 
-		result[idx] = tx
+		// pending returned error — check if it's present in processed
+		processedTx, errProcessed := sp.db.GetProcessedTx(
+			cCore.DBTxID{
+				ChainID: sp.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
+				DBKey:   hash.ObservedTransactionHash[:],
+			},
+		)
+		if processedTx == nil || errProcessed != nil {
+			// not in processed either — return original pending error
+			return nil, errPending
+		}
+
+		// it exists in processed — silently skip (do not add to resultPending)
+		// and continue with next tx hash
+
+		sp.logger.Error("tx for a BatchExecutionInfoEvent event found in already processed",
+			"srcChain", sp.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
+			"eventTxHash", hash.ObservedTransactionHash.String())
 	}
 
-	return result, nil
+	return resultPending, nil
 }
 
 func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(
