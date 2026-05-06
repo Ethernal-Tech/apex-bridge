@@ -273,7 +273,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 
 		sp.logger.Error("tx for a BatchExecutionInfoEvent event found in already processed",
 			"srcChain", sp.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
-			"eventTxHash", hash.ObservedTransactionHash.String())
+			"eventTxHash", common.TxHashBytesToString(hash.ObservedTransactionHash))
 	}
 
 	return resultPending, nil
