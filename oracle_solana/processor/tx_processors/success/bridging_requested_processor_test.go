@@ -371,7 +371,33 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Value:         cardanoMinWei,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging fee in metadata is less than minimum")
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+	})
+
+	t.Run("ValidateAndAddClaim operation fee below minimum", func(t *testing.T) {
+		cardanoMinWei := common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))
+		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrPrime,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestSolMetadataTransaction{
+				{Address: validCardanoTestAddr, Amount: cardanoMinWei, TokenID: solanaCurrencyID},
+			},
+			OperationFee: minOperationFee - 1,
+			BridgingFee:  minFeeForBridging,
+		})
+		require.NoError(t, err)
+
+		claims := &oCore.BridgeClaims{}
+		appConfig := getAppConfig()
+
+		err = proc.ValidateAndAddClaim(claims, &core.SolanaTx{
+			Metadata:      metadata,
+			OriginChainID: common.ChainIDStrSolana,
+			Value:         cardanoMinWei,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "operation fee in metadata is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim amount above max", func(t *testing.T) {

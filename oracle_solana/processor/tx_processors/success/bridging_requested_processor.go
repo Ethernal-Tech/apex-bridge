@@ -233,7 +233,15 @@ func (p *BridgingRequestedProcessorImpl) validateTokenAmounts(
 	if receiverCtx.solanaSrcConfig.MinFeeForBridging != nil && receiverCtx.solanaSrcConfig.MinFeeForBridging.Sign() > 0 {
 		feeWei := common.LamportToWei(new(big.Int).SetUint64(metadata.BridgingFee))
 		if feeWei.Cmp(receiverCtx.solanaSrcConfig.MinFeeForBridging) < 0 {
-			return fmt.Errorf("bridging fee in metadata is less than minimum: %v", metadata)
+			return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
+				feeWei, receiverCtx.solanaSrcConfig.MinFeeForBridging, metadata)
+		}
+	}
+
+	if receiverCtx.solanaSrcConfig.MinOperationFee > 0 {
+		if metadata.OperationFee < receiverCtx.solanaSrcConfig.MinOperationFee {
+			return fmt.Errorf("operation fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
+				metadata.OperationFee, receiverCtx.solanaSrcConfig.MinOperationFee, metadata)
 		}
 	}
 

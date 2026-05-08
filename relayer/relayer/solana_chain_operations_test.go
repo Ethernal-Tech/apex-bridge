@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -43,24 +42,6 @@ func Test_DecodePayload(t *testing.T) {
 	require.Equal(t, payload.Receivers[0].Address, "75bvshxQDP4Yyfx7cDsFbGeRTUF6PiSAfJqoa914LYD9")
 	require.Equal(t, payload.Receivers[0].TokenAmount.Amount, big.NewInt(2000000000))
 	require.Equal(t, payload.Receivers[0].TokenAmount.TokenMint, "So11111111111111111111111111111111111111112")
-}
-
-type mockTxSubmiter struct {
-	mock.Mock
-}
-
-var _ solanaWallet.ITxSubmiter = (*mockTxSubmiter)(nil)
-
-func (m *mockTxSubmiter) SendTransaction(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
-	args := m.Called(ctx, tx)
-
-	return args.Get(0).(solana.Signature), args.Error(1)
-}
-
-func (m *mockTxSubmiter) WaitForSignature(
-	ctx context.Context, sig solana.Signature, commitment rpc.CommitmentType, maxWaitTime time.Duration,
-) error {
-	return m.Called(ctx, sig, commitment, maxWaitTime).Error(0)
 }
 
 func buildTestRawTx(t *testing.T, _ solana.PublicKey) []byte {
@@ -217,7 +198,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid signature (all zeros)", func(t *testing.T) {
-		submiterMock := &mockTxSubmiter{}
+		submiterMock := &solanaWallet.MockTxProvider{}
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
@@ -243,7 +224,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 	})
 
 	t.Run("invalid RawTransaction", func(t *testing.T) {
-		submiterMock := &mockTxSubmiter{}
+		submiterMock := &solanaWallet.MockTxProvider{}
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
@@ -271,7 +252,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 	})
 
 	t.Run("send returns error", func(t *testing.T) {
-		submiterMock := &mockTxSubmiter{}
+		submiterMock := &solanaWallet.MockTxProvider{}
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,
@@ -303,7 +284,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		submiterMock := &mockTxSubmiter{}
+		submiterMock := &solanaWallet.MockTxProvider{}
 
 		ops := &SolanaChainOperations{
 			chainID:    common.ChainIDStrSolana,

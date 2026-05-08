@@ -754,6 +754,23 @@ apex-bridge deploy-solana deploy-program \
         --commitment confirmed
 ```
 
+# How to upgrade an existing Solana program
+
+Runs `solana program deploy` for the binary, then submits `update_program_version` so `ProgramConfig` matches the deployment. The new semver (`--upgrade-program-version`) must not be ordered before the version already stored on-chain. `--admin-key` must be the bridge authority stored in program config.
+
+```shell
+apex-bridge deploy-solana upgrade-program \
+        --url http://127.0.0.1:8899 \
+        --fee-payer ./fee-payer-key.json \
+        --key ./solana-program-key.json \
+        --program-id <> \
+        --build-path ./solana-program.so \
+        --upgrade-program-version 1.2.3 \
+        --admin-key ./admin-keypair.json \
+        --confirmation-timeout-seconds 120 \
+        --commitment confirmed
+```
+
 # How to initialize deployed Solana Skyline program
 ```shell
 apex-bridge deploy-solana initialize-program \
@@ -769,6 +786,34 @@ apex-bridge deploy-solana initialize-program \
         --min-amount-to-bridge 1000000 \
         --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
         --relayer-address 9fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --confirmation-timeout-seconds 120
+```
+
+# How to update Solana bridge fee configuration
+
+The transaction always submits min operation fee and bridging fee (use existing on-chain values when you only change treasury or relayer). Optionally set `--update-treasury` / `--update-relayer` with the new addresses.
+
+```shell
+apex-bridge deploy-solana update-fee-config \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --confirmation-timeout-seconds 120
+```
+
+```shell
+apex-bridge deploy-solana update-fee-config \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --update-treasury \
+        --new-treasury-address <NEW_TREASURY> \
+        --update-relayer \
+        --new-relayer-address <NEW_RELAYER> \
         --confirmation-timeout-seconds 120
 ```
 
