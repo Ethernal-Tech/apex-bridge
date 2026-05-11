@@ -51,6 +51,16 @@ func NewCardanoChainObserver(
 		return nil, err
 	}
 
+	if config.ChainID == common.ChainIDStrCardano {
+		err = indexerDB.OpenTx().SetLatestBlockPoint(&indexer.BlockPoint{
+			BlockSlot: 111519022,
+			BlockHash: indexer.NewHashFromHexString("e815f2bb3285dc0fd42d666e4c3284001a66b7eb2c5ef418b7f9a44d2a597c32"),
+		}).Execute()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	confirmedBlockHandler := func(block *indexer.CardanoBlock, blockTxs []*indexer.Tx) error {
 		logger.Info("Confirmed Block Handler invoked",
 			"block", block.Hash, "slot", block.Slot, "block txs", len(blockTxs))
