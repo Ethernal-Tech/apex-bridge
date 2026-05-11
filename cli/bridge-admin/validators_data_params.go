@@ -24,10 +24,11 @@ const (
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 
 type validatorsDataParams struct {
-	bridgeNodeURL  string
-	bridgeSCAddr   string
-	config         string
-	chainIDsConfig string
+	bridgeNodeURL        string
+	bridgeSCAddr         string
+	config               string
+	chainIDsConfig       string
+	cardanoCliBinaryName string
 }
 
 func (v *validatorsDataParams) ValidateFlags() error {
@@ -77,6 +78,13 @@ func (v *validatorsDataParams) RegisterFlags(cmd *cobra.Command) {
 		chainIDsConfigFlag,
 		"",
 		chainIDsConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&v.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
 	)
 }
 
@@ -147,7 +155,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(i))
 
 				addrs, err := cardanotx.NewApexAddresses(
-					wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
+					wallet.ResolveCardanoCliBinary(v.cardanoCliBinaryName), uint(chainConfig.NetworkMagic), policyScripts)
 				if err != nil {
 					return nil, err
 				}

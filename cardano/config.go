@@ -33,6 +33,7 @@ type CardanoChainConfig struct {
 	MintingScriptTxInput                  *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft                          *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress                        string                           `json:"relayerAddress,omitempty"`
+	CardanoCliBinaryName                  string                           `json:"cardanoCliBinaryName,omitempty"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -60,7 +61,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(
-			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
 	}
 
 	if config.BlockfrostURL != "" {

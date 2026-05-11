@@ -204,7 +204,7 @@ func calculateMinUtxoForRefund(
 	receiverAddr string, bridgingAddresses []string,
 	chainInfos map[string]*cChain.CardanoChainInfo,
 ) (uint64, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
 	if err != nil {
 		return 0, err
 	}

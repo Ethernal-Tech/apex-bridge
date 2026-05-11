@@ -24,13 +24,14 @@ func prepareCardanoTxBuilder(
 	networkMagic uint,
 	txProvider cardanowallet.ITxProvider,
 	wallet *cardanowallet.Wallet,
+	cardanoCliBinaryName string,
 ) (*TxBuildContext, error) {
 	walletAddr, err := cardanotx.GetAddress(networkType, wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(networkType))
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(cardanoCliBinaryName))
 	if err != nil {
 		return nil, err
 	}

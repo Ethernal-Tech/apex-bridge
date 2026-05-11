@@ -389,7 +389,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 	config *oCore.CardanoChainConfig, receiverAddr string, nativeTokensSum map[uint16]*big.Int,
 ) (uint64, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
 	if err != nil {
 		return 0, err
 	}

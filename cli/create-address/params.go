@@ -16,41 +16,44 @@ import (
 )
 
 const (
-	chainIDsConfigFlag   = "chain-ids-config"
-	networkIDFlag        = "network-id"
-	testnetMagicFlag     = "testnet-magic"
-	chainIDFlag          = "chain"
-	bridgeNodeURLFlag    = "bridge-url"
-	bridgeSCAddrFlag     = "bridge-addr"
-	bridgePrivateKeyFlag = "bridge-key"
-	privateKeyConfigFlag = "key-config"
-	showPolicyScrFlag    = "show-policy-script"
-	custodialAddrFlag    = "generate-custodial-address"
+	chainIDsConfigFlag       = "chain-ids-config"
+	networkIDFlag            = "network-id"
+	testnetMagicFlag         = "testnet-magic"
+	chainIDFlag              = "chain"
+	bridgeNodeURLFlag        = "bridge-url"
+	bridgeSCAddrFlag         = "bridge-addr"
+	bridgePrivateKeyFlag     = "bridge-key"
+	privateKeyConfigFlag     = "key-config"
+	showPolicyScrFlag        = "show-policy-script"
+	custodialAddrFlag        = "generate-custodial-address"
+	cardanoCliBinaryNameFlag = "cardano-cli-binary-name"
 
-	chainIDsConfigFlagDesc   = "path to the chain IDs config file"
-	networkIDFlagDesc        = "network ID"
-	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
-	bridgeNodeURLFlagDesc    = "bridge node url"
-	bridgeSCAddrFlagDesc     = "bridge smart contract address"
-	chainIDFlagDesc          = "cardano chain ID (prime, vector, etc)"
-	bridgePrivateKeyFlagDesc = "private key for bridge admin"
-	privateKeyConfigFlagDesc = "path to secrets manager config file"
-	showPolicyScrFlagDesc    = "show policy script"
-	custodialAddrFlagDesc    = "generate custodial address"
+	chainIDsConfigFlagDesc       = "path to the chain IDs config file"
+	networkIDFlagDesc            = "network ID"
+	testnetMagicFlagDesc         = "testnet magic number. leave 0 for mainnet"
+	bridgeNodeURLFlagDesc        = "bridge node url"
+	bridgeSCAddrFlagDesc         = "bridge smart contract address"
+	chainIDFlagDesc              = "cardano chain ID (prime, vector, etc)"
+	bridgePrivateKeyFlagDesc     = "private key for bridge admin"
+	privateKeyConfigFlagDesc     = "path to secrets manager config file"
+	showPolicyScrFlagDesc        = "show policy script"
+	custodialAddrFlagDesc        = "generate custodial address"
+	cardanoCliBinaryNameFlagDesc = "name of the cardano-cli binary to use for the chain"
 )
 
 type createAddressParams struct {
 	networkID    uint
 	testnetMagic uint
 
-	bridgeNodeURL    string
-	bridgeSCAddr     string
-	chainID          string
-	bridgePrivateKey string
-	privateKeyConfig string
-	showPolicyScript bool
-	custodialAddress bool
-	chainIDsConfig   string
+	bridgeNodeURL        string
+	bridgeSCAddr         string
+	chainID              string
+	bridgePrivateKey     string
+	privateKeyConfig     string
+	showPolicyScript     bool
+	custodialAddress     bool
+	chainIDsConfig       string
+	cardanoCliBinaryName string
 
 	chainIDConverter *common.ChainIDConverter
 }
@@ -161,6 +164,13 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		chainIDsConfigFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
@@ -173,7 +183,7 @@ func (ip *createAddressParams) Execute(
 	}
 
 	bridgeContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperBridge, ip.chainIDConverter)
-	cliBinary := wallet.ResolveCardanoCliBinary(wallet.CardanoNetworkType(ip.networkID))
+	cliBinary := wallet.ResolveCardanoCliBinary(ip.cardanoCliBinaryName)
 
 	validatorsData, err := bridgeContract.GetValidatorsChainData(ctx, ip.chainID)
 	if err != nil {
