@@ -17,6 +17,7 @@ type EthTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*EthTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error)
 	GetPendingTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
+	GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
 	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedEthTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedEthTx, error)
 	ClearAllTxs(chainID string) error

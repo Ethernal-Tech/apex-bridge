@@ -112,6 +112,26 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetPendingTx(
 	return result, err
 }
 
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetGenericProcessedTx(
+	entityID core.DBTxID,
+) (result core.BaseTx, err error) {
+	err = bd.DB.View(func(tx *bbolt.Tx) (err error) {
+		data := tx.Bucket(ChainBucket(ProcessedTxsBucket, entityID.ChainID)).Get(entityID.DBKey)
+		if len(data) == 0 {
+			return fmt.Errorf("couldn't get processed tx for entityID: %v", entityID)
+		}
+
+		result, err = common.GetRegisteredTypeInstance[core.BaseTx](bd.TypeRegister, entityID.ChainID)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(data, &result)
+	})
+
+	return result, err
+}
+
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetProcessedTx(
 	entityID core.DBTxID,
 ) (result TProcessedTx, err error) {
