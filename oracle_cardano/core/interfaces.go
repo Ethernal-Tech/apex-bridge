@@ -17,6 +17,7 @@ type CardanoTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*CardanoTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error)
 	GetPendingTx(entityID cCore.DBTxID) (cCore.BaseTx, error)
+	GetGenericProcessedTx(entityID cCore.DBTxID) (cCore.BaseTx, error)
 	GetProcessedTx(entityID cCore.DBTxID) (*ProcessedCardanoTx, error)
 	GetUnprocessedBatchEvents(chainID string) ([]*cCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error

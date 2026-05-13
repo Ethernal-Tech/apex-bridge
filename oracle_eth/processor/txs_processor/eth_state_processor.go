@@ -265,13 +265,13 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 		}
 
 		// pending returned error — check if it's present in processed
-		processedTx, errProcessed := sp.db.GetProcessedTx(
+		_, errProcessed := sp.db.GetGenericProcessedTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-		if processedTx == nil || errProcessed != nil {
+		if errProcessed != nil {
 			sp.logger.Error("Failed to get proccessed tx", "err", errProcessed)
 			// not in processed either — return original pending error
 			return nil, errPending
