@@ -158,6 +158,18 @@ func (m *EthTxsProcessorDBMock) GetPendingTx(entityID oCore.DBTxID) (oCore.BaseT
 	return nil, args.Error(1)
 }
 
+// GetGenericProcessedTx implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(oCore.BaseTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 // GetProcessedTx implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) GetProcessedTx(
 	entityID oCore.DBTxID,

@@ -171,6 +171,18 @@ func (m *CardanoTxsProcessorDBMock) GetPendingTx(entityID cCore.DBTxID) (cCore.B
 	return nil, args.Error(1)
 }
 
+// GetGenericProcessedTx implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetGenericProcessedTx(entityID cCore.DBTxID) (cCore.BaseTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(cCore.BaseTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 // GetProcessedTx implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) GetProcessedTx(
 	entityID cCore.DBTxID,
