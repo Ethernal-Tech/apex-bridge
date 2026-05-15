@@ -40,7 +40,8 @@ const (
 	nftPolicyIDFlag               = "nft-policy-id"
 	nftNameFlag                   = "nft-name"
 
-	relayerAddressFlag = "relayer-address"
+	relayerAddressFlag       = "relayer-address"
+	cardanoCliBinaryNameFlag = "cardano-cli-binary-name"
 
 	chainIDStringFlagDesc           = "(mandatory) chain id string for the chain config"
 	networkAddressFlagDesc          = "(mandatory) address of network"
@@ -65,7 +66,8 @@ const (
 	nftPolicyIDFlagDesc               = "the policy ID of the NFT used in the minting script"
 	nftNameFlagDesc                   = "the name of the NFT used in the minting script"
 
-	relayerAddressFlagDesc = "relayer address for paying collaterals on the chain"
+	relayerAddressFlagDesc       = "relayer address for paying collaterals on the chain"
+	cardanoCliBinaryNameFlagDesc = "name of the cardano-cli binary to use for the chain"
 
 	defaultBlockConfirmationCount = 10
 	defaultTTLSlotNumberInc       = 1800 + defaultBlockConfirmationCount*10 // BlockTimeSeconds
@@ -102,6 +104,8 @@ type cardanoChainGenerateConfigsParams struct {
 	relayerAddress    string
 	relayerDataDir    string
 	relayerConfigPath string
+
+	cardanoCliBinaryName string
 
 	dbsPath string
 
@@ -335,6 +339,13 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.dbsPath,
 		dbsPathFlag,
 		defaultDBsPath,
@@ -434,6 +445,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			MintingScriptTxInput:     mintingScriptTxInput,
 			CustodialNft:             custodialNFT,
 			RelayerAddress:           p.relayerAddress,
+			CardanoCliBinaryName:     p.cardanoCliBinaryName,
 		},
 		NetworkAddress:             p.networkAddress,
 		StartBlockHash:             startingHash,

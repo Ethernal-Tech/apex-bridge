@@ -24,39 +24,41 @@ import (
 )
 
 const (
-	privateKeyFlag      = "key"
-	stakePrivateKeyFlag = "stake-key"
-	ogmiosURLSrcFlag    = "ogmios-src"
-	receiverFlag        = "receiver"
-	networkIDSrcFlag    = "network-id-src"
-	testnetMagicFlag    = "testnet-src"
-	srcChainIDFlag      = "chain-src"
-	dstChainIDFlag      = "chain-dst"
-	multisigAddrSrcFlag = "addr-multisig-src"
-	treasuryAddrSrcFlag = "addr-treasury-src"
-	feeAmountFlag       = "fee"
-	ogmiosURLDstFlag    = "ogmios-dst"
-	txTypeFlag          = "tx-type"
-	gatewayAddressFlag  = "gateway-addr"
-	rpcURLFlag          = "rpc-url"
-	chainIDsConfigFlag  = "chain-ids-config"
+	privateKeyFlag           = "key"
+	stakePrivateKeyFlag      = "stake-key"
+	ogmiosURLSrcFlag         = "ogmios-src"
+	receiverFlag             = "receiver"
+	networkIDSrcFlag         = "network-id-src"
+	testnetMagicFlag         = "testnet-src"
+	srcChainIDFlag           = "chain-src"
+	dstChainIDFlag           = "chain-dst"
+	multisigAddrSrcFlag      = "addr-multisig-src"
+	treasuryAddrSrcFlag      = "addr-treasury-src"
+	feeAmountFlag            = "fee"
+	ogmiosURLDstFlag         = "ogmios-dst"
+	txTypeFlag               = "tx-type"
+	gatewayAddressFlag       = "gateway-addr"
+	rpcURLFlag               = "rpc-url"
+	chainIDsConfigFlag       = "chain-ids-config"
+	cardanoCliBinaryNameFlag = "cardano-cli-binary-name"
 
-	privateKeyFlagDesc      = "wallet payment signing key"
-	stakePrivateKeyFlagDesc = "wallet stake signing key"
-	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
-	receiverFlagDesc        = "receiver addr:amount"
-	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
-	networkIDSrcFlagDesc    = "source network id"
-	srcChainIDFlagDesc      = "source chain ID (prime, vector, etc)"
-	dstChainIDFlagDesc      = "destination chain ID (prime, vector, etc)"
-	multisigAddrSrcFlagDesc = "source multisig address"
-	treasuryAddrSrcFlagDesc = "source treasury address"
-	feeAmountFlagDesc       = "amount for multisig fee addr"
-	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
-	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
-	gatewayAddressFlagDesc  = "address of gateway contract"
-	rpcURLFlagDesc          = "evm chain rpc url"
-	chainIDsConfigFlagDesc  = "path to the chain IDs config file"
+	privateKeyFlagDesc           = "wallet payment signing key"
+	stakePrivateKeyFlagDesc      = "wallet stake signing key"
+	ogmiosURLSrcFlagDesc         = "source chain ogmios url"
+	receiverFlagDesc             = "receiver addr:amount"
+	testnetMagicFlagDesc         = "source testnet magic number. leave 0 for mainnet"
+	networkIDSrcFlagDesc         = "source network id"
+	srcChainIDFlagDesc           = "source chain ID (prime, vector, etc)"
+	dstChainIDFlagDesc           = "destination chain ID (prime, vector, etc)"
+	multisigAddrSrcFlagDesc      = "source multisig address"
+	treasuryAddrSrcFlagDesc      = "source treasury address"
+	feeAmountFlagDesc            = "amount for multisig fee addr"
+	ogmiosURLDstFlagDesc         = "destination chain ogmios url"
+	txTypeFlagDesc               = "type of transaction (evm, default: cardano)"
+	gatewayAddressFlagDesc       = "address of gateway contract"
+	rpcURLFlagDesc               = "evm chain rpc url"
+	chainIDsConfigFlagDesc       = "path to the chain IDs config file"
+	cardanoCliBinaryNameFlagDesc = "name of the cardano-cli binary to use for the chain"
 
 	ttlSlotNumberInc = 500
 
@@ -105,6 +107,8 @@ type sendTxParams struct {
 	receiversParsed    []*receiverAmount
 	wallet             *cardanowallet.Wallet
 	chainIDConverter   *common.ChainIDConverter
+
+	cardanoCliBinaryName string
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -369,6 +373,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		chainIDsConfigFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
@@ -395,7 +406,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			ip.chainIDSrc: {
-				CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(networkID),
+				CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(ip.cardanoCliBinaryName),
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 				TestNetMagic:             ip.testnetMagicSrc,
 				TTLSlotNumberInc:         ttlSlotNumberInc,

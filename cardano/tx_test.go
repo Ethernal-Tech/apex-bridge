@@ -24,10 +24,9 @@ func TestCreateTx(t *testing.T) {
 		"47344d5bd7b2fea56336ba789579705a944760032585ef64084c92db",
 	}
 	testnetMagic := uint(42)
-	networkID := wallet.MainNetNetwork
 	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes))
 	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
-	cardanoCliBinary := wallet.ResolveCardanoCliBinary(networkID)
+	cardanoCliBinary := wallet.ResolveCardanoCliBinary()
 	cliUtils := wallet.NewCliUtils(cardanoCliBinary)
 	multiSigAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)

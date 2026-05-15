@@ -91,7 +91,7 @@ func NewCardanoChainOperations(
 		config:           cardanoConfig,
 		chainIDConverter: chainIDConverter,
 		txProvider:       txProvider,
-		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.CardanoCliBinaryName),
 		gasLimiter: eth.NewGasLimitHolder(submitBatchMinGasLimit,
 			submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:                           db,

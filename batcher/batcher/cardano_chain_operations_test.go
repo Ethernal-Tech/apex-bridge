@@ -145,7 +145,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -422,7 +422,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 	})
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -1202,7 +1202,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -1453,7 +1453,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -1740,7 +1740,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -2244,7 +2244,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		},
 	}
 
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -2400,7 +2400,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
 		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
@@ -3026,7 +3026,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 			},
 		},
 		bridgingAddressesManager: bridgingAddressesManagerMock,
-		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(),
 		db:                       dbMock,
 		txProvider:               txProviderMock,
 		logger:                   hclog.NewNullLogger(),
@@ -3246,7 +3246,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 	require.NoError(t, err)
 
 	policyScript := cardanowallet.NewPolicyScript([]string{keyHash1, keyHash2}, 2)
-	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary())
 	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cardanowallet.MainNetNetwork), policyScript)
 	require.NoError(t, err)
 
@@ -3262,7 +3262,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 		config: &cardano.CardanoChainConfig{
 			NetworkMagic: uint32(cardanowallet.MainNetNetwork),
 		},
-		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(),
 		txProvider:               txProviderMock,
 		logger:                   hclog.NewNullLogger(),
 		bridgingAddressesManager: bridgingAddressesManagerMock,

@@ -189,7 +189,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(
-			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
 	}
 
 	if config.BlockfrostURL != "" {
