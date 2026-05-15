@@ -30,16 +30,17 @@ const (
 )
 
 type mintNativeTokenParams struct {
-	privateKeyRaw      string
-	stakePrivateKeyRaw string
-	ogmiosURL          string
-	networkID          uint
-	testnetMagic       uint
-	tokenName          string
-	mintAmount         uint64
-	showPolicyScript   bool
-	validitySlot       uint64
-	validitySlotInc    uint64
+	privateKeyRaw        string
+	stakePrivateKeyRaw   string
+	ogmiosURL            string
+	networkID            uint
+	testnetMagic         uint
+	tokenName            string
+	mintAmount           uint64
+	showPolicyScript     bool
+	validitySlot         uint64
+	validitySlotInc      uint64
+	cardanoCliBinaryName string
 
 	wallet *cardanowallet.Wallet
 }
@@ -151,6 +152,13 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 		validitySlotIncFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&m.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validitySlotIncFlag, validitySlotFlag)
 }
 
@@ -174,6 +182,7 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 	txHash, policyScript, err := mintTokenOnAddr(
 		ctx,
 		outputter,
+		m.cardanoCliBinaryName,
 		cardanowallet.CardanoNetworkType(m.networkID),
 		m.testnetMagic,
 		txProvider,
@@ -207,6 +216,7 @@ var (
 
 func mintTokenOnAddr(
 	ctx context.Context, outputter common.OutputFormatter,
+	cardanoCliBinaryName string,
 	networkType cardanowallet.CardanoNetworkType, networkMagic uint, txProvider cardanowallet.ITxProvider,
 	validitySlot uint64, minterWallet *cardanowallet.Wallet, tokenName string, mintAmount uint64,
 ) (string, cardanowallet.IPolicyScript, error) {
@@ -233,7 +243,7 @@ func mintTokenOnAddr(
 		}
 	}
 
-	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkType)
+	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(cardanoCliBinaryName)
 
 	pid, err := cardanowallet.NewCliUtils(cardanoCliBinary).GetPolicyID(policy)
 	if err != nil {
@@ -250,7 +260,7 @@ func mintTokenOnAddr(
 
 	txRaw, txHash, err := createMintTx(
 		ctx, networkType, networkMagic, txProvider, minterWallet,
-		mintToken, policy,
+		mintToken, policy, cardanoCliBinaryName,
 	)
 	if err != nil {
 		return "", nil, err
@@ -272,8 +282,9 @@ func createMintTx(
 	wallet *cardanowallet.Wallet,
 	token cardanowallet.TokenAmount,
 	tokenPolicyScript cardanowallet.IPolicyScript,
+	cardanoCliBinaryName string,
 ) ([]byte, string, error) {
-	txCtx, err := prepareCardanoTxBuilder(ctx, networkType, networkMagic, txProvider, wallet)
+	txCtx, err := prepareCardanoTxBuilder(ctx, networkType, networkMagic, txProvider, wallet, cardanoCliBinaryName)
 	if err != nil {
 		return nil, "", err
 	}

@@ -115,6 +115,7 @@ $ go run ./main.go create-addresses \
         --chain prime
 ```
 - optional `--show-policy-script` flag
+- optional `--cardano-cli-binary-name`
 - instead of `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to generate config files
@@ -186,6 +187,7 @@ $ apex-bridge generate-configs cardano-chain \
 	--nft-policy-id <the policy ID of the NFT used in the minting script> \
 	--nft-name <the name of the NFT used in the minting script> \
 	--relayer-address <relayer address for paying collaterals on the chain> \
+        --cardano-cli-binary-name <name of the cardano-cli binary for this chain> \
         --output-dir <path to config jsons output directory> 
 ```
 
@@ -281,6 +283,7 @@ $ apex-bridge sendtx \
         --network-id-src 2
 ```
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # Example of sending a transaction from the prime to the nexus
 ```shell
@@ -298,6 +301,7 @@ $ apex-bridge sendtx \
         --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c
 ```
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # Example of sending a transaction from the nexus to the prime
 ```shell
@@ -314,6 +318,7 @@ $ apex-bridge sendtx \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
@@ -337,6 +342,7 @@ $ apex-bridge sendtx skyline \
 ```
 - optional `--src-token-name` which can be used instead of `--dst-token-name`
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # Example of sending a skyline transaction from the cardano to the nexus
 ```shell
@@ -360,6 +366,7 @@ $ apex-bridge sendtx skyline \
         --dst-token-contract-addr 0x22222
 ```
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # Example of sending a skyline transaction from the nexus to the cardano
 ```shell
@@ -381,6 +388,7 @@ $ apex-bridge sendtx skyline \
 ```
 - `--src-token-name` flag should be set to `lovelace` only when sending the native currency and omitted in all other cases.
 - there is an optional `--stake-key` flag
+- optional `--cardano-cli-binary-name`
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
@@ -615,6 +623,7 @@ $ apex-bridge bridge-admin get-validators-data \
         --chain-ids-config ./chainIDsConfig.json \
         --config ./config.json
 ```
+- optional `--cardano-cli-binary-name`
 
 ```shell
 $ apex-bridge bridge-admin mint-native-token \
@@ -627,6 +636,7 @@ $ apex-bridge bridge-admin mint-native-token \
 ```
 - optional `--stake-key` and `--show-policy-script` flags
 - optional `--validity-slot NUMBER` or `--validity-slot-inc NUMBER` flag. Second one uses ogmios `getTipData`.slot + inc
+- optional `--cardano-cli-binary-name`
 
 ```shell
 $ apex-bridge bridge-admin deploy-cardano-script \
@@ -638,6 +648,7 @@ $ apex-bridge bridge-admin deploy-cardano-script \
         --nft-name-hex 54657374546F6B656E
 ```
 - optional `--plutus-script-dir`
+- optional `--cardano-cli-binary-name`
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \

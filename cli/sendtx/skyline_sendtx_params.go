@@ -77,6 +77,8 @@ type sendSkylineTxParams struct {
 	receiversParsed    []*receiverAmount
 	wallet             *cardanowallet.Wallet
 	chainIDConverter   *common.ChainIDConverter
+
+	cardanoCliBinaryName string
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -441,6 +443,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		chainIDsConfigFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&p.cardanoCliBinaryName,
+		cardanoCliBinaryNameFlag,
+		"",
+		cardanoCliBinaryNameFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
@@ -492,7 +501,7 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary:           cardanowallet.ResolveCardanoCliBinary(networkID),
+				CardanoCliBinary:           cardanowallet.ResolveCardanoCliBinary(p.cardanoCliBinaryName),
 				TxProvider:                 cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
 				TestNetMagic:               p.testnetMagicSrc,
 				TTLSlotNumberInc:           ttlSlotNumberInc,

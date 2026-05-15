@@ -211,7 +211,8 @@ func (b *BridgingAddressesManagerImpl) buildBridgingAddress(
 		append(b.bridgingStakePolicyScripts[chainID], policyScripts.Multisig.Stake)
 
 	addrs, err := cardano.NewApexAddresses(
-		cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
+		cardanowallet.ResolveCardanoCliBinary(chainConfig.CardanoCliBinaryName),
+		uint(chainConfig.NetworkMagic), policyScripts)
 	if err != nil {
 		return fmt.Errorf("error while executing NewApexAddresses for bridging addresses component. err: %w", err)
 	}
@@ -239,7 +240,8 @@ func (b *BridgingAddressesManagerImpl) buildCustodialAddress(
 	b.custodialPolicyScripts[chainID] = custodialPolicyScript.Payment
 
 	addrs, err := cardano.NewAddressContainer(
-		cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), custodialPolicyScript)
+		cardanowallet.ResolveCardanoCliBinary(chainConfig.CardanoCliBinaryName),
+		uint(chainConfig.NetworkMagic), custodialPolicyScript)
 	if err != nil {
 		return fmt.Errorf("error while executing NewApexAddresses for custodial address. err: %w", err)
 	}

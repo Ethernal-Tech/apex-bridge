@@ -56,7 +56,7 @@ func NewCardanoChainOperations(
 	return &CardanoChainOperations{
 		vcRunMode:        vcRunMode,
 		txProvider:       txProvider,
-		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName),
 		wallet:           cardanoWallet,
 		logger:           logger,
 	}, nil

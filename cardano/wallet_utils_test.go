@@ -45,7 +45,7 @@ func Test_GetPolicyScripts_And_GetMultisigAddresses(t *testing.T) {
 	ps := NewApexPolicyScripts(keyHashes, 0)
 
 	addr, err := NewApexAddresses(
-		wallet.ResolveCardanoCliBinary(wallet.TestNetNetwork), wallet.TestNetProtocolMagic, ps)
+		wallet.ResolveCardanoCliBinary(), wallet.TestNetProtocolMagic, ps)
 	require.NoError(t, err)
 
 	require.Equal(t, "addr_test1wp8ylty98278gsgmxdm90uq8338maed4hnp3up23560dpvs76xwds", addr.Multisig.Payment)
