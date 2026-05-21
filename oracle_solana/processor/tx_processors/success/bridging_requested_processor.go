@@ -487,7 +487,7 @@ func (p *BridgingRequestedProcessorImpl) processReceiverEth(
 func (p *BridgingRequestedProcessorImpl) calculateMinUtxo(
 	config *oCore.CardanoChainConfig, receiverAddr string, nativeTokensSum map[uint16]*big.Int,
 ) (uint64, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.ChainID))
 	if err != nil {
 		return 0, err
 	}
