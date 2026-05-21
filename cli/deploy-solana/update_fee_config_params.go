@@ -16,16 +16,12 @@ const (
 
 	updateFeeConfigUpdateTreasuryFlag     = "update-treasury"
 	updateFeeConfigNewTreasuryAddressFlag = "new-treasury-address"
-	updateFeeConfigUpdateRelayerFlag      = "update-relayer"
-	updateFeeConfigNewRelayerAddressFlag  = "new-relayer-address"
 
 	updateFeeConfigMinOperationFeeFlagDesc   = "minimal operation fee amount (lamports); sent on every update (use current on-chain values if unchanged)" //nolint:lll
 	updateFeeConfigMinFeeForBridgingFlagDesc = "minimal fee for bridging (lamports); sent on every update (use current on-chain values if unchanged)"     //nolint:lll
 
 	updateFeeConfigUpdateTreasuryFlagDesc     = "set new treasury wallet from --new-treasury-address"
 	updateFeeConfigNewTreasuryAddressFlagDesc = "new treasury wallet address (required with --update-treasury)"
-	updateFeeConfigUpdateRelayerFlagDesc      = "set new bridging-fee receiver from --new-relayer-address"
-	updateFeeConfigNewRelayerAddressFlagDesc  = "new relayer wallet address (required with --update-relayer)"
 )
 
 type updateFeeConfigParams struct {
@@ -36,8 +32,6 @@ type updateFeeConfigParams struct {
 
 	updateTreasury     bool
 	newTreasuryAddress string
-	updateRelayer      bool
-	newRelayerAddress  string
 }
 
 func (p *updateFeeConfigParams) setFlags(cmd *cobra.Command) {
@@ -66,18 +60,6 @@ func (p *updateFeeConfigParams) setFlags(cmd *cobra.Command) {
 		updateFeeConfigNewTreasuryAddressFlag,
 		"",
 		updateFeeConfigNewTreasuryAddressFlagDesc,
-	)
-	cmd.Flags().BoolVar(
-		&p.updateRelayer,
-		updateFeeConfigUpdateRelayerFlag,
-		false,
-		updateFeeConfigUpdateRelayerFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.newRelayerAddress,
-		updateFeeConfigNewRelayerAddressFlag,
-		"",
-		updateFeeConfigNewRelayerAddressFlagDesc,
 	)
 }
 
@@ -109,21 +91,6 @@ func (p *updateFeeConfigParams) validateFlags() error {
 		}
 	}
 
-	if p.updateRelayer && p.newRelayerAddress == "" {
-		return fmt.Errorf("new relayer address required when --%s is set: --%s",
-			updateFeeConfigUpdateRelayerFlag, updateFeeConfigNewRelayerAddressFlag)
-	}
-
-	if !p.updateRelayer && p.newRelayerAddress != "" {
-		return fmt.Errorf("use --%s with --%s", updateFeeConfigNewRelayerAddressFlag, updateFeeConfigUpdateRelayerFlag)
-	}
-
-	if p.updateRelayer {
-		if _, err := solanawallet.PublicKeyFromAddress(p.newRelayerAddress); err != nil {
-			return fmt.Errorf("invalid new relayer address: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -148,9 +115,7 @@ func (p *updateFeeConfigParams) Execute(outputter common.OutputFormatter) (commo
 		MinOperationFee:    p.minOperationFee,
 		BridgingFee:        p.bridgingFee,
 		UpdateTreasury:     p.updateTreasury,
-		UpdateRelayer:      p.updateRelayer,
 		NewTreasuryAddress: p.newTreasuryAddress,
-		NewRelayerAddress:  p.newRelayerAddress,
 	}
 
 	tx, err := txSender.CreateTx(

@@ -79,10 +79,11 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 				return nil, fmt.Errorf("indexer db not found for chainID: %s", chainID)
 			}
 
-			blockhash, err := solana.HashFromBase58(payload.Blockhash)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
+			if len(payload.Blockhash) != 32 || payload.Blockhash == [32]byte{} {
+				return nil, fmt.Errorf("failed to convert blockhash to solana.Hash: empty blockhash")
 			}
+
+			blockhash := solana.HashFromBytes(payload.Blockhash[:])
 
 			blockNumber, err := indexerDB.GetBlockNumberByBlockhash(blockhash)
 			if err != nil {

@@ -20,6 +20,7 @@ type SolanaChainOperations struct {
 	config     *solanatx.SolanaChainConfig
 	privateKey *solana.PrivateKey
 	txSender   *sendtx.TxSender
+	txProvider *wallet.Provider
 	logger     hclog.Logger
 }
 
@@ -55,6 +56,7 @@ func NewSolanaChainOperations(
 		config:     config,
 		privateKey: privateKey,
 		txSender:   txSender,
+		txProvider: txProvider,
 		logger:     logger,
 	}, nil
 }
@@ -66,8 +68,10 @@ func (sco *SolanaChainOperations) SendTx(
 
 	err := payload.Unmarshal(smartContractData.RawTransaction)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
+		return fmt.Errorf("failed to unmarshal solana payload: %w", err)
 	}
+
+	sco.logger.Info("Received payload", "payload", payload)
 
 	if payload.BatchID != smartContractData.ID {
 		return fmt.Errorf("batch ID mismatch: %d != %d", payload.BatchID, smartContractData.ID)
@@ -78,12 +82,11 @@ func (sco *SolanaChainOperations) SendTx(
 		return fmt.Errorf("failed to get signature pairs: %w", err)
 	}
 
-	txProvider, err := wallet.NewProvider(sco.config.TxProviderEndpoint)
-	if err != nil {
-		return fmt.Errorf("failed to create tx provider: %w", err)
+	if len(signaturePairs) == 0 {
+		return fmt.Errorf("no signature pairs provided")
 	}
 
-	txSender := sendtx.NewTxSender(txProvider, nil)
+	sco.logger.Info("Signature pairs", "len", len(signaturePairs), "signaturePairs", signaturePairs)
 
 	programID, err := solana.PublicKeyFromBase58(sco.config.ProgramID)
 	if err != nil {
@@ -91,18 +94,19 @@ func (sco *SolanaChainOperations) SendTx(
 	}
 
 	bridgingTxDto := sendtx.BridgeTransactionDto{
+		Ctx:            ctx,
 		ProgramID:      programID,
 		SenderAddr:     sco.privateKey.PublicKey().String(),
 		Receivers:      payload.Receivers,
-		BatchID:        payload.BatchID,
 		SignaturePairs: signaturePairs,
 		PayloadBytes:   smartContractData.RawTransaction,
 	}
 
-	blockhash, err := solana.HashFromBase58(payload.Blockhash)
-	if err != nil {
-		return fmt.Errorf("failed to convert blockhash to solana.Hash: %w", err)
+	if len(payload.Blockhash) != 32 || payload.Blockhash == [32]byte{} {
+		return fmt.Errorf("invalid blockhash: %s", payload.Blockhash)
 	}
+
+	blockhash := solana.HashFromBytes(payload.Blockhash[:])
 
 	var options []sendtx.CreateTxOption
 
@@ -112,7 +116,7 @@ func (sco *SolanaChainOperations) SendTx(
 			return fmt.Errorf("failed to convert alt public key to solana.PublicKey: %w", err)
 		}
 
-		altResolver := wallet.NewAddressLookupTableResolver(txProvider)
+		altResolver := wallet.NewAddressLookupTableResolver(sco.txProvider)
 
 		lookupTables, err := altResolver.Resolve(ctx, altPublicKey)
 		if err != nil {
@@ -122,7 +126,7 @@ func (sco *SolanaChainOperations) SendTx(
 		options = append(options, sendtx.WithAddressLookupTables(lookupTables))
 	}
 
-	tx, err := txSender.CreateTx(
+	tx, err := sco.txSender.CreateTx(
 		ctx, sco.privateKey.PublicKey(),
 		sendtx.InstructionTypeBridgeTransaction,
 		blockhash,

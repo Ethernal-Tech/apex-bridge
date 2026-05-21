@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -70,7 +71,7 @@ func NewSolanaChainOperations(
 func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	ctx context.Context, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	receivers, err := sco.newSolanaReceivers(
+	receivers, feeAmount, err := sco.newSolanaReceivers(
 		sco.config,
 		confirmedTransactions,
 		sco.config.MinFeeForBridging,
@@ -93,8 +94,9 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	sco.logger.Debug("blockHash chosen for batch", "blockHash", blockHash, "slot", slotNumber)
 
 	payload := sendtx.SolanaPayload{
-		Blockhash: blockHash.String(),
+		Blockhash: [32]byte(blockHash),
 		Receivers: receivers,
+		FeeAmount: feeAmount.Uint64(),
 		BatchID:   batchNonceID,
 	}
 
@@ -206,23 +208,25 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 	config *solanatx.SolanaChainConfig,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
-) ([]sendtx.BridgingTxReceiver, error) {
-	sourceAddrTxMap := map[string][]sendtx.BridgingTxReceiver{}
+) ([]sendtx.PayloadReceiver, *big.Int, error) {
+	sourceAddrTxMap := map[string][]sendtx.PayloadReceiver{}
+	feeAmount := big.NewInt(0)
+
 	updateAmount := func(
-		mp map[string][]sendtx.BridgingTxReceiver,
-		addr string,
-		tokenMint string,
+		mp map[string][]sendtx.PayloadReceiver,
+		addr solana.PublicKey,
+		tokenID uint16,
 		amount *big.Int,
 	) error {
-		var newEntry sendtx.BridgingTxReceiver
+		var newEntry sendtx.PayloadReceiver
 
-		val, exists := mp[addr]
+		val, exists := mp[addr.String()]
 
 		if !exists || len(val) == 0 {
-			newEntry.Address = addr
+			newEntry.Address = [32]byte(addr)
 			newEntry.TokenAmount = wallet.TokenAmount{
-				Amount:    amount,
-				TokenMint: tokenMint,
+				Amount:  amount.Uint64(),
+				TokenID: tokenID,
 			}
 
 			val = append(val, newEntry)
@@ -231,8 +235,8 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 			found := false
 
 			for i, entry := range val {
-				if entry.TokenAmount.TokenMint == tokenMint {
-					val[i].TokenAmount.Amount.Add(val[i].TokenAmount.Amount, amount)
+				if entry.TokenAmount.TokenID == tokenID {
+					val[i].TokenAmount.Amount += amount.Uint64()
 
 					found = true
 
@@ -242,17 +246,16 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 
 			if !found {
 				newEntry.Address = addr
-
 				newEntry.TokenAmount = wallet.TokenAmount{
-					Amount:    amount,
-					TokenMint: tokenMint,
+					Amount:  amount.Uint64(),
+					TokenID: tokenID,
 				}
 
 				val = append(val, newEntry)
 			}
 		}
 
-		mp[addr] = val
+		mp[addr.String()] = val
 
 		return nil
 	}
@@ -262,15 +265,18 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 			amount := common.WeiToLamport(recv.Amount)
 			tokenAmount := common.WeiToLamport(recv.AmountWrapped)
 
-			if amount.Cmp(big.NewInt(0)) == 1 {
-				tokenMint, err := config.GetTokenMint(recv.TokenId)
-				if err != nil {
-					return nil, err
-				}
+			if recv.DestinationAddress == common.EthZeroAddr {
+				feeAmount.Add(feeAmount, amount)
 
-				err = updateAmount(sourceAddrTxMap, recv.DestinationAddress, tokenMint, amount.Sub(amount, minFeeForBridging))
+				continue
+			}
+
+			if amount.Cmp(big.NewInt(0)) == 1 {
+				addressBytes := solana.MustPublicKeyFromBase58(recv.DestinationAddress)
+
+				err := updateAmount(sourceAddrTxMap, addressBytes, recv.TokenId, amount.Sub(amount, minFeeForBridging))
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 			}
 
@@ -283,26 +289,23 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 				if recv.TokenId == 0 {
 					wrappedTokenID, err := config.GetWrappedTokenID()
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 
 					realTokenID = wrappedTokenID
 				}
 
-				tokenMint, err := config.GetTokenMint(realTokenID)
-				if err != nil {
-					return nil, err
-				}
+				addressBytes := solana.MustPublicKeyFromBase58(recv.DestinationAddress)
 
-				err = updateAmount(sourceAddrTxMap, recv.DestinationAddress, tokenMint, tokenAmount)
+				err := updateAmount(sourceAddrTxMap, addressBytes, realTokenID, tokenAmount)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 			}
 		}
 	}
 
-	receivers := make([]sendtx.BridgingTxReceiver, 0, len(sourceAddrTxMap))
+	receivers := make([]sendtx.PayloadReceiver, 0, len(sourceAddrTxMap))
 
 	for _, v := range sourceAddrTxMap {
 		receivers = append(receivers, v...)
@@ -310,12 +313,12 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 
 	// every batcher should have same order
 	sort.SliceStable(receivers, func(i, j int) bool {
-		if receivers[i].Address != receivers[j].Address {
-			return receivers[i].Address < receivers[j].Address
+		if cmp := bytes.Compare(receivers[i].Address[:], receivers[j].Address[:]); cmp != 0 {
+			return cmp < 0
 		}
 
-		return receivers[i].TokenAmount.TokenMint < receivers[j].TokenAmount.TokenMint
+		return receivers[i].TokenAmount.TokenID < receivers[j].TokenAmount.TokenID
 	})
 
-	return receivers, nil
+	return receivers, feeAmount, nil
 }

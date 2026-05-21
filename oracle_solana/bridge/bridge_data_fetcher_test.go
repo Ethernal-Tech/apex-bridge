@@ -115,7 +115,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		blockhash := solana.Hash(solana.NewWallet().PublicKey())
 
 		payload := sendtx.SolanaPayload{
-			Blockhash: blockhash.String(),
+			Blockhash: blockhash,
 			BatchID:   batchID,
 		}
 		rawPayload, err := payload.Marshal()
@@ -147,10 +147,9 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx blockhash conversion error", func(t *testing.T) {
 		chainID := common.ChainIDStrSolana
 		batchID := uint64(42)
-		blockhash := "invalid blockhash"
 
 		payload := sendtx.SolanaPayload{
-			Blockhash: blockhash,
+			Blockhash: [32]byte{},
 			BatchID:   batchID,
 		}
 		rawPayload, err := payload.Marshal()
@@ -182,7 +181,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		blockhash := solana.Hash(solana.NewWallet().PublicKey())
 
 		payload := sendtx.SolanaPayload{
-			Blockhash: blockhash.String(),
+			Blockhash: blockhash,
 			BatchID:   batchID,
 		}
 		rawPayload, err := payload.Marshal()
@@ -218,7 +217,7 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		blockhash := solana.Hash(solana.NewWallet().PublicKey())
 
 		payload := sendtx.SolanaPayload{
-			Blockhash: blockhash.String(),
+			Blockhash: blockhash,
 			BatchID:   batchID,
 		}
 		rawPayload, err := payload.Marshal()

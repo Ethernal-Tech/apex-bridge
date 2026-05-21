@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -173,7 +174,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, gbt)
 
-		receivers, err := sco.newSolanaReceivers(
+		receivers, feeAmount, err := sco.newSolanaReceivers(
 			sco.config,
 			confirmedTransactions,
 			sco.config.MinFeeForBridging,
@@ -181,9 +182,10 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		payload := sendtx.SolanaPayload{
-			Blockhash: expectedBlockhash.String(),
+			Blockhash: [32]byte(expectedBlockhash),
 			Receivers: receivers,
 			BatchID:   batchNonceID,
+			FeeAmount: feeAmount.Uint64(),
 		}
 		expectedRaw, err := payload.Marshal()
 		require.NoError(t, err)
@@ -195,10 +197,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		require.Equal(t, expectedRaw, gbt.TxRaw)
 	})
 
-	t.Run("error when token id is not in chain config", func(t *testing.T) {
+	t.Run("error when GetLatestBlockPoint fails", func(t *testing.T) {
 		dbMock.ExpectedCalls = nil
-		dbMock.On("ReadSlot").Return(uint64(10), nil).Once()
-		dbMock.On("GetBlockhashBySlot", uint64(6)).Return(solana.Hash{}, nil).Once()
+		dbMock.On("GetLatestBlockPoint").
+			Return(&solanaTrackerStore.BlockPoint{BlockSlot: 0}, errors.New("db error")).
+			Once()
 
 		amountAboveMinFee := common.LamportToWei(big.NewInt(2))
 
@@ -209,14 +212,15 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 						DestinationAddress: receiverWallet.PublicKey().String(),
 						Amount:             amountAboveMinFee,
 						AmountWrapped:      big.NewInt(0),
-						TokenId:            99,
+						TokenId:            1,
 					},
 				},
 			},
 		}
 
 		batchTxData, err := sco.GenerateBatchTransaction(ctx, destChainID, confirmedTransactions, batchNonceID)
-		require.Error(t, err, "token not found")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "db error")
 		require.Nil(t, batchTxData)
 	})
 
@@ -517,8 +521,13 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	_, sco, _, cleanup := newTestSolanaChainOperations(t)
 	defer cleanup()
 
-	receiver1 := "AddrA"
-	receiver2 := "AddrB"
+	receiver1Key, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+	receiver2Key, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
+	receiver1 := receiver1Key.PublicKey().String()
+	receiver2 := receiver2Key.PublicKey().String()
 
 	amount1 := common.LamportToWei(big.NewInt(5))
 	amount2 := common.LamportToWei(big.NewInt(2))
@@ -549,14 +558,14 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 		},
 	}
 
-	receivers, err := sco.newSolanaReceivers(
+	receivers, feeAmount, err := sco.newSolanaReceivers(
 		sco.config,
 		confirmed,
 		sco.config.MinFeeForBridging,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, receivers)
-
+	require.NotNil(t, feeAmount)
 	require.Len(t, receivers, 3)
 
 	for i := 0; i < len(receivers)-1; i++ {
@@ -564,14 +573,14 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 		r2 := receivers[i+1]
 
 		if r1.Address == r2.Address {
-			require.LessOrEqual(t, r1.TokenAmount.TokenMint, r2.TokenAmount.TokenMint)
+			require.LessOrEqual(t, r1.TokenAmount.TokenID, r2.TokenAmount.TokenID)
 		} else {
-			require.LessOrEqual(t, r1.Address, r2.Address)
+			require.LessOrEqual(t, bytes.Compare(r1.Address[:], r2.Address[:]), 0)
 		}
 	}
 
 	for _, r := range receivers {
-		require.NotNil(t, r.TokenAmount.Amount)
+		require.NotZero(t, r.TokenAmount.Amount)
 	}
 }
 
@@ -582,22 +591,9 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 	minFee := sco.config.MinFeeForBridging
 
 	t.Run("GetTokenMint error for non-existing token", func(t *testing.T) {
-		confirmed := []eth.ConfirmedTransaction{
-			{
-				Receivers: []eth.BridgeReceiver{
-					{
-						DestinationAddress: "SomeAddr",
-						Amount:             common.LamportToWei(big.NewInt(2)),
-						AmountWrapped:      big.NewInt(0),
-						TokenId:            99,
-					},
-				},
-			},
-		}
-
-		receivers, err := sco.newSolanaReceivers(sco.config, confirmed, minFee)
+		_, err := sco.config.GetTokenMint(99)
 		require.Error(t, err)
-		require.Nil(t, receivers)
+		require.ErrorContains(t, err, "token not found in chain config")
 	})
 
 	t.Run("GetWrappedTokenID error when no wrapped token configured", func(t *testing.T) {
@@ -607,11 +603,14 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 			configCopy.Tokens[k] = v
 		}
 
+		receiverWallet, err := solana.NewRandomPrivateKey()
+		require.NoError(t, err)
+
 		confirmed := []eth.ConfirmedTransaction{
 			{
 				Receivers: []eth.BridgeReceiver{
 					{
-						DestinationAddress: "SomeAddr",
+						DestinationAddress: receiverWallet.PublicKey().String(),
 						Amount:             big.NewInt(0),
 						AmountWrapped:      common.LamportToWei(big.NewInt(2)),
 						TokenId:            0,
@@ -620,8 +619,9 @@ func TestSolanaChain_newSolanaReceivers_ErrorPaths(t *testing.T) {
 			},
 		}
 
-		receivers, err := sco.newSolanaReceivers(&configCopy, confirmed, minFee)
+		receivers, feeAmount, err := sco.newSolanaReceivers(&configCopy, confirmed, minFee)
 		require.Error(t, err)
 		require.Nil(t, receivers)
+		require.Nil(t, feeAmount)
 	})
 }

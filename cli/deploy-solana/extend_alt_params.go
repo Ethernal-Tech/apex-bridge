@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	extendALTAddressFlag       = "alt-address"
-	extendALTTokenMintFlag     = "token-mint"
-	extendALTAddressFlagDesc   = "ALT public key to extend"
-	extendALTTokenMintFlagDesc = "token mint public key (repeat for multiple mints)" //nolint:gosec
+	extendALTAddressFlag            = "alt-address"
+	extendALTTokenIDAndMintFlag     = "token-id-and-mint"
+	extendALTAddressFlagDesc        = "ALT public key to extend"
+	extendALTTokenIDAndMintFlagDesc = "token_id:token mint public key (repeat for multiple mints)" //nolint:gosec
 )
 
 type extendALTParams struct {
@@ -27,7 +27,7 @@ type extendALTParams struct {
 	tokenMints []string
 
 	altPublicKey     solana.PublicKey
-	tokenMintsParsed []solana.PublicKey
+	tokenMintsParsed map[uint16]solana.PublicKey
 }
 
 func (p *extendALTParams) setFlags(cmd *cobra.Command) {
@@ -41,9 +41,9 @@ func (p *extendALTParams) setFlags(cmd *cobra.Command) {
 	)
 	cmd.Flags().StringArrayVar(
 		&p.tokenMints,
-		extendALTTokenMintFlag,
+		extendALTTokenIDAndMintFlag,
 		nil,
-		extendALTTokenMintFlagDesc,
+		extendALTTokenIDAndMintFlagDesc,
 	)
 }
 
@@ -63,7 +63,7 @@ func (p *extendALTParams) validateFlags() error {
 
 	p.altPublicKey = altPublicKey
 
-	tokenMintsParsed := make([]solana.PublicKey, 0, len(p.tokenMints))
+	tokenMintsParsed := make(map[uint16]solana.PublicKey)
 
 	for i, tokenMint := range p.tokenMints {
 		tokenMint = strings.TrimSpace(tokenMint)
@@ -71,12 +71,22 @@ func (p *extendALTParams) validateFlags() error {
 			return fmt.Errorf("token mint %d is empty", i)
 		}
 
-		tokenMintPubKey, err := solanawallet.PublicKeyFromAddress(tokenMint)
+		tokenIDAndMint := strings.Split(tokenMint, ":")
+		if len(tokenIDAndMint) != 2 {
+			return fmt.Errorf("invalid token ID and mint %s", tokenMint)
+		}
+
+		tokenID, err := strconv.ParseUint(tokenIDAndMint[0], 10, 16)
+		if err != nil {
+			return fmt.Errorf("invalid token ID %s: %w", tokenIDAndMint[0], err)
+		}
+
+		tokenMintPubKey, err := solanawallet.PublicKeyFromAddress(tokenIDAndMint[1])
 		if err != nil {
 			return fmt.Errorf("invalid token mint %s: %w", tokenMint, err)
 		}
 
-		tokenMintsParsed = append(tokenMintsParsed, tokenMintPubKey)
+		tokenMintsParsed[uint16(tokenID)] = tokenMintPubKey
 	}
 
 	p.tokenMintsParsed = tokenMintsParsed

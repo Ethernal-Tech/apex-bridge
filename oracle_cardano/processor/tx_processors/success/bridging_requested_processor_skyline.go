@@ -186,15 +186,12 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	totalTokensAmount.TotalAmountCurrencyDst = new(big.Int).Add(
 		totalTokensAmount.TotalAmountCurrencyDst, destChainInfo.FeeAddrBridgingWei)
 
-	// On solana chain we don't need to add fee address receiver
-	if metadata.DestinationChainID != common.ChainIDStrSolana {
-		receivers = append(receivers, cCore.BridgingRequestReceiver{
-			DestinationAddress: destChainInfo.FeeAddress,
-			Amount:             destChainInfo.FeeAddrBridgingWei,
-			AmountWrapped:      big.NewInt(0),
-			TokenId:            0,
-		})
-	}
+	receivers = append(receivers, cCore.BridgingRequestReceiver{
+		DestinationAddress: destChainInfo.FeeAddress,
+		Amount:             destChainInfo.FeeAddrBridgingWei,
+		AmountWrapped:      big.NewInt(0),
+		TokenId:            0,
+	})
 
 	claim := cCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash[:],

@@ -18,6 +18,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
+	"github.com/Ethernal-Tech/solana-infrastructure/sendtx/skyline_program"
 	solanaWallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -27,21 +28,21 @@ import (
 )
 
 func Test_DecodePayload(t *testing.T) {
-	payloadString := "2b0000000000000036694e6b6d74484a455757644568344d384a43547964535059547048324c3738667a563979445162627677012c000000000000003735627673687851445034597966783763447346624765525455463650695341664a716f613931344c5944392b00000000000000536f31313131313131313131313131313131313131313131313131313131313131313131313131313131320a00000000000000323030303030303030303000000000000000"
-	payloadBytes, err := hex.DecodeString(payloadString)
+	payloadBytes, err := hex.DecodeString(
+		"bc69d80eedd69641ee4109ea79868425a3b4946afa2e5683ee946b262b659729" +
+			"0168c61393628c69f2dd67c2a6754c1b3a706deae20f659f55432ef9cbc24d" +
+			"0198190000ca9a3b0000000000ca9a3b000000000100000000000000",
+	)
 	require.NoError(t, err)
 
 	var payload sendtx.SolanaPayload
 	err = payload.Unmarshal(payloadBytes)
 	require.NoError(t, err)
 
-	// fmt.Println(payload)
-
-	require.Equal(t, payload.BatchID, uint64(48))
-	require.Equal(t, payload.Blockhash, "6iNkmtHJEWWdEh4M8JCTydSPYTpH2L78fzV9yDQbbvw")
-	require.Equal(t, payload.Receivers[0].Address, "75bvshxQDP4Yyfx7cDsFbGeRTUF6PiSAfJqoa914LYD9")
-	require.Equal(t, payload.Receivers[0].TokenAmount.Amount, big.NewInt(2000000000))
-	require.Equal(t, payload.Receivers[0].TokenAmount.TokenMint, "So11111111111111111111111111111111111111112")
+	require.Equal(t, uint64(1), payload.BatchID)
+	require.Equal(t, uint64(1_000_000_000), payload.FeeAmount)
+	require.Len(t, payload.Receivers, 1)
+	require.NotEqual(t, [32]byte{}, payload.Blockhash)
 }
 
 func buildTestRawTx(t *testing.T, _ solana.PublicKey) []byte {
@@ -54,13 +55,13 @@ func buildTestRawTx(t *testing.T, _ solana.PublicKey) []byte {
 	require.NoError(t, err)
 
 	payload := sendtx.SolanaPayload{
-		Blockhash: solana.Hash(blockHash.PublicKey()).String(),
-		Receivers: []sendtx.BridgingTxReceiver{
+		Blockhash: [32]byte(blockHash.PublicKey()),
+		Receivers: []sendtx.PayloadReceiver{
 			{
-				Address: receiverWallet.PublicKey().String(),
+				Address: [32]byte(receiverWallet.PublicKey()),
 				TokenAmount: solanaWallet.TokenAmount{
-					Amount:    new(big.Int).SetUint64(1_000_000),
-					TokenMint: solana.NewWallet().PublicKey().String(),
+					TokenID: 1,
+					Amount:  1_000_000,
 				},
 			},
 		},
@@ -108,6 +109,61 @@ func buildBridgeMockWithSignatures(
 	bridgeMock.On("GetValidatorsChainData", ctx, chainID).Return(validators, nil)
 
 	return bridgeMock
+}
+
+func mockBridgeTokenRegistry(
+	t *testing.T,
+	mockProvider *solanaWallet.MockTxProvider,
+	regs ...skyline_program.TokenRegistry,
+) {
+	t.Helper()
+
+	results := make(rpc.GetProgramAccountsResult, 0, len(regs))
+
+	for _, reg := range regs {
+		body, err := reg.Marshal()
+		require.NoError(t, err)
+
+		raw := append(append([]byte(nil), skyline_program.Account_TokenRegistry[:]...), body...)
+		results = append(results, &rpc.KeyedAccount{
+			Pubkey:  solana.NewWallet().PublicKey(),
+			Account: &rpc.Account{Data: rpc.DataBytesOrJSONFromBytes(raw)},
+		})
+	}
+
+	mockProvider.On(
+		"GetProgramAccounts",
+		mock.Anything,
+		skyline_program.ProgramID,
+		mock.AnythingOfType("*rpc.GetProgramAccountsOpts"),
+	).Return(results, nil)
+}
+
+func defaultBridgeTokenRegistry(tokenID uint16) skyline_program.TokenRegistry {
+	return skyline_program.TokenRegistry{
+		TokenId:           tokenID,
+		Mint:              solana.NewWallet().PublicKey(),
+		IsLockUnlock:      true,
+		MinBridgingAmount: 10,
+		Bump:              250,
+	}
+}
+
+func newSendTxTestOps(t *testing.T, mockProvider *solanaWallet.MockTxProvider, privateKey solana.PrivateKey) *SolanaChainOperations {
+	t.Helper()
+
+	mockBridgeTokenRegistry(t, mockProvider, defaultBridgeTokenRegistry(1))
+
+	return &SolanaChainOperations{
+		chainID: common.ChainIDStrSolana,
+		config: &solanatx.SolanaChainConfig{
+			TxProviderEndpoint: rpc.LocalNet_WS,
+			ProgramID:          skyline_program.ProgramID.String(),
+		},
+		privateKey: &privateKey,
+		txSender:   sendtx.NewTxSender(mockProvider, nil),
+		logger:     hclog.NewNullLogger(),
+	}
 }
 
 func TestNewSolanaChainOperations(t *testing.T) {
@@ -248,15 +304,49 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		err := ops.SendTx(ctx, &eth.BridgeSmartContractMock{}, batch)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to unmarshal payload")
+		require.Contains(t, err.Error(), "failed to unmarshal solana payload")
 	})
 
 	t.Run("send returns error", func(t *testing.T) {
 		submiterMock := &solanaWallet.MockTxProvider{}
+		ops := newSendTxTestOps(t, submiterMock, privateKey)
+
+		rawTx := buildTestRawTx(t, privateKey.PublicKey())
+		validSigs := make([][]byte, 3)
+		bridgeMock := buildBridgeMockWithSignatures(t, ctx, common.ChainIDStrSolana, rawTx, validSigs)
+
+		batch := &eth.ConfirmedBatch{
+			ID:             2,
+			RawTransaction: rawTx,
+			Bitmap:         new(big.Int),
+			Signatures:     validSigs,
+		}
+
+		submiterMock.On("SendTransaction", mock.Anything, mock.AnythingOfType("*solana.Transaction")).
+			Return(solana.Signature{}, errors.New("rpc unavailable")).Once()
+
+		err := ops.SendTx(ctx, bridgeMock, batch)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to send tx")
+
+		submiterMock.AssertExpectations(t)
+	})
+
+	t.Run("create tx returns error when token registry lookup fails", func(t *testing.T) {
+		submiterMock := &solanaWallet.MockTxProvider{}
+		submiterMock.On(
+			"GetProgramAccounts",
+			mock.Anything,
+			skyline_program.ProgramID,
+			mock.AnythingOfType("*rpc.GetProgramAccountsOpts"),
+		).Return(rpc.GetProgramAccountsResult(nil), errors.New("rpc unavailable")).Once()
 
 		ops := &SolanaChainOperations{
-			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
+			chainID: common.ChainIDStrSolana,
+			config: &solanatx.SolanaChainConfig{
+				TxProviderEndpoint: rpc.LocalNet_WS,
+				ProgramID:          skyline_program.ProgramID.String(),
+			},
 			privateKey: &privateKey,
 			txSender:   sendtx.NewTxSender(submiterMock, nil),
 			logger:     hclog.NewNullLogger(),
@@ -273,26 +363,18 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Signatures:     validSigs,
 		}
 
-		submiterMock.On("SendTransaction", ctx, mock.AnythingOfType("*solana.Transaction")).
-			Return(solana.Signature{}, errors.New("rpc unavailable")).Once()
-
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to send tx")
+		require.Contains(t, err.Error(), "failed to create tx")
+		require.Contains(t, err.Error(), "get token registry accounts")
 
 		submiterMock.AssertExpectations(t)
+		submiterMock.AssertNotCalled(t, "SendTransaction", mock.Anything, mock.Anything)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		submiterMock := &solanaWallet.MockTxProvider{}
-
-		ops := &SolanaChainOperations{
-			chainID:    common.ChainIDStrSolana,
-			config:     &solanatx.SolanaChainConfig{TxProviderEndpoint: rpc.LocalNet_WS, ProgramID: "CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9"},
-			privateKey: &privateKey,
-			txSender:   sendtx.NewTxSender(submiterMock, nil),
-			logger:     hclog.NewNullLogger(),
-		}
+		ops := newSendTxTestOps(t, submiterMock, privateKey)
 
 		rawTx := buildTestRawTx(t, privateKey.PublicKey())
 		validSigs := make([][]byte, 3)
@@ -307,7 +389,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		expectedSig := solana.Signature{1, 2, 3}
 
-		submiterMock.On("SendTransaction", ctx, mock.AnythingOfType("*solana.Transaction")).
+		submiterMock.On("SendTransaction", mock.Anything, mock.AnythingOfType("*solana.Transaction")).
 			Return(expectedSig, nil).Once()
 
 		err := ops.SendTx(ctx, bridgeMock, batch)
@@ -384,26 +466,31 @@ func TestSolanaChainOperations_getSignaturePairs(t *testing.T) {
 }
 
 func TestPayload_Unmarshal(t *testing.T) {
-	var payload = sendtx.SolanaPayload{
-		Receivers: []sendtx.BridgingTxReceiver{
+	receiverWallet, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
+	blockHashWallet, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
+	payload := sendtx.SolanaPayload{
+		Receivers: []sendtx.PayloadReceiver{
 			{
-				Address: "Ggc6De36VRJrgDQG8KFkGPTDbQBKQ1PSpyP9JLappixz",
+				Address: [32]byte(receiverWallet.PublicKey()),
 				TokenAmount: solanaWallet.TokenAmount{
-					Amount:    big.NewInt(1000000000000000000),
-					TokenMint: solana.NewWallet().PublicKey().String(),
+					TokenID: 1,
+					Amount:  1_000_000_000,
 				},
 			},
 		},
 		BatchID:   1,
-		Blockhash: "fee448eb51b7b7dc767700ad1246eb2c57e683c644838d99934ee3619d23fefe",
+		Blockhash: [32]byte(blockHashWallet.PublicKey()),
 	}
 
 	payloadBytes, err := payload.Marshal()
 	require.NoError(t, err)
-	fmt.Println(hex.EncodeToString(payloadBytes))
 
 	var payload2 sendtx.SolanaPayload
 	err = payload2.Unmarshal(payloadBytes)
 	require.NoError(t, err)
-	fmt.Println(payload2)
+	require.Equal(t, payload, payload2)
 }

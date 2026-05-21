@@ -22,7 +22,6 @@ const (
 	solanaBlockFetchDelayFlag     = "sol-block-fetch-delay"
 	solanaMinFeeForBridgingFlag   = "sol-min-fee-for-bridging"
 	solanaMinOperationFeeFlag     = "sol-min-operation-fee"
-	solanaFeeAddrBridgingFlag     = "sol-fee-addr-bridging"
 	solanaSlotBuffSizeFlag        = "sol-slot-buff-size"
 	solanaEventBuffSizeFlag       = "sol-event-buff-size"
 	solanaErrorBuffSizeFlag       = "sol-error-buff-size"
@@ -32,7 +31,6 @@ const (
 	solanaBlockFetchDelayFlagDesc     = "delay in milliseconds between block fetches for solana chain"
 	solanaMinFeeForBridgingFlagDesc   = "minimal bridging fee for solana chain"
 	solanaMinOperationFeeFlagDesc     = "minimal operation fee for solana chain"
-	solanaFeeAddrBridgingFlagDesc     = "minimal addr fee bridging for solana chain"
 	solanaSlotBuffSizeFlagDesc        = "slot buffer size for solana chain tracker"
 	solanaEventBuffSizeFlagDesc       = "event buffer size for solana chain tracker"
 	solanaErrorBuffSizeFlagDesc       = "error buffer size for solana chain tracker"
@@ -41,7 +39,6 @@ const (
 	defaultSolanaBlockFetchDelay            = uint64(250)
 	defaultSolanaMinFeeForBridging          = uint64(1_000_010)
 	defaultSolanaMinOperationFee            = uint64(0)
-	defaultSolanaFeeAddrBridging            = uint64(1_000_000)
 	defaultSolanaMinColCoinsAllowedToBridge = uint64(1)
 	defaultSolanaSlotBuffSize               = uint8(20)
 	defaultSolanaEventBuffSize              = uint8(100)
@@ -64,7 +61,6 @@ type solanaChainGenerateConfigsParams struct {
 	solanaBlockFetchDelay   uint64
 	solanaMinFeeForBridging uint64
 	solanaMinOperationFee   uint64
-	solanaFeeAddrBridging   uint64
 	solanaSlotBuffSize      uint8
 	solanaEventBuffSize     uint8
 	solanaErrorBuffSize     uint8
@@ -146,12 +142,6 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		solanaMinOperationFeeFlag,
 		defaultSolanaMinOperationFee,
 		solanaMinOperationFeeFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.solanaFeeAddrBridging,
-		solanaFeeAddrBridgingFlag,
-		defaultSolanaFeeAddrBridging,
-		solanaFeeAddrBridgingFlagDesc,
 	)
 	cmd.Flags().Uint8Var(
 		&p.solanaSlotBuffSize,
@@ -282,7 +272,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
 		PoolIntervalMiliseconds:    defaultSolanaPoolIntervalMiliseconds,
 		RestartTrackerPullCheck:    time.Second * 150,
-		FeeAddrBridgingAmount:      p.solanaFeeAddrBridging,
+		FeeAddrBridgingAmount:      p.solanaMinFeeForBridging,
 		MinColCoinsAllowedToBridge: defaultSolanaMinColCoinsAllowedToBridge,
 		MinOperationFee:            p.solanaMinOperationFee,
 		SlotBuffSize:               p.solanaSlotBuffSize,
