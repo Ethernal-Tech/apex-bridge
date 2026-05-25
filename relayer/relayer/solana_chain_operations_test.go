@@ -162,6 +162,7 @@ func newSendTxTestOps(t *testing.T, mockProvider *solanaWallet.MockTxProvider, p
 		},
 		privateKey: &privateKey,
 		txSender:   sendtx.NewTxSender(mockProvider, nil),
+		txProvider: mockProvider,
 		logger:     hclog.NewNullLogger(),
 	}
 }
@@ -330,6 +331,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		require.Contains(t, err.Error(), "failed to send tx")
 
 		submiterMock.AssertExpectations(t)
+		submiterMock.AssertNotCalled(t, "WaitForSignature", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("create tx returns error when token registry lookup fails", func(t *testing.T) {
@@ -391,6 +393,8 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 
 		submiterMock.On("SendTransaction", mock.Anything, mock.AnythingOfType("*solana.Transaction")).
 			Return(expectedSig, nil).Once()
+		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
+			Return(nil).Once()
 
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)

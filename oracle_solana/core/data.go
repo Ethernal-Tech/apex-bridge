@@ -130,7 +130,7 @@ func (p ProcessedSolanaTx) GetIsInvalid() bool {
 }
 
 func (p ProcessedSolanaTx) ToSolanaTxKey() []byte {
-	return ToSolanaTxKey(p.OriginChainID, p.InnerActionHash[:])
+	return ToSolanaTxKey(p.OriginChainID, p.TxSignature[:])
 }
 
 type BridgeExpectedSolanaTx struct {

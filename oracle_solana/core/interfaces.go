@@ -46,9 +46,6 @@ type SolanaTxsReceiver interface {
 	NewUnprocessedEvent(originChainID string, event tracker.EventNotification) error
 }
 
-type SolanaTxsProcessor interface {
-}
-
 type SolanaBridgeDataFetcher interface {
 	oCore.BridgeDataFetcher
 	FetchExpectedTx(chainID string) (*BridgeExpectedSolanaTx, error)

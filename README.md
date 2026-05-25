@@ -40,6 +40,9 @@ abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi -
        --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
 ```
 
+# Solana binaries
+Required solana binaries could be installed using: https://solana.com/docs/intro/installation
+
 # How to generate blade secrets
 ```shell
 $ blade secrets init --insecure --data-dir ./blade-secrets
@@ -66,6 +69,13 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
+# How to generate key for solana batcher(s)
+```shell
+$ go run ./main.go wallet-create --chain solana --validator-data-dir /home/bbs/cardano --type batcher-solana --show-pk
+```
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
+`--validator-config path_to_config/config.json`
+
 # How to generate ecdsa keys for evm relayer(s)
 ```shell
 $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --type relayer-evm --show-pk
@@ -73,9 +83,14 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
-# How to generate key cardano relayer
+# How to generate key for cardano relayer
 ```shell
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-cardano --network-id 1
+```
+
+# How to generate key for solana relayer
+```shell
+$ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-solana --network-id 2
 ```
 
 # How to generate key for blade admin
@@ -258,7 +273,6 @@ $ apex-bridge generate-configs solana-chain \
         --sol-block-fetch-delay <delay in ms between block fetches> \
         --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
         --sol-min-operation-fee <minimal operation fee> \
-        --sol-fee-addr-bridging <minimal addr fee bridging amount> \
         --slot-rounding-threshold <slot rounding threshold> \
         --sol-slot-buff-size <tracker slot buffer size> \
         --sol-event-buff-size <tracker event buffer size> \
@@ -267,6 +281,8 @@ $ apex-bridge generate-configs solana-chain \
         --fee-addr-bridging <solana public key used as bridging fee address> \
         --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
+        --sol-ttl-number-inc <TTL increment for solana chain> \
+        --sol-confirmation-timeout <confirmation timeout for solana chain txs in milliseconds>
         --output-validator-components-file-name <validator components config json output file name> \
         --output-relayer-file-name <relayer config json output file name> \
         --dbs-path <path to where databases will be stored> \
@@ -553,6 +569,16 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - optional `--is-wrapped-token` bool flag
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin update-chain-max-number-of-transactions \
+        --chain-ids-config ./chainIDsConfig.json \
+        --bridge-url http://localhost:12013 \
+        --chain nexus \
+        --max-number-of-transactions 10 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell

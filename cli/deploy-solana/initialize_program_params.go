@@ -26,7 +26,6 @@ const (
 	initializeProgramMinFeeForBridgingFlag          = "min-fee-for-bridging"
 	initializeProgramMinAmountToBridgeFlag          = "min-amount-to-bridge"
 	initializeProgramTreasuryAddressFlag            = "treasury-address"
-	initializeProgramRelayerAddressFlag             = "relayer-address"
 	initializeProgramConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	initializeProgramRPCURLFlagDesc                     = "Solana RPC URL"
@@ -38,7 +37,6 @@ const (
 	initializeProgramMinFeeForBridgingFlagDesc          = "minimal fee for bridging (lamports)"
 	initializeProgramMinAmountToBridgeFlagDesc          = "minimal token amount to bridge (lamports)"
 	initializeProgramTreasuryAddressFlagDesc            = "treasury wallet address"
-	initializeProgramRelayerAddressFlagDesc             = "relayer wallet address used as bridging fee receiver"
 	initializeProgramConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
 
 	defaultInitializeProgramConfirmationTimeoutSeconds = uint64(120)
@@ -53,12 +51,10 @@ type initializeProgramParams struct {
 	minFeeForBridging          uint64
 	minAmountToBridge          uint64
 	treasuryAddress            string
-	relayerAddress             string
 	confirmationTimeoutSeconds uint64
 
 	adminPrivateKey     solana.PrivateKey
 	treasuryPublicKey   solana.PublicKey
-	relayerPublicKey    solana.PublicKey
 	confirmationTimeout time.Duration
 	programID           string
 	programPublicKey    solana.PublicKey
@@ -119,12 +115,6 @@ func (p *initializeProgramParams) setFlags(cmd *cobra.Command) {
 		initializeProgramTreasuryAddressFlag,
 		"",
 		initializeProgramTreasuryAddressFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.relayerAddress,
-		initializeProgramRelayerAddressFlag,
-		"",
-		initializeProgramRelayerAddressFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.confirmationTimeoutSeconds,
@@ -204,17 +194,6 @@ func (p *initializeProgramParams) validateFlags() error {
 
 	p.treasuryPublicKey = treasuryPublicKey
 
-	if p.relayerAddress == "" {
-		return fmt.Errorf("relayer address not specified: --%s", initializeProgramRelayerAddressFlag)
-	}
-
-	relayerPublicKey, err := solanawallet.PublicKeyFromAddress(p.relayerAddress)
-	if err != nil {
-		return fmt.Errorf("invalid relayer address: %w", err)
-	}
-
-	p.relayerPublicKey = relayerPublicKey
-
 	if p.confirmationTimeoutSeconds == 0 {
 		return fmt.Errorf("confirmation timeout must be greater than 0: --%s",
 			initializeProgramConfirmationTimeoutSecondsFlag)
@@ -243,7 +222,6 @@ func (p *initializeProgramParams) Execute(outputter common.OutputFormatter) (com
 		MinFeeForBridging:     p.minFeeForBridging,
 		MinAmountToBridge:     p.minAmountToBridge,
 		TreasuryAddress:       p.treasuryPublicKey,
-		BridgingFeeAddress:    p.relayerPublicKey,
 	})
 
 	txDto := solsendtx.InitializeDto{

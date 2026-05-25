@@ -23,8 +23,8 @@ type BridgingRequestSolMetadata struct {
 	DestinationChainID string                                  `json:"d"`
 	SenderAddr         string                                  `json:"s"`
 	Transactions       []BridgingRequestSolMetadataTransaction `json:"tx"`
-	BridgingFee        uint64                                  `json:"fa"`
-	OperationFee       uint64                                  `json:"of"`
+	BridgingFee        *big.Int                                `json:"fa"`
+	OperationFee       *big.Int                                `json:"of"`
 }
 
 type RefundBridgingRequestSolMetadata struct {

@@ -25,6 +25,8 @@ const (
 	solanaSlotBuffSizeFlag        = "sol-slot-buff-size"
 	solanaEventBuffSizeFlag       = "sol-event-buff-size"
 	solanaErrorBuffSizeFlag       = "sol-error-buff-size"
+	solanaTTLNumberIncFlag        = "sol-ttl-number-inc"
+	solanaConfirmationTimeoutFlag = "sol-confirmation-timeout"
 
 	solanaChainNodeURLFlagDesc        = "solana chain node URL"
 	solanaChainTrackedProgramFlagDesc = "(mandatory) solana program address to track"
@@ -34,6 +36,8 @@ const (
 	solanaSlotBuffSizeFlagDesc        = "slot buffer size for solana chain tracker"
 	solanaEventBuffSizeFlagDesc       = "event buffer size for solana chain tracker"
 	solanaErrorBuffSizeFlagDesc       = "error buffer size for solana chain tracker"
+	solanaTTLNumberIncFlagDesc        = "TTL increment for solana chain"
+	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
 
 	defaultSolanaPoolIntervalMiliseconds    = time.Duration(1500)
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -43,11 +47,11 @@ const (
 	defaultSolanaSlotBuffSize               = uint8(20)
 	defaultSolanaEventBuffSize              = uint8(100)
 	defaultSolanaErrorBuffSize              = uint8(10)
+	defaultSolanaTTLSlotNumberInc           = uint64(0)
+	defaultSolanaConfirmationTimeout        = int64(60000) // 1 minute
 
-	feeAddrBridgingFlag     = "fee-addr-bridging"
-	feeAddrBridgingFlagDesc = "fee address bridging for solana chain"
-	altPublicKeyFlag        = "alt-public-key"
-	altPublicKeyFlagDesc    = "alt public key for solana chain"
+	altPublicKeyFlag     = "alt-public-key"
+	altPublicKeyFlagDesc = "alt public key for solana chain"
 
 	defaultSlotRoundingThresholdSolana = 10
 	defaultNoBatchPeriodPercentSolana  = 0.01
@@ -65,7 +69,9 @@ type solanaChainGenerateConfigsParams struct {
 	solanaEventBuffSize     uint8
 	solanaErrorBuffSize     uint8
 
-	emptyBlocksThreshold uint
+	emptyBlocksThreshold      uint
+	solanaTTLNumberInc        uint64
+	solanaConfirmationTimeout int64
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -97,10 +103,6 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 
 	if _, err := wallet.PublicKeyFromAddress(p.treasuryAddress); err != nil {
 		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
-	}
-
-	if _, err := wallet.PublicKeyFromAddress(p.feeAddrBridging); err != nil {
-		return fmt.Errorf("invalid %s: %s", feeAddrBridgingFlag, p.feeAddrBridging)
 	}
 
 	return nil
@@ -169,6 +171,20 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.solanaTTLNumberInc,
+		solanaTTLNumberIncFlag,
+		defaultSolanaTTLSlotNumberInc,
+		solanaTTLNumberIncFlagDesc,
+	)
+
+	cmd.Flags().Int64Var(
+		&p.solanaConfirmationTimeout,
+		solanaConfirmationTimeoutFlag,
+		defaultSolanaConfirmationTimeout,
+		solanaConfirmationTimeoutFlagDesc,
+	)
+
 	// Output params
 	cmd.Flags().StringVar(
 		&p.outputDir,
@@ -209,13 +225,6 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		treasuryAddressFlag,
 		"",
 		treasuryAddressFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&p.feeAddrBridging,
-		feeAddrBridgingFlag,
-		"",
-		feeAddrBridgingFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -260,9 +269,10 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 
 	vcConfig.SolanaChains[p.chainIDString] = &oCore.SolanaChainConfig{
 		SolanaChainConfig: solanatx.SolanaChainConfig{
+			ConfirmationTimeout:   time.Duration(p.solanaConfirmationTimeout),
+			TTLNumberInc:          p.solanaTTLNumberInc,
 			MinFeeForBridging:     common.LamportToWei(new(big.Int).SetUint64(p.solanaMinFeeForBridging)),
 			TxProviderEndpoint:    p.solanaChainNodeURL,
-			BridgingFeeAddress:    p.feeAddrBridging,
 			SlotRoundingThreshold: p.slotRoundingThreshold,
 			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
 			ALTPublicKey:          p.altPublicKey,

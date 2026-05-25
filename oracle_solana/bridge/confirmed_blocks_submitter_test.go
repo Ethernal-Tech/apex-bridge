@@ -146,7 +146,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockHash:   blockHash,
 			BlockNumber: 20,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return([]*solanaCore.SolanaTx{}, nil).Once()
+		mockEmptySlots(indexerDB, blockHash, 2, 3)
 		bridgeSubmitter.On("SubmitBlocks", chainID, mock.Anything).Return(testErr).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
@@ -174,7 +174,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockHash:   blockHash,
 			BlockNumber: 20,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return([]*solanaCore.SolanaTx{}, nil).Once()
+		mockEmptySlots(indexerDB, blockHash, 2, 3)
 		bridgeSubmitter.On("SubmitBlocks", chainID, mock.Anything).Return(nil).Once()
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
 			BlockNumOrSlot: 3,
@@ -201,14 +201,21 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		}, nil).Once()
 
 		blockHash := solana.Hash(solana.NewWallet().PublicKey())
+		pendingSig, signErr := solana.NewWallet().PrivateKey.Sign([]byte("pending-tx"))
+		require.NoError(t, signErr)
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
 			BlockSlot:   6,
 			BlockHash:   blockHash,
 			BlockNumber: 99,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return([]*solanaCore.SolanaTx{
-			{SlotNumber: 4},
+		mockEmptySlots(indexerDB, blockHash, 2, 3)
+		indexerDB.On("GetEventsBySlot", uint64(4)).Return([]solanaTxsStore.EventRecord{
+			{Slot: 4, TxSignature: pendingSig.String()},
 		}, nil).Once()
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{
+			ChainID: chainID,
+			DBKey:   pendingSig[:],
+		}).Return((*solanaCore.ProcessedSolanaTx)(nil), nil).Once()
 
 		submittedBlocks := []eth.CardanoBlock{
 			{
@@ -234,7 +241,8 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{
 				SubmitConfig: oracleCommon.SubmitConfig{
-					EmptyBlocksThreshold: map[string]uint{},
+					ConfirmedBlocksThreshold: 30,
+					EmptyBlocksThreshold:     map[string]uint{},
 				},
 			},
 		}
@@ -246,7 +254,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockSlot:   1,
 			BlockNumber: 1,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return([]*solanaCore.SolanaTx{}, nil).Once()
+		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
@@ -260,6 +268,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{
 				SubmitConfig: oracleCommon.SubmitConfig{
+					ConfirmedBlocksThreshold: 30,
 					EmptyBlocksThreshold: map[string]uint{
 						chainID: uint(math.MaxInt) + 1,
 					},
@@ -274,7 +283,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockSlot:   1,
 			BlockNumber: 1,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return([]*solanaCore.SolanaTx{}, nil).Once()
+		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
@@ -284,7 +293,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		require.ErrorContains(t, err, "threshold too large")
 	})
 
-	t.Run("getBlocksToSubmit unprocessed txs error", func(t *testing.T) {
+	t.Run("getBlocksToSubmit get events by slot error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
 		}
@@ -296,13 +305,20 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockSlot:   3,
 			BlockNumber: 2,
 		}, nil).Once()
-		oracleDB.On("GetAllUnprocessedTxs", chainID, 0).Return(([]*solanaCore.SolanaTx)(nil), testErr).Once()
+		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord(nil), testErr).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		_, _, err = blocksSubmitter.getBlocksToSubmit(1)
-		require.ErrorContains(t, err, "error getting unprocessed txs")
+		require.ErrorContains(t, err, "failed to get events for slot")
 	})
+}
+
+func mockEmptySlots(indexerDB *solanaTxsStore.MockStorageHandler, blockHash solana.Hash, slots ...uint64) {
+	for _, slot := range slots {
+		indexerDB.On("GetEventsBySlot", slot).Return([]solanaTxsStore.EventRecord{}, nil).Once()
+		indexerDB.On("GetBlockhashBySlot", slot).Return(blockHash, nil).Once()
+	}
 }

@@ -50,7 +50,8 @@ func NewSolanaOracle(
 	db.Init(boltDB, appConfig, typeRegister)
 
 	bridgeDataFetcher := bridge.NewSolanaBridgeDataFetcher(
-		ctx, oracleBridgeSC, indexerDbs, logger.Named("solana_bridge_data_fetcher"))
+		ctx, oracleBridgeSC, indexerDbs, logger.Named("solana_bridge_data_fetcher"),
+		appConfig)
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("solana_expected_txs_fetcher"))

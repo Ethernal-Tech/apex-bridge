@@ -259,7 +259,7 @@ func TestRefundRequestProcessorSkyline(t *testing.T) {
 		require.Equal(t, uint64(2), claim.RetryCounter)
 		require.Len(t, claim.TokenAmounts, 4)
 		require.Equal(t, uint16(1), claim.TokenAmounts[0].TokenId)
-		require.Equal(t, common.LamportToWei(big.NewInt(100)), claim.TokenAmounts[0].AmountCurrency)
+		require.Equal(t, common.LamportToWei(big.NewInt(999)), claim.TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claim.TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(2), claim.TokenAmounts[1].TokenId)
 		require.Equal(t, common.LamportToWei(big.NewInt(50)), claim.TokenAmounts[1].AmountTokens)
@@ -290,12 +290,13 @@ func TestRefundRequestProcessorSkyline(t *testing.T) {
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 	})
 
-	t.Run("buildSolRefundTokenAmounts track flags", func(t *testing.T) {
+	t.Run("buildRefundTokenAmounts track flags", func(t *testing.T) {
 		cfg := testRefundAppConfig()
 		chainCfg := cfg.SolanaChains[common.ChainIDStrSolana]
 		currencyID, err := chainCfg.GetCurrencyID()
 		require.NoError(t, err)
 
+		txValue := common.LamportToWei(big.NewInt(200))
 		metadata := &solCore.RefundBridgingRequestSolMetadata{
 			DestinationChainID: common.ChainIDStrPrime,
 			Transactions: []solCore.BridgingRequestSolMetadataTransaction{
@@ -305,9 +306,11 @@ func TestRefundRequestProcessorSkyline(t *testing.T) {
 			},
 		}
 
-		tokenAmounts, totalCurrency, totalWrapped := buildSolRefundTokenAmounts(chainCfg, metadata, currencyID)
+		tokenAmounts, totalCurrency, totalWrapped := buildRefundTokenAmounts(chainCfg, txValue, metadata, currencyID)
 		require.Len(t, tokenAmounts, 3)
 		require.Equal(t, common.LamportToWei(big.NewInt(30)), totalCurrency)
 		require.Equal(t, common.LamportToWei(big.NewInt(40)), totalWrapped)
+		require.Equal(t, txValue, tokenAmounts[0].AmountCurrency)
+		require.Equal(t, uint64(0), tokenAmounts[1].AmountCurrency.Uint64())
 	})
 }

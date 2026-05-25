@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	sendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
@@ -21,8 +22,9 @@ const (
 	// Solana slot target is 400ms
 	// TTL for solana tx is caped to 150 blocks
 	// source: https://solana.com/developers/guides/advanced/confirmation#how-does-transaction-expiration-work
+	// we add 50 blocks on top of the ttl to be safe
 
-	TTLOfset = 150
+	TTLOfset = 200
 )
 
 type SolanaBridgeDataFetcherImpl struct {
@@ -30,6 +32,7 @@ type SolanaBridgeDataFetcherImpl struct {
 	bridgeSC   eth.IOracleBridgeSmartContract
 	logger     hclog.Logger
 	indexerDbs map[string]solanaTxsStore.StorageHandler
+	appConfig  *oCore.AppConfig
 }
 
 var _ core.SolanaBridgeDataFetcher = (*SolanaBridgeDataFetcherImpl)(nil)
@@ -39,12 +42,14 @@ func NewSolanaBridgeDataFetcher(
 	bridgeSC eth.IOracleBridgeSmartContract,
 	indexerDbs map[string]solanaTxsStore.StorageHandler,
 	logger hclog.Logger,
+	appConfig *oCore.AppConfig,
 ) *SolanaBridgeDataFetcherImpl {
 	return &SolanaBridgeDataFetcherImpl{
 		ctx:        ctx,
 		bridgeSC:   bridgeSC,
 		indexerDbs: indexerDbs,
 		logger:     logger,
+		appConfig:  appConfig,
 	}
 }
 
@@ -95,7 +100,7 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 			expectedTx := &core.BridgeExpectedSolanaTx{
 				ChainID:  chainID,
 				Hash:     hash,
-				TTL:      blockNumber + TTLOfset,
+				TTL:      blockNumber + TTLOfset + df.appConfig.SolanaChains[chainID].TTLNumberInc,
 				Metadata: txMetadata,
 				Priority: 0,
 			}

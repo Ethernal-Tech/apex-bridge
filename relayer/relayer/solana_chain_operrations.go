@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -20,7 +21,7 @@ type SolanaChainOperations struct {
 	config     *solanatx.SolanaChainConfig
 	privateKey *solana.PrivateKey
 	txSender   *sendtx.TxSender
-	txProvider *wallet.Provider
+	txProvider wallet.ITxSubmiter
 	logger     hclog.Logger
 }
 
@@ -116,7 +117,12 @@ func (sco *SolanaChainOperations) SendTx(
 			return fmt.Errorf("failed to convert alt public key to solana.PublicKey: %w", err)
 		}
 
-		altResolver := wallet.NewAddressLookupTableResolver(sco.txProvider)
+		provider, ok := sco.txProvider.(*wallet.Provider)
+		if !ok {
+			return fmt.Errorf("address lookup tables require a concrete wallet provider")
+		}
+
+		altResolver := wallet.NewAddressLookupTableResolver(provider)
 
 		lookupTables, err := altResolver.Resolve(ctx, altPublicKey)
 		if err != nil {
@@ -154,6 +160,11 @@ func (sco *SolanaChainOperations) SendTx(
 	txSignature, err := sco.txSender.SendTx(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("failed to send tx: %w", err)
+	}
+
+	err = sco.txProvider.WaitForSignature(ctx, *txSignature, rpc.CommitmentFinalized, sco.config.ConfirmationTimeout)
+	if err != nil {
+		return fmt.Errorf("failed to wait for signature: %w", err)
 	}
 
 	sco.logger.Info("Submitted the bridge transaction to skyline solana program",

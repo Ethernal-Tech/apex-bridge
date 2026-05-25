@@ -33,7 +33,8 @@ func (*RefundRequestProcessorSkylineImpl) PreValidate(tx *core.SolanaTx, appConf
 }
 
 func (*RefundRequestProcessorSkylineImpl) HandleBridgingProcessorPreValidate(
-	tx *core.SolanaTx, appConfig *oCore.AppConfig) error {
+	tx *core.SolanaTx, appConfig *oCore.AppConfig,
+) error {
 	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
 		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
 		return fmt.Errorf(
@@ -82,7 +83,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	chainIDConverter := appConfig.ChainIDConverter
 
 	tokenAmounts, totalCurrency, totalWrapped :=
-		buildSolRefundTokenAmounts(chainConfig, metadata, currencyID)
+		buildRefundTokenAmounts(chainConfig, tx.Value, metadata, currencyID)
 
 	claim := oCore.RefundRequestClaim{
 		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
@@ -120,13 +121,11 @@ func (*RefundRequestProcessorSkylineImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if chainConfig.MinFeeForBridging != nil && chainConfig.MinFeeForBridging.Sign() > 0 {
-		if tx.Value.Cmp(chainConfig.MinFeeForBridging) == -1 {
-			return fmt.Errorf(
-				"tx.Value: %v is less than the minimum required for refund: %v",
-				tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)),
-			)
-		}
+	if tx.Value.Cmp(chainConfig.MinFeeForBridging) == -1 {
+		return fmt.Errorf(
+			"tx.Value: %v is less than the minimum required for refund: %v",
+			tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)),
+		)
 	}
 
 	for _, receiver := range metadata.Transactions {
@@ -142,14 +141,17 @@ func (*RefundRequestProcessorSkylineImpl) validate(
 	return nil
 }
 
-func buildSolRefundTokenAmounts(
+func buildRefundTokenAmounts(
 	chainConfig *oCore.SolanaChainConfig,
+	txValue *big.Int,
 	metadata *core.RefundBridgingRequestSolMetadata,
 	currencyID uint16,
 ) (tokenAmounts []oCore.RefundTokenAmount, totalCurrency, totalWrapped *big.Int) {
 	tokenAmounts = make([]oCore.RefundTokenAmount, 0)
 	totalCurrency = big.NewInt(0)
 	totalWrapped = big.NewInt(0)
+
+	currencyAdded := false
 
 	for _, receiver := range metadata.Transactions {
 		tokenPair, _ := oUtils.GetTokenPair(
@@ -159,29 +161,42 @@ func buildSolRefundTokenAmounts(
 			receiver.TokenID,
 		)
 
+		// handle currency
 		if receiver.TokenID == currencyID {
 			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalCurrency.Add(totalCurrency, receiver.Amount)
 			}
 
-			tokenAmounts = append(tokenAmounts, oCore.RefundTokenAmount{
-				TokenId:        receiver.TokenID,
-				AmountCurrency: receiver.Amount,
-				AmountTokens:   big.NewInt(0),
-			})
+			if !currencyAdded {
+				tokenAmounts = append(tokenAmounts, oCore.RefundTokenAmount{
+					TokenId:        receiver.TokenID,
+					AmountCurrency: txValue,
+					AmountTokens:   big.NewInt(0),
+				})
+
+				currencyAdded = true
+			}
 
 			continue
 		}
 
+		// handle wrapped token
 		if chainConfig.Tokens[receiver.TokenID].IsWrappedCurrency {
 			if tokenPair != nil && (chainConfig.AlwaysTrackCurrencyAndWrappedCurrency || tokenPair.TrackSourceToken) {
 				totalWrapped.Add(totalWrapped, receiver.Amount)
 			}
 		}
 
+		// build RefundTokenAmount entry
+		currencyAmount := big.NewInt(0)
+		if !currencyAdded {
+			currencyAmount = txValue
+			currencyAdded = true
+		}
+
 		tokenAmounts = append(tokenAmounts, oCore.RefundTokenAmount{
 			TokenId:        receiver.TokenID,
-			AmountCurrency: big.NewInt(0),
+			AmountCurrency: currencyAmount,
 			AmountTokens:   receiver.Amount,
 		})
 	}

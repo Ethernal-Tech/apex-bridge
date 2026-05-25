@@ -19,8 +19,6 @@ import (
 func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
 		utxoMinValue         = uint64(1000000)
-		minFeeForBridging    = uint64(1000010)
-		minOperationFee      = uint64(500)
 		minColCoinsToBridge  = uint64(100000)
 		feeAddrBridgingAmt   = uint64(1000005)
 		validCardanoTestAddr = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
@@ -30,6 +28,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		primeCurrencyID  = uint16(2)
 		nexusCurrencyID  = uint16(3)
 	)
+
+	minFeeForBridging := common.LamportToWei(new(big.Int).SetUint64(1000010))
+	minOperationFee := common.LamportToWei(new(big.Int).SetUint64(500))
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100_000_000_000)
 
@@ -63,8 +64,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					},
 					MinColCoinsAllowedToBridge: common.LamportToWei(new(big.Int).SetUint64(minColCoinsToBridge)),
 					FeeAddrBridgingAmount:      common.LamportToWei(new(big.Int).SetUint64(feeAddrBridgingAmt)),
-					MinOperationFee:            common.LamportToWei(new(big.Int).SetUint64(minOperationFee)),
-					MinFeeForBridging:          common.LamportToWei(new(big.Int).SetUint64(minFeeForBridging)),
+					MinOperationFee:            minOperationFee,
+					MinFeeForBridging:          minFeeForBridging,
 				},
 			},
 			SolanaChains: map[string]*oCore.SolanaChainConfig{
@@ -81,11 +82,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 						Tokens: map[uint16]common.Token{
 							solanaCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						},
-						MinFeeForBridging: common.LamportToWei(new(big.Int).SetUint64(minFeeForBridging)),
+						MinFeeForBridging: minFeeForBridging,
 					},
 					FeeAddrBridgingAmount:      feeAddrBridgingAmt,
 					MinColCoinsAllowedToBridge: minColCoinsToBridge,
-					MinOperationFee:            minOperationFee,
+					MinOperationFee:            common.WeiToLamport(minOperationFee).Uint64(),
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
@@ -153,7 +154,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: "unregistered",
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -174,7 +175,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrSolana,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim operation fee below minimum", func(t *testing.T) {
@@ -185,7 +186,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Transactions: []core.BridgingRequestSolMetadataTransaction{
 				{Address: validCardanoTestAddr, Amount: common.LamportToWei(new(big.Int).SetUint64(utxoMinValue)), TokenID: solanaCurrencyID},
 			},
-			OperationFee: minOperationFee - 1,
+			OperationFee: new(big.Int).Sub(minOperationFee, big.NewInt(1)),
 			BridgingFee:  minFeeForBridging,
 		})
 		require.NoError(t, err)
@@ -350,6 +351,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim bridging fee below minimum", func(t *testing.T) {
 		cardanoMinWei := common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))
+		bridgingFeeWei := new(big.Int).Sub(minFeeForBridging, big.NewInt(1))
+		txValue := new(big.Int).Add(cardanoMinWei, bridgingFeeWei)
+
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrPrime,
@@ -358,7 +362,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				{Address: validCardanoTestAddr, Amount: cardanoMinWei, TokenID: solanaCurrencyID},
 			},
 			OperationFee: minOperationFee,
-			BridgingFee:  minFeeForBridging - 1,
+			BridgingFee:  bridgingFeeWei,
 		})
 		require.NoError(t, err)
 
@@ -368,10 +372,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.SolanaTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrSolana,
-			Value:         cardanoMinWei,
+			Value:         txValue,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+		require.ErrorContains(t, err, "bridging fee in metadata is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim operation fee below minimum", func(t *testing.T) {
@@ -383,7 +387,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Transactions: []core.BridgingRequestSolMetadataTransaction{
 				{Address: validCardanoTestAddr, Amount: cardanoMinWei, TokenID: solanaCurrencyID},
 			},
-			OperationFee: minOperationFee - 1,
+			OperationFee: new(big.Int).Sub(minOperationFee, big.NewInt(1)),
 			BridgingFee:  minFeeForBridging,
 		})
 		require.NoError(t, err)
@@ -402,6 +406,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim amount above max", func(t *testing.T) {
 		bigAmountWei := new(big.Int).Add(common.LamportToWei(maxAmountAllowedToBridge), big.NewInt(1))
+		txValue := new(big.Int).Add(bigAmountWei, minFeeForBridging)
+
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrPrime,
@@ -420,7 +426,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.SolanaTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrSolana,
-			Value:         bigAmountWei,
+			Value:         txValue,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "greater than maximum allowed")
@@ -428,6 +434,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid to Cardano", func(t *testing.T) {
 		amount := common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))
+		txValue := new(big.Int).Add(amount, minFeeForBridging)
 
 		var txSig solana.Signature
 
@@ -452,7 +459,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrSolana,
 			TxSignature:   txSig,
-			Value:         amount,
+			Value:         txValue,
 		}, appConfig)
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
@@ -461,11 +468,13 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t,
 			common.ChainIDStrPrime,
 			appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
-		require.Len(t, claims.BridgingRequestClaims[0].Receivers, 1)
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, 2)
+		require.Equal(t, primeFeeAddr, claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 	})
 
 	t.Run("ValidateAndAddClaim valid to ETH", func(t *testing.T) {
 		amount := common.LamportToWei(new(big.Int).SetUint64(utxoMinValue))
+		txValue := new(big.Int).Add(amount, minFeeForBridging)
 
 		var txSig solana.Signature
 
@@ -490,7 +499,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrSolana,
 			TxSignature:   txSig,
-			Value:         amount,
+			Value:         txValue,
 		}, appConfig)
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
@@ -522,6 +531,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		totalValue := new(big.Int).Mul(amount, big.NewInt(2))
+		totalValue.Add(totalValue, minFeeForBridging)
+
 		claims := &oCore.BridgeClaims{}
 		appConfig := getAppConfig()
 
@@ -533,6 +544,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 		require.NoError(t, err)
 		require.Equal(t, 1, claims.Count())
-		require.Len(t, claims.BridgingRequestClaims[0].Receivers, 2)
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, 3)
+		require.Equal(t, primeFeeAddr, claims.BridgingRequestClaims[0].Receivers[2].DestinationAddress)
 	})
 }

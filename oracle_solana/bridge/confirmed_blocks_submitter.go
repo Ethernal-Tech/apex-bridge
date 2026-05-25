@@ -11,6 +11,7 @@ import (
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	solanaCore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
+	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -126,55 +127,88 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		return result, latestInfo, nil
 	}
 
-	unprocessedSlots, err := bs.getUnprocessedSlots()
-	if err != nil {
-		return result, latestInfo, err
-	}
+	//nolint:gosec
+	to := min(latestBlockPoint.BlockSlot, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)-1)
 
-	for slotNum := from; slotNum <= latestBlockPoint.BlockSlot; slotNum++ {
-		if unprocessedSlots[slotNum] {
-			latestInfo.CounterEmpty = 0
-
-			break
+	for slotNum := from; slotNum <= to; slotNum++ {
+		events, err := bs.indexerDB.GetEventsBySlot(slotNum)
+		if err != nil {
+			return result, latestInfo, fmt.Errorf("failed to get events for slot %d: %w", slotNum, err)
 		}
 
-		latestInfo.BlockNumOrSlot = slotNum
-		latestInfo.CounterEmpty++
+		if len(events) == 0 {
+			latestInfo.BlockNumOrSlot = slotNum
+			latestInfo.CounterEmpty++
 
-		threshold, ok := bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[bs.chainID]
-		if !ok {
-			return result, latestInfo, fmt.Errorf("empty blocks threshold not configured for chain: %s", bs.chainID)
-		}
+			threshold, ok := bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[bs.chainID]
+			if !ok {
+				return result, latestInfo, fmt.Errorf("empty blocks threshold not configured for chain: %s", bs.chainID)
+			}
 
-		if threshold > uint(math.MaxInt) {
-			return result, latestInfo, fmt.Errorf("threshold too large: %d", threshold)
-		}
+			if threshold > uint(math.MaxInt) {
+				return result, latestInfo, fmt.Errorf("threshold too large: %d", threshold)
+			}
 
-		if latestInfo.CounterEmpty < int(threshold) {
-			continue
+			if latestInfo.CounterEmpty < int(threshold) {
+				continue
+			}
+		} else {
+			allProcessed, err := bs.checkIfBlockIsProcessed(events)
+			if err != nil {
+				return result, latestInfo, err
+			} else if !allProcessed {
+				latestInfo.CounterEmpty = 0
+
+				break
+			}
 		}
 
 		latestInfo.CounterEmpty = 0
+		latestInfo.BlockNumOrSlot = slotNum
+
+		blockHash, err := bs.indexerDB.GetBlockhashBySlot(slotNum)
+		if err != nil {
+			return result, latestInfo, fmt.Errorf("failed to get block hash for slot %d: %w", slotNum, err)
+		}
 
 		result = append(result, eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(slotNum),
-			BlockHash: latestBlockPoint.BlockHash,
+			BlockHash: blockHash,
 		})
 	}
 
 	return result, latestInfo, nil
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) getUnprocessedSlots() (map[uint64]bool, error) {
-	unprocessedTxs, err := bs.oracleDB.GetAllUnprocessedTxs(bs.chainID, 0)
-	if err != nil {
-		return nil, fmt.Errorf("error getting unprocessed txs: %w", err)
+func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(
+	events []solanaTxsStore.EventRecord,
+) (bool, error) {
+	seen := make(map[string]struct{}, len(events))
+
+	for _, event := range events {
+		if _, exists := seen[event.TxSignature]; exists {
+			continue
+		}
+
+		seen[event.TxSignature] = struct{}{}
+
+		txSignature, err := solana.SignatureFromBase58(event.TxSignature)
+		if err != nil {
+			return false, fmt.Errorf("failed to parse tx signature %s: %w", event.TxSignature, err)
+		}
+
+		prTx, err := bs.oracleDB.GetProcessedTx(oracleCommon.DBTxID{
+			ChainID: bs.chainID,
+			DBKey:   txSignature[:],
+		})
+		if err != nil {
+			return false, fmt.Errorf("failed to check if tx %s is processed: %w", event.TxSignature, err)
+		}
+
+		if prTx == nil {
+			return false, nil
+		}
 	}
 
-	slots := make(map[uint64]bool, len(unprocessedTxs))
-	for _, tx := range unprocessedTxs {
-		slots[tx.SlotNumber] = true
-	}
-
-	return slots, nil
+	return true, nil
 }

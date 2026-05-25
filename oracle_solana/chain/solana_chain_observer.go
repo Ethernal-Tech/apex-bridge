@@ -135,11 +135,6 @@ func loadTrackerConfigs(config *oCore.SolanaChainConfig, logger hclog.Logger) (*
 		return nil, err
 	}
 
-	_, err = specs.AddEventSpec(&skyline.ValidatorSetUpdatedEvent{}, core.ValidatorSetUpdatedEvent)
-	if err != nil {
-		return nil, err
-	}
-
 	_, err = specs.AddEventSpec(&skyline.HotWalletIncrementEvent{}, core.HotWalletIncrementEvent)
 	if err != nil {
 		return nil, err

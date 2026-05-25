@@ -55,11 +55,8 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 	wrappedTokenMint, err := solana.NewRandomPrivateKey()
 	require.NoError(t, err)
 
-	bridgingFeeWallet, err := solana.NewRandomPrivateKey()
-	require.NoError(t, err)
-
 	batcherConfig := solanatx.SolanaChainConfig{
-		TTLSlotNumberInc:      5,
+		TTLNumberInc:          5,
 		SlotRoundingThreshold: 6,
 		NoBatchPeriodPercent:  0.1,
 		Tokens: map[uint16]common.Token{
@@ -71,8 +68,7 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 				IsWrappedCurrency: true,
 			},
 		},
-		BridgingFeeAddress: bridgingFeeWallet.PublicKey().String(),
-		MinFeeForBridging:  big.NewInt(1_000_000),
+		MinFeeForBridging: big.NewInt(1_000_000),
 	}
 
 	chainSpecificJSONRaw, err := batcherConfig.Serialize()

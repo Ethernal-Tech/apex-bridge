@@ -159,8 +159,8 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 		DestinationChainID: bridgeRequestEvent.DestinationChain,
 		SenderAddr:         bridgeRequestEvent.Sender.String(),
 		Transactions:       transactions,
-		BridgingFee:        bridgeRequestEvent.BridgeFee,
-		OperationFee:       bridgeRequestEvent.OperationalFee,
+		BridgingFee:        common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.BridgeFee)),
+		OperationFee:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.OperationalFee)),
 	}
 
 	metadata, err := core.MarshalSolMetadata(mtdata)

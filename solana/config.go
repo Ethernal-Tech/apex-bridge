@@ -4,19 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 type SolanaChainConfig struct {
-	TTLSlotNumberInc                      uint64                       `json:"ttlSlotNumberIncrement"`
+	ConfirmationTimeout                   time.Duration                `json:"confirmationTimeout"`
+	TTLNumberInc                          uint64                       `json:"ttlNumberIncrement"`
 	SlotRoundingThreshold                 uint64                       `json:"slotRoundingThreshold"`
 	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`
 	MinFeeForBridging                     *big.Int                     `json:"minFeeForBridging"`
 	DestinationChains                     map[string]common.TokenPairs `json:"destChain"`
 	Tokens                                map[uint16]common.Token      `json:"tokens"`
 	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
-	BridgingFeeAddress                    string                       `json:"bridgingFeeAddress"`
 	TxProviderEndpoint                    string                       `json:"txProviderEndpoint"`
 	ALTPublicKey                          string                       `json:"altPublicKey"`
 	ProgramID                             string                       `json:"trackedProgram"`
