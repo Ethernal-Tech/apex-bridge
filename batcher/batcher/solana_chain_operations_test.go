@@ -525,8 +525,8 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	receiver1 := receiver1Key.PublicKey().String()
 	receiver2 := receiver2Key.PublicKey().String()
 
-	amount1 := common.LamportToWei(big.NewInt(5))
-	amount2 := common.LamportToWei(big.NewInt(2))
+	amount1 := common.LamportToWei(big.NewInt(1_000_005))
+	amount2 := common.LamportToWei(big.NewInt(1_000_002))
 	wrappedAmount := common.LamportToWei(big.NewInt(3))
 
 	confirmed := []eth.ConfirmedTransaction{

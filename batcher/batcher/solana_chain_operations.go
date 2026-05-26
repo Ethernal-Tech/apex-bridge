@@ -74,7 +74,7 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	receivers, feeAmount, err := sco.newSolanaReceivers(
 		sco.config,
 		confirmedTransactions,
-		sco.config.MinFeeForBridging,
+		common.WeiToLamport(sco.config.MinFeeForBridging),
 	)
 	if err != nil {
 		return nil, err
@@ -274,9 +274,17 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 			if amount.Cmp(big.NewInt(0)) == 1 {
 				addressBytes := solana.MustPublicKeyFromBase58(recv.DestinationAddress)
 
-				err := updateAmount(sourceAddrTxMap, addressBytes, recv.TokenId, amount.Sub(amount, minFeeForBridging))
-				if err != nil {
-					return nil, nil, err
+				if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
+					feeAmount.Add(feeAmount, minFeeForBridging)
+				}
+
+				amount.Sub(amount, minFeeForBridging)
+
+				if amount.Cmp(big.NewInt(0)) >= 1 {
+					err := updateAmount(sourceAddrTxMap, addressBytes, recv.TokenId, amount)
+					if err != nil {
+						return nil, nil, err
+					}
 				}
 			}
 
