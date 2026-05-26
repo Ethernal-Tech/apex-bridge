@@ -160,7 +160,7 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 		SenderAddr:         bridgeRequestEvent.Sender.String(),
 		Transactions:       transactions,
 		BridgingFee:        common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.BridgeFee)),
-		OperationFee:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.OperationalFee)),
+		OperationFee:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.OperationFee)),
 	}
 
 	metadata, err := core.MarshalSolMetadata(mtdata)
@@ -174,7 +174,7 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 
 		SlotNumber:  event.SlotNumber,
 		TxSignature: event.TxSignature,
-		Value:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.Amount)),
+		Value:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.Value)),
 		Metadata:    metadata,
 	}, nil
 }

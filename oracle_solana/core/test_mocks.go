@@ -133,6 +133,15 @@ func (m *SolanaTxsProcessorDBMock) GetPendingTx(entityID oCore.DBTxID) (oCore.Ba
 	return nil, args.Error(1)
 }
 
+func (m *SolanaTxsProcessorDBMock) GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		return args.Get(0).(oCore.BaseTx), args.Error(1) //nolint
+	}
+
+	return nil, args.Error(1)
+}
+
 func (m *SolanaTxsProcessorDBMock) GetProcessedTx(entityID oCore.DBTxID) (*ProcessedSolanaTx, error) {
 	args := m.Called(entityID)
 	if args.Get(0) != nil {

@@ -239,23 +239,44 @@ func (s *SolStateProcessor) processBatchExecutionInfoEvents(
 func (s *SolStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, len(event.TxHashes))
+	resultPending := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
-		tx, err := s.db.GetPendingTx(
+	for _, hash := range event.TxHashes {
+		// try pending first
+		pendingTx, errPending := s.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: s.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash,
 			},
 		)
-		if err != nil {
-			return nil, err
+		if errPending == nil {
+			// pending exists — append and continue
+			resultPending = append(resultPending, pendingTx)
+
+			continue
 		}
 
-		result[idx] = tx
+		// pending returned error — check if it's present in processed
+		_, errProcessed := s.db.GetGenericProcessedTx(
+			oracleCore.DBTxID{
+				ChainID: s.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
+				DBKey:   hash.ObservedTransactionHash,
+			},
+		)
+		if errProcessed != nil {
+			// not in processed either — return original pending error
+			return nil, errPending
+		}
+
+		// it exists in processed — silently skip (do not add to resultPending)
+		// and continue with next tx hash
+
+		s.logger.Error("tx for a BatchExecutionInfoEvent event found in already processed",
+			"srcChain", s.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
+			"eventTxHash", common.TxHashBytesToString(hash.ObservedTransactionHash))
 	}
 
-	return result, nil
+	return resultPending, nil
 }
 
 func (s *SolStateProcessor) processNotEnoughFundsEvents(

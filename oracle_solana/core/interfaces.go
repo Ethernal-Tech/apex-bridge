@@ -22,6 +22,7 @@ type SolanaTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*SolanaTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*SolanaTx, error)
 	GetPendingTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
+	GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
 	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedSolanaTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedSolanaTx, error)
 	ClearAllTxs(chainID string) error
