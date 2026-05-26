@@ -587,7 +587,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 187765},
+			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 191901},
 		}
 		outputs := []wallet.TxOutput{}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = 0
@@ -673,7 +673,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 204485},
+			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 208621},
 		}
 		outputs := []wallet.TxOutput{
 			{
@@ -714,7 +714,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 208841},
+			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 212977},
 		}
 		outputs := []wallet.TxOutput{
 			{

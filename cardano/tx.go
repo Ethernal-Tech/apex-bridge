@@ -77,12 +77,10 @@ func CreateTx(
 
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	feeOutput, feeIndex := getOutputForAddress(outputs, txInputInfos.MultiSigFee.Address)
-	feeOutputPresent := feeIndex >= 0
 
 	// add multisigFee output
 	if feeIndex == -1 {
 		feeIndex = len(outputs)
-		feeOutputPresent = true
 
 		builder.AddOutputs(cardanowallet.TxOutput{
 			Addr: txInputInfos.MultiSigFee.Address,
@@ -123,7 +121,7 @@ func CreateTx(
 				}
 			} else if multiSigIndex >= 0 {
 				// we need to decrement feeIndex if it was after multisig in outputs
-				if feeOutputPresent && feeIndex > multiSigIndex {
+				if feeIndex > multiSigIndex {
 					feeIndex--
 				}
 
@@ -155,15 +153,8 @@ func CreateTx(
 		return nil, "", err
 	}
 
-	// First pass sizes the draft for fee calculation. Use at most what fee inputs can cover;
-	// otherwise CreateTxOutputChange fails when rough fee > final fee but inputs match final only.
-	if affordable := maxAffordableFeeForFeePayer(
-		feeOutput, txInputInfos.MultiSigFee.Sum, stakeKeyRegistrationFee); calcFee > affordable {
-		calcFee = affordable
-	}
-
-	feeIndex, feeOutputPresent, _, err = applyFeePayerChangeOutput(
-		builder, feeIndex, feeOutputPresent, feeOutput, txInputInfos.MultiSigFee.Sum,
+	feeIndex, _, err = applyFeePayerChangeOutput(
+		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
 		calcFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
 	)
 	if err != nil {
@@ -180,8 +171,10 @@ func CreateTx(
 		return nil, "", err
 	}
 
-	_, _, _, err = applyFeePayerChangeOutput( //nolint:dogsled
-		builder, feeIndex, feeOutputPresent, feeOutput, txInputInfos.MultiSigFee.Sum,
+	finalFee = max(calcFee, finalFee)
+
+	_, _, err = applyFeePayerChangeOutput(
+		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
 		finalFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
 	)
 	if err != nil {
@@ -191,32 +184,17 @@ func CreateTx(
 	return builder.Build()
 }
 
-// maxAffordableFeeForFeePayer is the highest fee the fee-payer input can cover besides the stake deposit.
-func maxAffordableFeeForFeePayer(
-	feeOutput cardanowallet.TxOutput,
-	feeInputSum map[string]uint64,
-	stakeKeyRegistrationFee uint64,
-) uint64 {
-	total := feeOutput.Amount + feeInputSum[cardanowallet.AdaTokenName]
-	if total <= stakeKeyRegistrationFee {
-		return 0
-	}
-
-	return total - stakeKeyRegistrationFee
-}
-
 // applyFeePayerChangeOutput sets the tx fee and updates the fee-payer change output in the builder.
 // feeOutputPresent is false when that output was removed; feeIndex is only valid when feeOutputPresent is true.
 func applyFeePayerChangeOutput(
 	builder *cardanowallet.TxBuilder,
 	feeIndex int,
-	feeOutputPresent bool,
 	feeOutput cardanowallet.TxOutput,
 	feeInputSum map[string]uint64,
 	fee uint64,
 	stakeKeyRegistrationFee uint64,
 	stakeKeyDeregistrationGain uint64,
-) (int, bool, uint64, error) {
+) (int, uint64, error) {
 	builder.SetFee(fee)
 
 	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
@@ -224,7 +202,7 @@ func applyFeePayerChangeOutput(
 			cardanowallet.AdaTokenName: fee + stakeKeyRegistrationFee,
 		})
 	if err != nil {
-		return feeIndex, feeOutputPresent, fee, err
+		return feeIndex, fee, err
 	}
 
 	// Include the key deregistration gain if exists
@@ -232,24 +210,24 @@ func applyFeePayerChangeOutput(
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {
-		if feeOutputPresent {
+		if feeIndex >= 0 {
 			builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
 
-			return feeIndex, true, fee, nil
+			return feeIndex, fee, nil
 		}
 
 		builder.AddOutputs(feeChangeTxOutput)
 
-		return feeIndex, true, fee, nil
+		return len(builder.GetOutputs()) - 1, fee, nil
 	}
 
-	if feeOutputPresent {
+	if feeIndex >= 0 {
 		builder.RemoveOutput(feeIndex)
 
-		return feeIndex, false, fee, nil
+		return -1, fee, nil
 	}
 
-	return feeIndex, false, fee, nil
+	return feeIndex, fee, nil
 }
 
 func handlePlutusTx(
