@@ -153,14 +153,55 @@ func CreateTx(
 		return nil, "", err
 	}
 
-	builder.SetFee(calcFee)
-
-	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
-		feeOutput, txInputInfos.MultiSigFee.Sum, map[string]uint64{
-			cardanowallet.AdaTokenName: calcFee + stakeKeyRegistrationFee,
-		})
+	feeIndex, err = applyFeePayerChangeOutput(
+		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
+		calcFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
+	)
 	if err != nil {
 		return nil, "", err
+	}
+
+	finalFee, err := builder.SetAdditionalWitnessCount(additionalWitnessCount).CalculateFee(0)
+	if err != nil {
+		return nil, "", err
+	}
+
+	finalFee, err = handlePlutusTx(ctx, builder, txPlutusMintData, finalFee)
+	if err != nil {
+		return nil, "", err
+	}
+
+	finalFee = max(calcFee, finalFee)
+
+	_, err = applyFeePayerChangeOutput(
+		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
+		finalFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
+	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return builder.Build()
+}
+
+// applyFeePayerChangeOutput sets the tx fee and updates the fee-payer change output in the builder.
+func applyFeePayerChangeOutput(
+	builder *cardanowallet.TxBuilder,
+	feeIndex int,
+	feeOutput cardanowallet.TxOutput,
+	feeInputSum map[string]uint64,
+	fee uint64,
+	stakeKeyRegistrationFee uint64,
+	stakeKeyDeregistrationGain uint64,
+) (int, error) {
+	builder.SetFee(fee)
+
+	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
+		feeOutput, feeInputSum, map[string]uint64{
+			cardanowallet.AdaTokenName: fee + stakeKeyRegistrationFee,
+		})
+	if err != nil {
+		return feeIndex, err
 	}
 
 	// Include the key deregistration gain if exists
@@ -168,12 +209,24 @@ func CreateTx(
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {
-		builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
-	} else {
-		builder.RemoveOutput(feeIndex)
+		if feeIndex >= 0 {
+			builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
+
+			return feeIndex, nil
+		}
+
+		builder.AddOutputs(feeChangeTxOutput)
+
+		return len(builder.GetOutputs()) - 1, nil
 	}
 
-	return builder.Build()
+	if feeIndex >= 0 {
+		builder.RemoveOutput(feeIndex)
+
+		return -1, nil
+	}
+
+	return feeIndex, nil
 }
 
 func handlePlutusTx(
