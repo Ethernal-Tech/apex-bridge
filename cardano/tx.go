@@ -153,7 +153,7 @@ func CreateTx(
 		return nil, "", err
 	}
 
-	feeIndex, _, err = applyFeePayerChangeOutput(
+	feeIndex, err = applyFeePayerChangeOutput(
 		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
 		calcFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
 	)
@@ -173,7 +173,7 @@ func CreateTx(
 
 	finalFee = max(calcFee, finalFee)
 
-	_, _, err = applyFeePayerChangeOutput(
+	_, err = applyFeePayerChangeOutput(
 		builder, feeIndex, feeOutput, txInputInfos.MultiSigFee.Sum,
 		finalFee, stakeKeyRegistrationFee, stakeKeyDeregistrationGain,
 	)
@@ -194,7 +194,7 @@ func applyFeePayerChangeOutput(
 	fee uint64,
 	stakeKeyRegistrationFee uint64,
 	stakeKeyDeregistrationGain uint64,
-) (int, uint64, error) {
+) (int, error) {
 	builder.SetFee(fee)
 
 	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
@@ -202,7 +202,7 @@ func applyFeePayerChangeOutput(
 			cardanowallet.AdaTokenName: fee + stakeKeyRegistrationFee,
 		})
 	if err != nil {
-		return feeIndex, fee, err
+		return feeIndex, err
 	}
 
 	// Include the key deregistration gain if exists
@@ -213,21 +213,21 @@ func applyFeePayerChangeOutput(
 		if feeIndex >= 0 {
 			builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
 
-			return feeIndex, fee, nil
+			return feeIndex, nil
 		}
 
 		builder.AddOutputs(feeChangeTxOutput)
 
-		return len(builder.GetOutputs()) - 1, fee, nil
+		return len(builder.GetOutputs()) - 1, nil
 	}
 
 	if feeIndex >= 0 {
 		builder.RemoveOutput(feeIndex)
 
-		return -1, fee, nil
+		return -1, nil
 	}
 
-	return feeIndex, fee, nil
+	return feeIndex, nil
 }
 
 func handlePlutusTx(

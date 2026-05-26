@@ -38,8 +38,8 @@ github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfe
 github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e/go.mod h1:PVyFIDYImtT8fzpX5Q9xLi0TqAVENf5oif0uxvBQbXU=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19 h1:a96KsZz67W/Nn6Kx55A4eaMngFNsm5A5A6MRYF2xu8U=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19/go.mod h1:ikj6EuZ/ISPyR1DYKnqoE5F2geyI3KzVllndxg7vFs8=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526120437-7ddff9b455ff h1:q1OCLcsG+d/Q3fvrYefQVUjd/yRxgonk6HQDQeDdXLg=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526120437-7ddff9b455ff/go.mod h1:v0z3aaYeuDhLfmO/s+1lq1WBPnLQyHIAjpPiEiecMeU=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526122458-c4bdf8b8493a h1:/q1EBi26wyYZcE60+eZ5OqRjEnx132ZZWN6NlIJxdyI=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526122458-c4bdf8b8493a/go.mod h1:v0z3aaYeuDhLfmO/s+1lq1WBPnLQyHIAjpPiEiecMeU=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94 h1:xUvsP9JPf8BKZ0ZJt0kC0UlernoKTkAzm4JVo4Mig/M=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94/go.mod h1:B8gumPuc8eynSJmAcMd2CEjhlOSE8CynwFx9G3AlaQ8=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
