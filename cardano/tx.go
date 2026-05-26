@@ -185,7 +185,6 @@ func CreateTx(
 }
 
 // applyFeePayerChangeOutput sets the tx fee and updates the fee-payer change output in the builder.
-// feeOutputPresent is false when that output was removed; feeIndex is only valid when feeOutputPresent is true.
 func applyFeePayerChangeOutput(
 	builder *cardanowallet.TxBuilder,
 	feeIndex int,
