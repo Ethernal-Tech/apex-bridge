@@ -483,7 +483,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: 195377 - 131},
+			Sum: map[string]uint64{wallet.AdaTokenName: 195553 - 131},
 		}
 		outputs := []wallet.TxOutput{
 			{
@@ -517,7 +517,7 @@ func TestCreateTx(t *testing.T) {
 				context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 1)
 			require.Error(t, err)
 
-			txInputsInfos.MultiSigFee.TxInputs.Sum = map[string]uint64{wallet.AdaTokenName: 199821 - 131}
+			txInputsInfos.MultiSigFee.TxInputs.Sum = map[string]uint64{wallet.AdaTokenName: 199997 - 131}
 
 			rawTx, _, err = CreateTx(
 				context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 1)
@@ -602,6 +602,25 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
 		require.Len(t, info.Outputs, 0)
+	})
+	t.Run("only certificates, no multisig inputs and fee amount smaller than both estimates", func(t *testing.T) {
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount},
+		}
+		outputs := []wallet.TxOutput{}
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = 0
+
+		rawTx, hash, err := CreateTx(
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
+		require.ErrorContains(t, err, "invalid amount")
+		require.Empty(t, rawTx)
+		require.Empty(t, hash)
 	})
 	t.Run("only certificates, not enough fee", func(t *testing.T) {
 		txInputsInfos.MultiSig = []*TxInputInfo{
