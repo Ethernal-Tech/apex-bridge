@@ -278,7 +278,6 @@ $ apex-bridge generate-configs solana-chain \
         --sol-event-buff-size <tracker event buffer size> \
         --sol-error-buff-size <tracker error buffer size> \
         --treasury-address <solana treasury public key> \
-        --fee-addr-bridging <solana public key used as bridging fee address> \
         --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
         --sol-ttl-number-inc <TTL increment for solana chain> \
@@ -822,7 +821,6 @@ apex-bridge deploy-solana initialize-program \
         --min-fee-for-bridging 1000010 \
         --min-amount-to-bridge 1000000 \
         --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
-        --relayer-address 9fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
         --confirmation-timeout-seconds 120
 ```
 
@@ -849,8 +847,6 @@ apex-bridge deploy-solana update-fee-config \
         --min-fee-for-bridging 1000010 \
         --update-treasury \
         --new-treasury-address <NEW_TREASURY> \
-        --update-relayer \
-        --new-relayer-address <NEW_RELAYER> \
         --confirmation-timeout-seconds 120
 ```
 
@@ -870,12 +866,12 @@ apex-bridge deploy-solana extend-alt \
         --program-id <> \
         --admin-key ./admin-keypair.json \
         --alt-address <ALT_PUBLIC_KEY_FROM_CREATE_ALT> \
-        --token-mint <TOKEN_MINT_1> \
-        --token-mint <TOKEN_MINT_2> \
-        --token-mint <TOKEN_MINT_3> \
+        --token-id-and-mint <TOKEN_ID_1:TOKEN_MINT_1> \
+        --token-id-and-mint <TOKEN_ID_2:TOKEN_MINT_2> \
+        --token-id-and-mint <TOKEN_ID_3:TOKEN_MINT_3> \
         --confirmation-timeout-seconds 120
 ```
-- run `extend-alt` again with new `--token-mint` values when new tokens are registered.
+- run `extend-alt` again with new `--token-id-and-mint` values when new tokens are registered.
 
 # How to register lock/unlock Solana token
 ```shell
