@@ -82,8 +82,7 @@ func (p *registerLockUnlockTokenParams) Execute(outputter common.OutputFormatter
 	}
 
 	txSender := solsendtx.NewTxSender(provider, &solsendtx.ChainConfig{
-		TreasuryAddress:    p.treasuryPublicKey,
-		BridgingFeeAddress: p.relayerPublicKey,
+		TreasuryAddress: p.treasuryPublicKey,
 	})
 
 	txDto := solsendtx.RegisterTokenLockUnlockDto{

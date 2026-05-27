@@ -158,8 +158,7 @@ func (p *registerMintBurnTokenParams) Execute(outputter common.OutputFormatter) 
 	}
 
 	txSender := solsendtx.NewTxSender(provider, &solsendtx.ChainConfig{
-		TreasuryAddress:    p.treasuryPublicKey,
-		BridgingFeeAddress: p.relayerPublicKey,
+		TreasuryAddress: p.treasuryPublicKey,
 	})
 
 	tokenKeyPair, err := solanawallet.NewWallet()
