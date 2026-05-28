@@ -155,5 +155,6 @@ func loadTrackerConfigs(config *oCore.SolanaChainConfig, logger hclog.Logger) (*
 			EventBuffSize: config.EventBuffSize,
 			ErrorBuffSize: config.ErrorBuffSize,
 		},
+		StartFromSlot: config.TrackerStartSlot,
 	}, nil
 }

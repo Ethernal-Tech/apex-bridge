@@ -27,6 +27,7 @@ const (
 	solanaErrorBuffSizeFlag       = "sol-error-buff-size"
 	solanaTTLNumberIncFlag        = "sol-ttl-number-inc"
 	solanaConfirmationTimeoutFlag = "sol-confirmation-timeout"
+	solanaTrackerStartSlotFlag    = "sol-tracker-start-slot"
 
 	solanaChainNodeURLFlagDesc        = "solana chain node URL"
 	solanaChainTrackedProgramFlagDesc = "(mandatory) solana program address to track"
@@ -38,6 +39,7 @@ const (
 	solanaErrorBuffSizeFlagDesc       = "error buffer size for solana chain tracker"
 	solanaTTLNumberIncFlagDesc        = "TTL increment for solana chain"
 	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
+	solanaTrackerStartSlotFlagDesc    = "slot to start solana chain tracker from (default 0)"
 
 	defaultSolanaPoolIntervalMiliseconds    = time.Duration(1500)
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -49,6 +51,7 @@ const (
 	defaultSolanaErrorBuffSize              = uint8(10)
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
 	defaultSolanaConfirmationTimeout        = int64(60000) // 1 minute
+	defaultSolanaTrackerStartSlot           = uint64(0)
 
 	altPublicKeyFlag     = "alt-public-key"
 	altPublicKeyFlagDesc = "alt public key for solana chain"
@@ -68,6 +71,7 @@ type solanaChainGenerateConfigsParams struct {
 	solanaSlotBuffSize      uint8
 	solanaEventBuffSize     uint8
 	solanaErrorBuffSize     uint8
+	solanaTrackerStartSlot  uint64
 
 	emptyBlocksThreshold      uint
 	solanaTTLNumberInc        uint64
@@ -206,6 +210,13 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		slotRoundingThresholdFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.solanaTrackerStartSlot,
+		solanaTrackerStartSlotFlag,
+		defaultSolanaTrackerStartSlot,
+		solanaTrackerStartSlotFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.outputRelayerFileName,
 		outputRelayerFileNameFlag,
@@ -278,6 +289,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 			ALTPublicKey:          p.altPublicKey,
 			ProgramID:             p.solanaTrackedProgram,
 		},
+		TrackerStartSlot:           p.solanaTrackerStartSlot,
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
 		PoolIntervalMiliseconds:    defaultSolanaPoolIntervalMiliseconds,

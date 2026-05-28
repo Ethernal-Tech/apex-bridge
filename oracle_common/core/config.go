@@ -86,6 +86,7 @@ type SolanaChainConfig struct {
 	MinColCoinsAllowedToBridge uint64        `json:"minColCoinsAllowedToBridge"`
 	MinOperationFee            uint64        `json:"minOperationFee"`
 	TreasuryAddress            string        `json:"treasuryAddress"`
+	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
 
 	SlotBuffSize  uint8 `json:"slotBuffSize"`
 	EventBuffSize uint8 `json:"eventBuffSize"`

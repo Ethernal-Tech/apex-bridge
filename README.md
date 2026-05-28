@@ -277,6 +277,7 @@ $ apex-bridge generate-configs solana-chain \
         --sol-slot-buff-size <tracker slot buffer size> \
         --sol-event-buff-size <tracker event buffer size> \
         --sol-error-buff-size <tracker error buffer size> \
+        --sol-tracker-start-slot <slot to start solana chain tracker from>
         --treasury-address <solana treasury public key> \
         --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
