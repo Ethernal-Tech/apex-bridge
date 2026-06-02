@@ -7,8 +7,9 @@ import (
 
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
-	solana "github.com/Ethernal-Tech/apex-bridge/solana"
+	solanaAB "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
+	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func TestSolanaChainObserver(t *testing.T) {
 	logger := hclog.NewNullLogger()
 
 	config := &oCore.SolanaChainConfig{
-		SolanaChainConfig: solana.SolanaChainConfig{
+		SolanaChainConfig: solanaAB.SolanaChainConfig{
 			TxProviderEndpoint: solanaNodeURL,
 		},
 		ChainID:                    "solana-devnet",
@@ -28,9 +29,6 @@ func TestSolanaChainObserver(t *testing.T) {
 		PoolIntervalMiliseconds:    time.Duration(1000), // 1000 ms
 		BlockFetchDelayMiliseconds: time.Duration(100),  // 100 ms
 		RestartTrackerPullCheck:    30 * time.Second,
-		SlotBuffSize:               100,
-		EventBuffSize:              100,
-		ErrorBuffSize:              100,
 	}
 
 	t.Run("bad config - NewSolanaChainObserver error", func(t *testing.T) {
@@ -70,7 +68,10 @@ func TestSolanaChainObserver(t *testing.T) {
 	t.Run("check start stop", func(t *testing.T) {
 		indexerDB := &store.MockStorageHandler{}
 		indexerDB.On("ReadSlot").Return(uint64(1), nil)
+		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 		indexerDB.On("UseTransactions").Return(false)
+		indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
+		indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
 
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
@@ -91,7 +92,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		restartCheckInterval := 25 * time.Millisecond
 		configShortInterval := &oCore.SolanaChainConfig{
 			ChainID: "solana-devnet",
-			SolanaChainConfig: solana.SolanaChainConfig{
+			SolanaChainConfig: solanaAB.SolanaChainConfig{
 				TxProviderEndpoint: solanaNodeURL,
 			},
 			TrackedProgram:             trackedProgram,
@@ -102,8 +103,10 @@ func TestSolanaChainObserver(t *testing.T) {
 
 		indexerDB := &store.MockStorageHandler{}
 		// Tracker.Start() calls ReadSlot once; health-check goroutine calls ReadSlot each time the timer fires.
-		indexerDB.On("ReadSlot").Return(uint64(1), nil)
+		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 		indexerDB.On("UseTransactions").Return(false)
+		indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
+		indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
 
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
@@ -133,14 +136,14 @@ func TestSolanaChainObserver_ExecuteIsTrackerAlive(t *testing.T) {
 	}
 
 	t.Run("everything is normal", func(t *testing.T) {
-		indexerDB.On("ReadSlot").Return(uint64(1), nil).Once()
+		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil).Once()
 
 		require.True(t, so.updateIsTrackerAlive())
 		require.Equal(t, uint64(1), so.lastSlot)
 	})
 
 	t.Run("restart required", func(t *testing.T) {
-		indexerDB.On("ReadSlot").Return(uint64(2), nil).Once()
+		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 2}, nil).Once()
 
 		so.lastSlot = 2
 
@@ -149,7 +152,7 @@ func TestSolanaChainObserver_ExecuteIsTrackerAlive(t *testing.T) {
 	})
 
 	t.Run("ReadSlot error - consider alive to avoid unnecessary restart", func(t *testing.T) {
-		indexerDB.On("ReadSlot").Return(uint64(0), errors.New("test error")).Once()
+		indexerDB.On("GetLatestBlockPoint").Return((*store.BlockPoint)(nil), errors.New("test error")).Once()
 
 		require.True(t, so.updateIsTrackerAlive())
 	})
@@ -161,11 +164,14 @@ func TestSolanaChainObserver_Dispose(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	indexerDB := &store.MockStorageHandler{}
 	indexerDB.On("ReadSlot").Return(uint64(1), nil)
+	indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 	indexerDB.On("UseTransactions").Return(false)
+	indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
+	indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
 
 	testConfig := &oCore.SolanaChainConfig{
 		ChainID: "solana-devnet",
-		SolanaChainConfig: solana.SolanaChainConfig{
+		SolanaChainConfig: solanaAB.SolanaChainConfig{
 			TxProviderEndpoint: solanaNodeURL,
 		},
 		TrackedProgram:             trackedProgram,
@@ -189,7 +195,7 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 	logger := hclog.NewNullLogger()
 
 	config := &oCore.SolanaChainConfig{
-		SolanaChainConfig: solana.SolanaChainConfig{
+		SolanaChainConfig: solanaAB.SolanaChainConfig{
 			TxProviderEndpoint: solanaNodeURL,
 		},
 		TrackedProgram:             trackedProgram,
@@ -197,12 +203,14 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 		BlockFetchDelayMiliseconds: time.Duration(100),
 	}
 
-	cfg, err := loadTrackerConfigs(config, logger)
+	solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
+	solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
+
+	cfg, err := loadTrackerConfigs(config, solanaTxsReceiverMock, logger)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	require.Equal(t, config.TxProviderEndpoint, cfg.RPCEndpoint)
-	require.Equal(t, config.PoolIntervalMiliseconds*time.Millisecond, cfg.PollTime)
-	require.Equal(t, config.BlockFetchDelayMiliseconds*time.Millisecond, cfg.BlockFetchDelay)
+	require.Equal(t, config.PoolIntervalMiliseconds, cfg.PollTime)
 	require.NotEmpty(t, cfg.TrackedPrograms)
 	require.Contains(t, cfg.TrackedPrograms, config.TrackedProgram)
 }

@@ -274,9 +274,6 @@ $ apex-bridge generate-configs solana-chain \
         --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
         --sol-min-operation-fee <minimal operation fee> \
         --slot-rounding-threshold <slot rounding threshold> \
-        --sol-slot-buff-size <tracker slot buffer size> \
-        --sol-event-buff-size <tracker event buffer size> \
-        --sol-error-buff-size <tracker error buffer size> \
         --sol-tracker-start-slot <slot to start solana chain tracker from>
         --treasury-address <solana treasury public key> \
         --alt-public-key <address lookup table public key> \
@@ -881,7 +878,6 @@ apex-bridge deploy-solana register-lock-unlock-token \
         --admin-key ./admin-keypair.json \
         --program-id <> \
         --treasury-address <TREASURY_ADDRESS> \
-        --relayer-address <RELAYER_ADDRESS> \
         --token-id 1 \
         --token-mint <EXISTING_TOKEN_MINT> \
         --min-bridging-amount 1000000 \
@@ -895,7 +891,6 @@ apex-bridge deploy-solana register-mint-burn-token \
         --program-id <> \
         --admin-key ./admin-keypair.json \
         --treasury-address <TREASURY_ADDRESS> \
-        --relayer-address <RELAYER_ADDRESS> \
         --token-id 2 \
         --token-name TOKEN2 \
         --token-symbol TOKEN2 \

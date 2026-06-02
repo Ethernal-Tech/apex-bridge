@@ -45,7 +45,7 @@ func getNumberWithRoundingThresholdRoundDown(
 	newNumber := (number / threshold) * threshold
 	diffFromPrevious := number - newNumber
 
-	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
+	if diffFromPrevious < uint64(float64(threshold)*noBatchPeriodPercent) ||
 		diffFromPrevious > uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
 		return 0, fmt.Errorf("%w: (number, rounded) = (%d, %d)", errNonActiveBatchPeriod, number, newNumber)
 	}

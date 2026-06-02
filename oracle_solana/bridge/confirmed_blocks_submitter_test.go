@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"math/big"
 	"testing"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	solanaCore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solanaTx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
@@ -132,6 +132,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute submit blocks error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
+			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
+				chainID: {
+					SolanaChainConfig: solanaTx.SolanaChainConfig{
+						SlotRoundingThreshold: 10,
+						NoBatchPeriodPercent:  0,
+					},
+				},
+			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -160,6 +168,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute save latest info error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
+			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
+				chainID: {
+					SolanaChainConfig: solanaTx.SolanaChainConfig{
+						SlotRoundingThreshold: 10,
+						NoBatchPeriodPercent:  0,
+					},
+				},
+			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -192,6 +208,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute passes and submits threshold empty block", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
+			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
+				chainID: {
+					SolanaChainConfig: solanaTx.SolanaChainConfig{
+						SlotRoundingThreshold: 10,
+						NoBatchPeriodPercent:  0,
+					},
+				},
+			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -217,13 +241,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			DBKey:   pendingSig[:],
 		}).Return((*solanaCore.ProcessedSolanaTx)(nil), nil).Once()
 
-		submittedBlocks := []eth.CardanoBlock{
-			{
-				BlockSlot: big.NewInt(3),
-				BlockHash: blockHash,
-			},
-		}
-		bridgeSubmitter.On("SubmitBlocks", chainID, submittedBlocks).Return(nil).Once()
+		bridgeSubmitter.On("SubmitBlocks", chainID, []eth.CardanoBlock(nil)).Return(nil).Once()
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
 			BlockNumOrSlot: 3,
 			CounterEmpty:   0,
@@ -243,6 +261,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 				SubmitConfig: oracleCommon.SubmitConfig{
 					ConfirmedBlocksThreshold: 30,
 					EmptyBlocksThreshold:     map[string]uint{},
+				},
+			},
+			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
+				chainID: {
+					SolanaChainConfig: solanaTx.SolanaChainConfig{
+						SlotRoundingThreshold: 10,
+						NoBatchPeriodPercent:  0,
+					},
 				},
 			},
 		}
@@ -271,6 +297,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 					ConfirmedBlocksThreshold: 30,
 					EmptyBlocksThreshold: map[string]uint{
 						chainID: uint(math.MaxInt) + 1,
+					},
+				},
+			},
+			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
+				chainID: {
+					SolanaChainConfig: solanaTx.SolanaChainConfig{
+						SlotRoundingThreshold: 10,
+						NoBatchPeriodPercent:  0,
 					},
 				},
 			},

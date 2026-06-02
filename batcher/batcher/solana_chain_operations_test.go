@@ -58,7 +58,7 @@ func newTestSolanaChainOperations(t *testing.T) (string, *SolanaChainOperations,
 	batcherConfig := solanatx.SolanaChainConfig{
 		TTLNumberInc:          5,
 		SlotRoundingThreshold: 6,
-		NoBatchPeriodPercent:  0.1,
+		NoBatchPeriodPercent:  0.4,
 		Tokens: map[uint16]common.Token{
 			currencyID: {
 				ChainSpecific: common.WSOLTokenMint,
@@ -98,7 +98,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		solanaHash, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
 
-		slotNumber := uint64(10)
+		slotNumber := uint64(8)
 		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
 			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
 		)
@@ -135,7 +135,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		solanaHash, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
 
-		slotNumber := uint64(4)
+		slotNumber := uint64(8)
 		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
 			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
 		)
@@ -224,10 +224,11 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		dbMock.ExpectedCalls = nil
 
 		latestBlockPoint := &solanaTrackerStore.BlockPoint{
-			BlockSlot: 6,
+			BlockSlot: 7,
 		}
 
 		dbMock.On("GetLatestBlockPoint").Return(latestBlockPoint, nil).Once()
+		dbMock.On("GetBlockhashBySlot", mock.Anything).Return(solana.Hash{}, nil).Once()
 
 		confirmedTransactions := []eth.ConfirmedTransaction{
 			{
@@ -278,7 +279,7 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 		dbMock.ExpectedCalls = nil
 		expectedErr := errors.New("blockhash error")
 
-		slotNumber := uint64(10)
+		slotNumber := uint64(9)
 		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
 			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
 		)
@@ -322,7 +323,7 @@ func TestSolanaChain_SignBatchTransaction(t *testing.T) {
 		receiverWallet, err := solana.NewRandomPrivateKey()
 		require.NoError(t, err)
 
-		slotNumber := uint64(10)
+		slotNumber := uint64(8)
 		roundedSlot, err := getNumberWithRoundingThresholdRoundDown(
 			slotNumber, sco.config.SlotRoundingThreshold, sco.config.NoBatchPeriodPercent,
 		)

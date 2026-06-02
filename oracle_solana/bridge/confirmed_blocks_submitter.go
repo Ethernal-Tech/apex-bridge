@@ -119,6 +119,10 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		return result, latestInfo, fmt.Errorf("error getting latest block point: %w", err)
 	}
 
+	if latestBlockPoint == nil {
+		return result, latestInfo, nil
+	}
+
 	if latestBlockPoint.BlockNumber == 0 {
 		return result, latestInfo, nil
 	}
@@ -166,15 +170,19 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		latestInfo.CounterEmpty = 0
 		latestInfo.BlockNumOrSlot = slotNum
 
-		blockHash, err := bs.indexerDB.GetBlockhashBySlot(slotNum)
-		if err != nil {
-			return result, latestInfo, fmt.Errorf("failed to get block hash for slot %d: %w", slotNum, err)
-		}
+		// Since we are querying every SlotRoundingThreshold slot for block
+		// we need to check those slots and not the ones that are not fetched from the indexer
+		if slotNum%bs.appConfig.SolanaChains[bs.chainID].SlotRoundingThreshold == 0 {
+			blockHash, err := bs.indexerDB.GetBlockhashBySlot(slotNum)
+			if err != nil {
+				return result, latestInfo, fmt.Errorf("failed to get block hash for slot %d: %w", slotNum, err)
+			}
 
-		result = append(result, eth.CardanoBlock{
-			BlockSlot: new(big.Int).SetUint64(slotNum),
-			BlockHash: blockHash,
-		})
+			result = append(result, eth.CardanoBlock{
+				BlockSlot: new(big.Int).SetUint64(slotNum),
+				BlockHash: blockHash,
+			})
+		}
 	}
 
 	return result, latestInfo, nil

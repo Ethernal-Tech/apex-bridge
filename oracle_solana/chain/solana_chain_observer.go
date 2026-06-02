@@ -40,7 +40,7 @@ func NewSolanaChainObserver(
 func (so *SolanaChainObserverImpl) Start() error {
 	so.logger.Debug("Starting solana chain observer", "endpoint", so.config.TxProviderEndpoint)
 
-	trackerConfig, err := loadTrackerConfigs(so.config, so.logger)
+	trackerConfig, err := loadTrackerConfigs(so.config, so.txsReceiver, so.logger)
 	if err != nil {
 		so.logger.Error("Failed to load tracker configs", "error", err)
 
@@ -63,12 +63,6 @@ func (so *SolanaChainObserverImpl) Start() error {
 				tracker.Close() // close old tracker
 
 				return
-
-			case event := <-tracker.eventTracker.ChEvent():
-				err := so.txsReceiver.NewUnprocessedEvent(so.config.ChainID, event)
-				if err != nil {
-					so.logger.Error("Failed to process new event", "error", err)
-				}
 
 			case <-time.After(so.config.RestartTrackerPullCheck):
 				// restart tracker if it is not alive
@@ -105,7 +99,7 @@ func (so *SolanaChainObserverImpl) GetConfig() *oCore.SolanaChainConfig {
 }
 
 func (so *SolanaChainObserverImpl) updateIsTrackerAlive() bool {
-	slot, err := so.indexerDB.ReadSlot()
+	blockPoint, err := so.indexerDB.GetLatestBlockPoint()
 	if err != nil {
 		so.logger.Warn("failed to retrieve last processed solana slot from solana tracker: %w")
 
@@ -113,8 +107,8 @@ func (so *SolanaChainObserverImpl) updateIsTrackerAlive() bool {
 	}
 
 	// everything is ok, tracker slot is greater then previous saved
-	if slot > so.lastSlot {
-		so.lastSlot = slot // update last slot number
+	if blockPoint != nil && blockPoint.BlockSlot > so.lastSlot {
+		so.lastSlot = blockPoint.BlockSlot // update last slot number
 
 		return true
 	}
@@ -122,7 +116,11 @@ func (so *SolanaChainObserverImpl) updateIsTrackerAlive() bool {
 	return false
 }
 
-func loadTrackerConfigs(config *oCore.SolanaChainConfig, logger hclog.Logger) (*tracker.EventTrackerConfig, error) {
+func loadTrackerConfigs(
+	config *oCore.SolanaChainConfig,
+	txsReceiver core.SolanaTxsReceiver,
+	logger hclog.Logger,
+) (*tracker.EventTrackerConfig, error) {
 	specs := tracker.ProgramEventSpecs{}
 
 	_, err := specs.AddEventSpec(&skyline.BridgeRequestEvent{}, core.BridgeRequestEvent)
@@ -145,16 +143,37 @@ func loadTrackerConfigs(config *oCore.SolanaChainConfig, logger hclog.Logger) (*
 	}
 
 	return &tracker.EventTrackerConfig{
-		RPCEndpoint:     config.TxProviderEndpoint,
-		TrackedPrograms: TrackedPrograms,
-		PollTime:        config.PoolIntervalMiliseconds * time.Millisecond,
-		BlockFetchDelay: config.BlockFetchDelayMiliseconds * time.Millisecond,
-		Logger:          logger.Named(time.Now().UTC().String()),
-		Notifications: &tracker.NotificationConfig{
-			SlotBuffSize:  config.SlotBuffSize,
-			EventBuffSize: config.EventBuffSize,
-			ErrorBuffSize: config.ErrorBuffSize,
+		RPCEndpoint:            config.TxProviderEndpoint,
+		TrackedPrograms:        TrackedPrograms,
+		PollTime:               config.PoolIntervalMiliseconds,
+		BlockRoundingThreshold: config.SlotRoundingThreshold,
+		EventSubscriber: &confirmedEventHandler{
+			ChainID:     config.ChainID,
+			TxsReceiver: txsReceiver,
+			Logger:      logger,
 		},
-		StartFromSlot: config.TrackerStartSlot,
+		Logger: logger.Named(time.Now().UTC().String()),
 	}, nil
+}
+
+type confirmedEventHandler struct {
+	TxsReceiver core.SolanaTxsReceiver
+	ChainID     string
+	Logger      hclog.Logger
+}
+
+func (handler confirmedEventHandler) AddEvent(event tracker.EventNotification) error {
+	handler.Logger.Info("Confirmed Event Handler invoked",
+		"event", event)
+
+	err := handler.TxsReceiver.NewUnprocessedEvent(handler.ChainID, event)
+	if err != nil {
+		handler.Logger.Error("Failed to process new event", "err", err, "event", event)
+
+		return err
+	}
+
+	handler.Logger.Info("Event has been processed", "event", event)
+
+	return nil
 }

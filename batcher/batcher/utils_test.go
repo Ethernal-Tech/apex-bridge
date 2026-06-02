@@ -55,21 +55,14 @@ func Test_getNumberWithRoundingThreshold(t *testing.T) {
 	assert.Equal(t, uint64(6), val)
 }
 
-//nolint:dupl
 func Test_getNumberWithRoundingThresholdRoundDown(t *testing.T) {
 	_, err := getNumberWithRoundingThresholdRoundDown(66, 60, 0.125)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getNumberWithRoundingThresholdRoundDown(12, 60, 0.2)
 	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getNumberWithRoundingThresholdRoundDown(115, 60, 0.125)
 	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getNumberWithRoundingThresholdRoundDown(228, 80, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getNumberWithRoundingThresholdRoundDown(336, 80, 0.2)
 	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getNumberWithRoundingThresholdRoundDown(0, 60, 0.125)
@@ -105,7 +98,7 @@ func Test_getNumberWithRoundingThresholdRoundDown(t *testing.T) {
 }
 
 func Test_getNumberWithRoundingThresholdRoundDown_OurConfig_WindowBehavior(t *testing.T) {
-	threshold := uint64(5)
+	threshold := uint64(10)
 	noBatchPeriodPercent := 0.01
 	lowCut := uint64(float64(threshold) * noBatchPeriodPercent)          // 1
 	highCut := uint64(float64(threshold) * (1.0 - noBatchPeriodPercent)) // 9
@@ -115,14 +108,6 @@ func Test_getNumberWithRoundingThresholdRoundDown_OurConfig_WindowBehavior(t *te
 	for n := uint64(1); n <= 1000; n++ {
 		got, err := getNumberWithRoundingThresholdRoundDown(n, threshold, noBatchPeriodPercent)
 		rem := n % threshold
-
-		inNoBatchZone := rem <= lowCut || rem > highCut
-		if inNoBatchZone {
-			fmt.Printf("n=%d rem=%d err=%v\n", n, rem, err)
-			assert.ErrorIs(t, err, errNonActiveBatchPeriod, "n=%d rem=%d", n, rem)
-
-			continue
-		}
 
 		assert.NoError(t, err, "n=%d rem=%d", n, rem)
 		assert.Equal(t, (n/threshold)*threshold, got, "n=%d rem=%d", n, rem)

@@ -13,20 +13,16 @@ import (
 
 const (
 	registerTokenTreasuryAddressFlag = "treasury-address"
-	registerTokenRelayerAddressFlag  = "relayer-address"
 
 	registerTokenTreasuryAddressFlagDesc = "treasury wallet address"
-	registerTokenRelayerAddressFlagDesc  = "relayer wallet address used as bridging fee receiver" //nolint:gosec
 )
 
 type registerTokenCommonParams struct {
 	altCommonParams
 
 	treasuryAddress string
-	relayerAddress  string
 
 	treasuryPublicKey solana.PublicKey
-	relayerPublicKey  solana.PublicKey
 }
 
 func (p *registerTokenCommonParams) setRegisterTokenCommonFlags(cmd commonFlagSetter) {
@@ -37,12 +33,6 @@ func (p *registerTokenCommonParams) setRegisterTokenCommonFlags(cmd commonFlagSe
 		registerTokenTreasuryAddressFlag,
 		"",
 		registerTokenTreasuryAddressFlagDesc,
-	)
-	cmd.StringVar(
-		&p.relayerAddress,
-		registerTokenRelayerAddressFlag,
-		"",
-		registerTokenRelayerAddressFlagDesc,
 	)
 }
 
@@ -61,17 +51,6 @@ func (p *registerTokenCommonParams) validateRegisterTokenCommonFlags() error {
 	}
 
 	p.treasuryPublicKey = treasuryPublicKey
-
-	if p.relayerAddress == "" {
-		return fmt.Errorf("relayer address not specified: --%s", registerTokenRelayerAddressFlag)
-	}
-
-	relayerPublicKey, err := solanawallet.PublicKeyFromAddress(p.relayerAddress)
-	if err != nil {
-		return fmt.Errorf("invalid relayer address: %w", err)
-	}
-
-	p.relayerPublicKey = relayerPublicKey
 
 	return nil
 }

@@ -414,7 +414,9 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 				if err != nil {
 					s.logger.Error("Failed to get latest block point",
 						"chainId", chainID, "err", err)
-				} else if latestProcessedBlockPoint.BlockNumber >= fromBlockNumber && fromBlockNumber < minBlockNumber &&
+				} else if latestProcessedBlockPoint != nil &&
+					latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
+					fromBlockNumber < minBlockNumber &&
 					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
 					minBlockNumber = fromBlockNumber
 					found = true
@@ -571,7 +573,8 @@ func (s *SolStateProcessor) checkExpectedTxs(
 				break
 			}
 
-			if latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
+			if latestProcessedBlockPoint != nil &&
+				latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
 				s.state.blockInfo.EqualWithExpected(expectedTx, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}
