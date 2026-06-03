@@ -410,12 +410,11 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 			for _, tx := range expectedTxs {
 				fromBlockNumber := tx.TTL + TTLInsuranceOffset
 
-				latestProcessedBlockPoint, err := soDB.GetLatestProcessedBlockPoint()
+				latestFinalizedBlockNumber, err := soDB.GetLatestFinalizedBlockNumber()
 				if err != nil {
 					s.logger.Error("Failed to get latest block point",
 						"chainId", chainID, "err", err)
-				} else if latestProcessedBlockPoint != nil &&
-					latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
+				} else if latestFinalizedBlockNumber >= fromBlockNumber &&
 					fromBlockNumber < minBlockNumber &&
 					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
 					minBlockNumber = fromBlockNumber
@@ -565,7 +564,7 @@ func (s *SolStateProcessor) checkExpectedTxs(
 
 			fromBlockNumber := expectedTx.TTL + TTLInsuranceOffset
 
-			latestProcessedBlockPoint, err := soDB.GetLatestProcessedBlockPoint()
+			latestFinalizedBlockNumber, err := soDB.GetLatestFinalizedBlockNumber()
 			if err != nil {
 				s.logger.Error("Failed to get latest block point",
 					"chainId", expectedTx.ChainID, "err", err)
@@ -573,8 +572,7 @@ func (s *SolStateProcessor) checkExpectedTxs(
 				break
 			}
 
-			if latestProcessedBlockPoint != nil &&
-				latestProcessedBlockPoint.BlockNumber >= fromBlockNumber &&
+			if latestFinalizedBlockNumber >= fromBlockNumber &&
 				s.state.blockInfo.EqualWithExpected(expectedTx, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}

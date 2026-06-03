@@ -12,6 +12,7 @@ import (
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	processorSol "github.com/Ethernal-Tech/apex-bridge/oracle_solana/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	utils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -324,12 +325,14 @@ func (c *OracleStateControllerImpl) passedSolanaTTL(chainID string, ttl *big.Int
 		return false, fmt.Errorf("couldn't find indexer db")
 	}
 
-	blockPoint, err := db.GetLatestBlockPoint()
+	blockNumber, err := db.GetLatestFinalizedBlockNumber()
 	if err != nil {
 		return false, fmt.Errorf("couldn't fetch indexer latest block point. err: %w", err)
 	}
 
-	return new(big.Int).SetUint64(blockPoint.BlockSlot).Cmp(ttl) == 1, nil
+	ttlWithInsurance := new(big.Int).Add(ttl, big.NewInt(processorSol.TTLInsuranceOffset))
+
+	return new(big.Int).SetUint64(blockNumber).Cmp(ttlWithInsurance) == 1, nil
 }
 
 func (c *OracleStateControllerImpl) passedCardanoTTL(chainID string, ttl *big.Int) (bool, error) {
