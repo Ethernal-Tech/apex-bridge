@@ -258,7 +258,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		SolanaChainConfig: solanatx.SolanaChainConfig{
 			ConfirmationTimeout:   time.Duration(p.solanaConfirmationTimeout),
 			TTLNumberInc:          p.solanaTTLNumberInc,
-			MinFeeForBridging:     common.LamportToWei(new(big.Int).SetUint64(p.solanaMinFeeForBridging)),
+			MinFeeForBridging:     new(big.Int).SetUint64(p.solanaMinFeeForBridging),
 			TxProviderEndpoint:    p.solanaChainNodeURL,
 			SlotRoundingThreshold: p.slotRoundingThreshold,
 			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
