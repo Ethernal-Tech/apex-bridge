@@ -10,6 +10,7 @@ import (
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 )
 
@@ -235,6 +236,20 @@ func (appConfig *AppConfig) ValidateDirectionConfig() error {
 				if len(tok.ChainSpecific) == 0 || !goEthCommon.IsHexAddress(tok.ChainSpecific) {
 					return fmt.Errorf("invalid eth token contract addr %s in direction config for chain: %s",
 						tok.ChainSpecific, ec.ChainID)
+				}
+			}
+		}
+	}
+
+	for _, sc := range appConfig.SolanaChains {
+		dirConfig := appConfig.DirectionConfig[sc.ChainID]
+
+		for _, tok := range dirConfig.Tokens {
+			if tok.ChainSpecific != wallet.AdaTokenName {
+				err := solanawallet.ValidateAddress(tok.ChainSpecific, true)
+				if len(tok.ChainSpecific) == 0 || err != nil {
+					return fmt.Errorf("invalid solana token address %s in direction config for chain: %s",
+						tok.ChainSpecific, sc.ChainID)
 				}
 			}
 		}
