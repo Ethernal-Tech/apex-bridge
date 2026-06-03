@@ -82,7 +82,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 						Tokens: map[uint16]common.Token{
 							solanaCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						},
-						MinFeeForBridging: minFeeForBridging,
+						MinFeeForBridging: common.WeiToLamport(minFeeForBridging),
 					},
 					FeeAddrBridgingAmount:      feeAddrBridgingAmt,
 					MinColCoinsAllowedToBridge: minColCoinsToBridge,

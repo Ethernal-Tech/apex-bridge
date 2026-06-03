@@ -44,7 +44,7 @@ func testRefundAppConfig() *oCore.AppConfig {
 						solanaRegularToken: {ChainSpecific: "token-x", LockUnlock: false, IsWrappedCurrency: false},
 						solanaUntrackedID:  {ChainSpecific: "token-y", LockUnlock: false, IsWrappedCurrency: false},
 					},
-					MinFeeForBridging: common.LamportToWei(big.NewInt(10)),
+					MinFeeForBridging: big.NewInt(10),
 				},
 			},
 		},

@@ -24,7 +24,7 @@ type BridgingRequestStateResponse struct {
 func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
 		SourceChainID:      state.SourceChainID,
-		SourceTxHash:       hex.EncodeToString(state.SourceTxHash),
+		SourceTxHash:       common.TxHashBytesToString(state.SourceTxHash),
 		DestinationChainID: state.DestinationChainID,
 		DestinationTxHash:  hex.EncodeToString(state.DestinationTxHash),
 		Status:             state.Status,

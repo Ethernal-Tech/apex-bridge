@@ -121,10 +121,10 @@ func (*RefundRequestProcessorSkylineImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if tx.Value.Cmp(chainConfig.MinFeeForBridging) == -1 {
+	if tx.Value.Cmp(common.LamportToWei(chainConfig.MinFeeForBridging)) == -1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)),
+			tx.Value, new(big.Int).Add(common.LamportToWei(chainConfig.MinFeeForBridging), big.NewInt(1)),
 		)
 	}
 

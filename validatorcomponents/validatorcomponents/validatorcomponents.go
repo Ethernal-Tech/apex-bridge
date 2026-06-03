@@ -270,7 +270,7 @@ func NewValidatorComponents(
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),
 			controllers.NewOracleStateController(
-				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
+				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs,
 				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(

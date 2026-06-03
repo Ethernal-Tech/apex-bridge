@@ -282,7 +282,7 @@ func (p *BridgingRequestedProcessorImpl) validateTokenAmounts(
 	metadata.BridgingFee.Add(metadata.BridgingFee, receiverCtx.feeSum)
 	nativeCurrencySum.Add(nativeCurrencySum, metadata.BridgingFee)
 
-	if metadata.BridgingFee.Cmp(receiverCtx.solanaSrcConfig.MinFeeForBridging) < 0 {
+	if metadata.BridgingFee.Cmp(common.LamportToWei(receiverCtx.solanaSrcConfig.MinFeeForBridging)) < 0 {
 		return fmt.Errorf("bridging fee in metadata is less than minimum: %v", metadata)
 	}
 

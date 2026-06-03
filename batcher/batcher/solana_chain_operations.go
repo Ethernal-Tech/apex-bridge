@@ -74,7 +74,7 @@ func (sco *SolanaChainOperations) GenerateBatchTransaction(
 	receivers, feeAmount, err := sco.newSolanaReceivers(
 		sco.config,
 		confirmedTransactions,
-		common.WeiToLamport(sco.config.MinFeeForBridging),
+		sco.config.MinFeeForBridging,
 	)
 	if err != nil {
 		return nil, err
