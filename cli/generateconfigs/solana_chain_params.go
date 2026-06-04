@@ -35,7 +35,7 @@ const (
 	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
 	solanaTrackerStartSlotFlagDesc    = "slot to start solana chain tracker from (default 0)"
 
-	defaultSolanaPoolIntervalMiliseconds    = 300 * time.Millisecond
+	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
 	defaultSolanaMinFeeForBridging          = uint64(1_000_010)
 	defaultSolanaMinOperationFee            = uint64(0)
@@ -267,7 +267,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		TrackerStartSlot:           p.solanaTrackerStartSlot,
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
-		PoolIntervalMiliseconds:    defaultSolanaPoolIntervalMiliseconds,
+		RetryTimeoutMiliseconds:    defaultSolanaRetryIntervalMiliseconds,
 		RestartTrackerPullCheck:    time.Second * 150,
 		FeeAddrBridgingAmount:      p.solanaMinFeeForBridging,
 		MinColCoinsAllowedToBridge: defaultSolanaMinColCoinsAllowedToBridge,

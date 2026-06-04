@@ -80,7 +80,7 @@ type SolanaChainConfig struct {
 	ChainID                    string        `json:"-"`
 	TrackedProgram             string        `json:"trackedProgram"`
 	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
-	PoolIntervalMiliseconds    time.Duration `json:"poolIntervalMs"`
+	RetryTimeoutMiliseconds    time.Duration `json:"retryTimeoutMs"`
 	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
 	FeeAddrBridgingAmount      uint64        `json:"feeAddressBridgingAmount"`
 	MinColCoinsAllowedToBridge uint64        `json:"minColCoinsAllowedToBridge"`

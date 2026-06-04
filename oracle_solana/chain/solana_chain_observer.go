@@ -145,7 +145,7 @@ func loadTrackerConfigs(
 	return &tracker.EventTrackerConfig{
 		RPCEndpoint:            config.TxProviderEndpoint,
 		TrackedPrograms:        TrackedPrograms,
-		PollTime:               config.PoolIntervalMiliseconds,
+		RetryTimeout:           config.RetryTimeoutMiliseconds,
 		BlockRoundingThreshold: config.SlotRoundingThreshold,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:     config.ChainID,

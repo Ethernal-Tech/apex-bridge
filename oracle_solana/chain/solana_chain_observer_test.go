@@ -26,7 +26,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		},
 		ChainID:                    "solana-devnet",
 		TrackedProgram:             trackedProgram,
-		PoolIntervalMiliseconds:    time.Duration(1000), // 1000 ms
+		RetryTimeoutMiliseconds:    time.Duration(1000), // 1000 ms
 		BlockFetchDelayMiliseconds: time.Duration(100),  // 100 ms
 		RestartTrackerPullCheck:    30 * time.Second,
 	}
@@ -96,7 +96,7 @@ func TestSolanaChainObserver(t *testing.T) {
 				TxProviderEndpoint: solanaNodeURL,
 			},
 			TrackedProgram:             trackedProgram,
-			PoolIntervalMiliseconds:    time.Duration(1000),
+			RetryTimeoutMiliseconds:    time.Duration(1000),
 			BlockFetchDelayMiliseconds: time.Duration(100),
 			RestartTrackerPullCheck:    restartCheckInterval,
 		}
@@ -175,7 +175,7 @@ func TestSolanaChainObserver_Dispose(t *testing.T) {
 			TxProviderEndpoint: solanaNodeURL,
 		},
 		TrackedProgram:             trackedProgram,
-		PoolIntervalMiliseconds:    time.Duration(1000),
+		RetryTimeoutMiliseconds:    time.Duration(1000),
 		BlockFetchDelayMiliseconds: time.Duration(100),
 		RestartTrackerPullCheck:    30 * time.Second,
 	}
@@ -199,7 +199,7 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 			TxProviderEndpoint: solanaNodeURL,
 		},
 		TrackedProgram:             trackedProgram,
-		PoolIntervalMiliseconds:    time.Duration(1000),
+		RetryTimeoutMiliseconds:    time.Duration(1000),
 		BlockFetchDelayMiliseconds: time.Duration(100),
 	}
 
@@ -210,7 +210,7 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	require.Equal(t, config.TxProviderEndpoint, cfg.RPCEndpoint)
-	require.Equal(t, config.PoolIntervalMiliseconds, cfg.PollTime)
+	require.Equal(t, config.RetryTimeoutMiliseconds, cfg.RetryTimeout)
 	require.NotEmpty(t, cfg.TrackedPrograms)
 	require.Contains(t, cfg.TrackedPrograms, config.TrackedProgram)
 }
