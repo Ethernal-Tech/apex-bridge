@@ -274,12 +274,12 @@ $ apex-bridge generate-configs solana-chain \
         --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
         --sol-min-operation-fee <minimal operation fee> \
         --slot-rounding-threshold <slot rounding threshold> \
-        --sol-tracker-start-slot <slot to start solana chain tracker from>
+        --sol-tracker-start-slot <slot to start solana chain tracker from> \
         --treasury-address <solana treasury public key> \
         --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
         --sol-ttl-number-inc <TTL increment for solana chain> \
-        --sol-confirmation-timeout <confirmation timeout for solana chain txs in milliseconds>
+        --sol-confirmation-timeout <confirmation timeout for solana chain txs in milliseconds> \
         --output-validator-components-file-name <validator components config json output file name> \
         --output-relayer-file-name <relayer config json output file name> \
         --dbs-path <path to where databases will be stored> \
@@ -295,10 +295,9 @@ $ apex-bridge generate-configs solana-chain \
         --sol-node-url https://api.devnet.solana.com \
         --sol-tracked-program F3rcR9BR4hnyHyPWKh3PotJrtLa7AiAo4YVtki9LC2xC \
         --treasury-address Ggc6De36VRJrgDQG8KFkGPTDbQBKQ1PSpyP9JLappixz \
-        --fee-addr-bridging 75bvshxQDP4Yyfx7cDsFbGeRTUF6PiSAfJqoa914LYD9 \
         --output-validator-components-file-name "vc_config.json"
 ```
-The keys and program id above are valid-format placeholders from tests; substitute your deployment values. Use `--relayer-data-dir` or `--relayer-config` when the generated relayer config must reference your secrets layout (same semantics as EVM). `--sol-node-url` must be a valid `http` or `https` URL.
+The keys and program id above are valid-format placeholders from tests; substitute your deployment values. Use `--relayer-data-dir` or `--relayer-config` when the generated relayer config must reference your secrets layout (same semantics as EVM). `--sol-node-url` must be a valid `http` or `https` URL. Bridging fee amount in the generated config comes from `--sol-min-fee-for-bridging` (default `1000010` lamports).
 
 # Example of sending a transaction from the prime to the vector
 ```shell
@@ -824,7 +823,7 @@ apex-bridge deploy-solana initialize-program \
 
 # How to update Solana bridge fee configuration
 
-The transaction always submits min operation fee and bridging fee (use existing on-chain values when you only change treasury or relayer). Optionally set `--update-treasury` / `--update-relayer` with the new addresses.
+The transaction always submits min operation fee and bridging fee (use existing on-chain values when you only change treasury). Optionally set `--update-treasury` with `--new-treasury-address`.
 
 ```shell
 apex-bridge deploy-solana update-fee-config \
@@ -905,9 +904,8 @@ apex-bridge deploy-solana register-mint-burn-token \
 apex-bridge deploy-solana hot-wallet-increment \
         --url http://127.0.0.1:8899 \
         --key ./admin-keypair.json \
-        --program-id <> \
+        --program-id <SKYLINE_PROGRAM_ADDRESS> \
         --mint <TOKEN_MINT_ADDRESS> \
         --amount 1000000 \
-        --program <SKYLINE_PROGRAM_ADDRESS> \
         --confirmation-timeout-seconds 120
 ```

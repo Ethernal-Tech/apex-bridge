@@ -173,6 +173,7 @@ func (r *SolEventReceiverImpl) parseBridgeRequestEvent(
 		Priority:      1,
 
 		SlotNumber:  event.SlotNumber,
+		BlockNumber: event.BlockNumber,
 		TxSignature: event.TxSignature,
 		Value:       common.LamportToWei(new(big.Int).SetUint64(bridgeRequestEvent.Value)),
 		Metadata:    metadata,
@@ -199,6 +200,7 @@ func (r *SolEventReceiverImpl) parseHotWalletIncrementEvent(
 		Priority:      1,
 
 		SlotNumber:  event.SlotNumber,
+		BlockNumber: event.BlockNumber,
 		TxSignature: event.TxSignature,
 		Value:       common.LamportToWei(new(big.Int).SetUint64(hotWalletIncrementEvent.Amount)),
 		Metadata:    []byte{},
@@ -227,6 +229,7 @@ func (r *SolEventReceiverImpl) parseTransactionExecutedEvent(
 		Priority:      1,
 
 		SlotNumber:      event.SlotNumber,
+		BlockNumber:     event.BlockNumber,
 		TxSignature:     event.TxSignature,
 		InnerActionHash: event.InnerActionHash,
 		Metadata:        metadata,

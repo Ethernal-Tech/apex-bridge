@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	solanaCore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
-	solanaTx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
@@ -66,7 +66,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	})
 
 	t.Run("NewConfirmedBlocksSubmitter UpdateFromIndexerDB updates latest info", func(t *testing.T) {
-		startSlot := uint64(1044)
+		startBlockNum := uint64(1044)
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
 		}
@@ -76,18 +76,18 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
 		oracleDB := &solanaCore.SolanaTxsProcessorDBMock{}
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{
-			BlockNumOrSlot: startSlot - 1,
+			BlockNumOrSlot: startBlockNum - 1,
 			CounterEmpty:   3,
 		}, nil).Once()
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   startSlot,
-			BlockNumber: 10,
+			BlockSlot:   10,
+			BlockNumber: startBlockNum,
 		}, nil).Once()
 
 		bs, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
-		require.Equal(t, startSlot, bs.latestInfo.BlockNumOrSlot)
+		require.Equal(t, startBlockNum, bs.latestInfo.BlockNumOrSlot)
 		require.Equal(t, 0, bs.latestInfo.CounterEmpty)
 	})
 
@@ -132,14 +132,6 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute submit blocks error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
-			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
-				chainID: {
-					SolanaChainConfig: solanaTx.SolanaChainConfig{
-						SlotRoundingThreshold: 10,
-						NoBatchPeriodPercent:  0,
-					},
-				},
-			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -148,13 +140,10 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockNumOrSlot: 1,
 		}, nil).Once()
 
-		blockHash := solana.Hash(solana.NewWallet().PublicKey())
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   3,
-			BlockHash:   blockHash,
 			BlockNumber: 20,
 		}, nil).Once()
-		mockEmptySlots(indexerDB, blockHash, 2, 3)
+		mockEmptyBlocks(indexerDB, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)
 		bridgeSubmitter.On("SubmitBlocks", chainID, mock.Anything).Return(testErr).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
@@ -168,14 +157,6 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute save latest info error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
-			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
-				chainID: {
-					SolanaChainConfig: solanaTx.SolanaChainConfig{
-						SlotRoundingThreshold: 10,
-						NoBatchPeriodPercent:  0,
-					},
-				},
-			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -184,13 +165,10 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockNumOrSlot: 1,
 		}, nil).Once()
 
-		blockHash := solana.Hash(solana.NewWallet().PublicKey())
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   3,
-			BlockHash:   blockHash,
-			BlockNumber: 20,
+			BlockNumber: 3,
 		}, nil).Once()
-		mockEmptySlots(indexerDB, blockHash, 2, 3)
+		mockEmptyBlocks(indexerDB, 2, 3)
 		bridgeSubmitter.On("SubmitBlocks", chainID, mock.Anything).Return(nil).Once()
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
 			BlockNumOrSlot: 3,
@@ -208,14 +186,6 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("execute passes and submits threshold empty block", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
-			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
-				chainID: {
-					SolanaChainConfig: solanaTx.SolanaChainConfig{
-						SlotRoundingThreshold: 10,
-						NoBatchPeriodPercent:  0,
-					},
-				},
-			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
@@ -224,16 +194,13 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			BlockNumOrSlot: 1,
 		}, nil).Once()
 
-		blockHash := solana.Hash(solana.NewWallet().PublicKey())
 		pendingSig, signErr := solana.NewWallet().PrivateKey.Sign([]byte("pending-tx"))
 		require.NoError(t, signErr)
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   6,
-			BlockHash:   blockHash,
-			BlockNumber: 99,
+			BlockNumber: 6,
 		}, nil).Once()
-		mockEmptySlots(indexerDB, blockHash, 2, 3)
-		indexerDB.On("GetEventsBySlot", uint64(4)).Return([]solanaTxsStore.EventRecord{
+		mockEmptyBlocks(indexerDB, 2, 3)
+		indexerDB.On("GetEventsByBlockNumber", uint64(4)).Return([]solanaTxsStore.EventRecord{
 			{Slot: 4, TxSignature: pendingSig.String()},
 		}, nil).Once()
 		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{
@@ -241,7 +208,9 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			DBKey:   pendingSig[:],
 		}).Return((*solanaCore.ProcessedSolanaTx)(nil), nil).Once()
 
-		bridgeSubmitter.On("SubmitBlocks", chainID, []eth.CardanoBlock(nil)).Return(nil).Once()
+		bridgeSubmitter.On("SubmitBlocks", chainID, []eth.CardanoBlock{
+			{BlockSlot: big.NewInt(3)},
+		}).Return(nil).Once()
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
 			BlockNumOrSlot: 3,
 			CounterEmpty:   0,
@@ -263,24 +232,15 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 					EmptyBlocksThreshold:     map[string]uint{},
 				},
 			},
-			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
-				chainID: {
-					SolanaChainConfig: solanaTx.SolanaChainConfig{
-						SlotRoundingThreshold: 10,
-						NoBatchPeriodPercent:  0,
-					},
-				},
-			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
 		oracleDB := &solanaCore.SolanaTxsProcessorDBMock{}
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   1,
 			BlockNumber: 1,
 		}, nil).Once()
-		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
+		indexerDB.On("GetEventsByBlockNumber", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
@@ -300,24 +260,15 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 					},
 				},
 			},
-			SolanaChains: map[string]*oracleCommon.SolanaChainConfig{
-				chainID: {
-					SolanaChainConfig: solanaTx.SolanaChainConfig{
-						SlotRoundingThreshold: 10,
-						NoBatchPeriodPercent:  0,
-					},
-				},
-			},
 		}
 		bridgeSubmitter := &solanaCore.SolanaBridgeSubmitterMock{}
 		indexerDB := &solanaTxsStore.MockStorageHandler{}
 		oracleDB := &solanaCore.SolanaTxsProcessorDBMock{}
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   1,
 			BlockNumber: 1,
 		}, nil).Once()
-		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
+		indexerDB.On("GetEventsByBlockNumber", uint64(1)).Return([]solanaTxsStore.EventRecord{}, nil).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
@@ -327,7 +278,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		require.ErrorContains(t, err, "threshold too large")
 	})
 
-	t.Run("getBlocksToSubmit get events by slot error", func(t *testing.T) {
+	t.Run("getBlocksToSubmit get events by block number error", func(t *testing.T) {
 		appConfig := &oracleCommon.AppConfig{
 			Bridge: oracleCommon.BridgeConfig{SubmitConfig: testSolanaSubmitConfig(chainID)},
 		}
@@ -336,10 +287,9 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		oracleDB := &solanaCore.SolanaTxsProcessorDBMock{}
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
 		indexerDB.On("GetLatestBlockPoint").Return(&solanaTxsStore.BlockPoint{
-			BlockSlot:   3,
 			BlockNumber: 2,
 		}, nil).Once()
-		indexerDB.On("GetEventsBySlot", uint64(1)).Return([]solanaTxsStore.EventRecord(nil), testErr).Once()
+		indexerDB.On("GetEventsByBlockNumber", uint64(1)).Return([]solanaTxsStore.EventRecord(nil), testErr).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
 			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
@@ -350,9 +300,8 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	})
 }
 
-func mockEmptySlots(indexerDB *solanaTxsStore.MockStorageHandler, blockHash solana.Hash, slots ...uint64) {
-	for _, slot := range slots {
-		indexerDB.On("GetEventsBySlot", slot).Return([]solanaTxsStore.EventRecord{}, nil).Once()
-		indexerDB.On("GetBlockhashBySlot", slot).Return(blockHash, nil).Once()
+func mockEmptyBlocks(indexerDB *solanaTxsStore.MockStorageHandler, blockNums ...uint64) {
+	for _, blockNum := range blockNums {
+		indexerDB.On("GetEventsByBlockNumber", blockNum).Return([]solanaTxsStore.EventRecord{}, nil).Once()
 	}
 }

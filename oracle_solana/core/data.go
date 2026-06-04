@@ -27,6 +27,7 @@ type SolanaTx struct {
 	LastTimeTried  time.Time `json:"last_time_tried"`
 
 	SlotNumber      uint64           `json:"slot_number"`
+	BlockNumber     uint64           `json:"block_number"`
 	TxSignature     solana.Signature `json:"tx_signature"`
 	Value           *big.Int         `json:"value"`
 	Metadata        []byte           `json:"metadata"`

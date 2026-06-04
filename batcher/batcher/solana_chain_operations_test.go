@@ -396,7 +396,7 @@ func TestSolanaChain_IsSynchronized(t *testing.T) {
 		}
 
 		bridgeMock.On("GetLastObservedBlock", ctx, destChainID).Return(lastObserved, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&solanaTrackerStore.BlockPoint{BlockSlot: uint64(11)}, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&solanaTrackerStore.BlockPoint{BlockSlot: uint64(11), BlockNumber: uint64(11)}, nil).Once()
 
 		synced, err := sco.IsSynchronized(ctx, bridgeMock, destChainID)
 		require.NoError(t, err)

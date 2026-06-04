@@ -80,7 +80,6 @@ type solanaChainGenerateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 	treasuryAddress   string
-	feeAddrBridging   string
 	altPublicKey      string
 
 	slotRoundingThreshold uint64

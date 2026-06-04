@@ -63,11 +63,13 @@ func TestParseHotWalletIncrementEvent(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		txSig := solana.Signature{1, 2, 3}
 		slot := uint64(123)
+		blockNum := uint64(124)
 		amountLamports := uint64(10)
 
 		tx, err := receiver.parseHotWalletIncrementEvent(common.ChainIDStrSolana, tracker.EventNotification{
 			EventName:   core.HotWalletIncrementEvent,
 			SlotNumber:  slot,
+			BlockNumber: blockNum,
 			TxSignature: txSig,
 			EventData: &skyline.HotWalletIncrementEvent{
 				Sender: solana.NewWallet().PublicKey(),
@@ -78,6 +80,7 @@ func TestParseHotWalletIncrementEvent(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, common.ChainIDStrSolana, tx.OriginChainID)
 		require.Equal(t, slot, tx.SlotNumber)
+		require.Equal(t, blockNum, tx.BlockNumber)
 		require.Equal(t, txSig, tx.TxSignature)
 		require.Equal(t, common.LamportToWei(new(big.Int).SetUint64(amountLamports)), tx.Value)
 		require.Empty(t, tx.Metadata)

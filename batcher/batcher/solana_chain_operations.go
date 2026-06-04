@@ -151,8 +151,9 @@ func (sco *SolanaChainOperations) IsSynchronized(
 		return false, err
 	}
 
+	// We use block number to check if the batcher is synchronized
 	return lastOracleBlockPoint != nil &&
-		lastOracleBlockPoint.BlockSlot >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
+		lastOracleBlockPoint.BlockNumber >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
 }
 
 func (sco *SolanaChainOperations) Submit(

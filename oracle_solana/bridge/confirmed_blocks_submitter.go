@@ -47,7 +47,7 @@ func NewConfirmedBlocksSubmitter(
 		}
 
 		if latestBlockPoint.BlockNumber > 0 {
-			latestInfo.BlockNumOrSlot = latestBlockPoint.BlockSlot
+			latestInfo.BlockNumOrSlot = latestBlockPoint.BlockNumber
 			latestInfo.CounterEmpty = 0
 		}
 	}
@@ -127,21 +127,21 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		return result, latestInfo, nil
 	}
 
-	if latestBlockPoint.BlockSlot < from {
+	if latestBlockPoint.BlockNumber < from {
 		return result, latestInfo, nil
 	}
 
 	//nolint:gosec
-	to := min(latestBlockPoint.BlockSlot, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)-1)
+	to := min(latestBlockPoint.BlockNumber, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)-1)
 
-	for slotNum := from; slotNum <= to; slotNum++ {
-		events, err := bs.indexerDB.GetEventsBySlot(slotNum)
+	for blockNum := from; blockNum <= to; blockNum++ {
+		events, err := bs.indexerDB.GetEventsByBlockNumber(blockNum)
 		if err != nil {
-			return result, latestInfo, fmt.Errorf("failed to get events for slot %d: %w", slotNum, err)
+			return result, latestInfo, fmt.Errorf("failed to get events for slot %d: %w", blockNum, err)
 		}
 
 		if len(events) == 0 {
-			latestInfo.BlockNumOrSlot = slotNum
+			latestInfo.BlockNumOrSlot = blockNum
 			latestInfo.CounterEmpty++
 
 			threshold, ok := bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[bs.chainID]
@@ -168,21 +168,11 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		}
 
 		latestInfo.CounterEmpty = 0
-		latestInfo.BlockNumOrSlot = slotNum
+		latestInfo.BlockNumOrSlot = blockNum
 
-		// Since we are querying every SlotRoundingThreshold slot for block
-		// we need to check those slots and not the ones that are not fetched from the indexer
-		if slotNum%bs.appConfig.SolanaChains[bs.chainID].SlotRoundingThreshold == 0 {
-			blockHash, err := bs.indexerDB.GetBlockhashBySlot(slotNum)
-			if err != nil {
-				return result, latestInfo, fmt.Errorf("failed to get block hash for slot %d: %w", slotNum, err)
-			}
-
-			result = append(result, eth.CardanoBlock{
-				BlockSlot: new(big.Int).SetUint64(slotNum),
-				BlockHash: blockHash,
-			})
-		}
+		result = append(result, eth.CardanoBlock{
+			BlockSlot: new(big.Int).SetUint64(blockNum),
+		})
 	}
 
 	return result, latestInfo, nil
