@@ -274,7 +274,7 @@ $ apex-bridge generate-configs solana-chain \
         --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
         --sol-min-operation-fee <minimal operation fee> \
         --slot-rounding-threshold <slot rounding threshold> \
-        --sol-tracker-start-slot <slot to start solana chain tracker from> \
+        --sol-tracker-start-block <block to start solana chain tracker from. format slot:blockNumber> \
         --treasury-address <solana treasury public key> \
         --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \

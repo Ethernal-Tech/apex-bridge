@@ -87,6 +87,7 @@ type SolanaChainConfig struct {
 	MinOperationFee            uint64        `json:"minOperationFee"`
 	TreasuryAddress            string        `json:"treasuryAddress"`
 	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
+	TrackerStartBlockNumber    uint64        `json:"trackerStartBlockNumber"`
 }
 
 type SubmitConfig struct {

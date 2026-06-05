@@ -24,7 +24,7 @@ const (
 	solanaMinOperationFeeFlag     = "sol-min-operation-fee"
 	solanaTTLNumberIncFlag        = "sol-ttl-number-inc"
 	solanaConfirmationTimeoutFlag = "sol-confirmation-timeout"
-	solanaTrackerStartSlotFlag    = "sol-tracker-start-slot"
+	solanaTrackerStartBlockFlag   = "sol-tracker-start-block"
 
 	solanaChainNodeURLFlagDesc        = "solana chain node URL"
 	solanaChainTrackedProgramFlagDesc = "(mandatory) solana program address to track"
@@ -33,7 +33,7 @@ const (
 	solanaMinOperationFeeFlagDesc     = "minimal operation fee for solana chain"
 	solanaTTLNumberIncFlagDesc        = "TTL increment for solana chain"
 	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
-	solanaTrackerStartSlotFlagDesc    = "slot to start solana chain tracker from (default 0)"
+	solanaTrackerStartBlockFlagDesc   = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)"
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -45,7 +45,6 @@ const (
 	defaultSolanaErrorBuffSize              = uint8(10)
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
 	defaultSolanaConfirmationTimeout        = int64(60000) // 1 minute
-	defaultSolanaTrackerStartSlot           = uint64(0)
 
 	altPublicKeyFlag     = "alt-public-key"
 	altPublicKeyFlagDesc = "alt public key for solana chain"
@@ -65,7 +64,10 @@ type solanaChainGenerateConfigsParams struct {
 	solanaSlotBuffSize      uint8
 	solanaEventBuffSize     uint8
 	solanaErrorBuffSize     uint8
-	solanaTrackerStartSlot  uint64
+	solanaTrackerStartBlock string
+
+	solanaTrackerStartSlot     uint64
+	solanaTrackerStartBlockNum uint64
 
 	emptyBlocksThreshold      uint
 	solanaTTLNumberInc        uint64
@@ -101,6 +103,17 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 	if _, err := wallet.PublicKeyFromAddress(p.treasuryAddress); err != nil {
 		return fmt.Errorf("invalid %s: %s", treasuryAddressFlag, p.treasuryAddress)
 	}
+
+	var startSlot, startBlock uint64
+	if p.solanaTrackerStartBlock != "" {
+		_, err := fmt.Sscanf(p.solanaTrackerStartBlock, "%d:%d", &startSlot, &startBlock)
+		if err != nil {
+			return fmt.Errorf("invalid format for %s, expected slot:blockNumber: %w", solanaTrackerStartBlockFlag, err)
+		}
+	}
+
+	p.solanaTrackerStartSlot = startSlot
+	p.solanaTrackerStartBlockNum = startBlock
 
 	return nil
 }
@@ -185,11 +198,11 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		slotRoundingThresholdFlagDesc,
 	)
 
-	cmd.Flags().Uint64Var(
-		&p.solanaTrackerStartSlot,
-		solanaTrackerStartSlotFlag,
-		defaultSolanaTrackerStartSlot,
-		solanaTrackerStartSlotFlagDesc,
+	cmd.Flags().StringVar(
+		&p.solanaTrackerStartBlock,
+		solanaTrackerStartBlockFlag,
+		"",
+		solanaTrackerStartBlockFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -265,6 +278,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 			ProgramID:             p.solanaTrackedProgram,
 		},
 		TrackerStartSlot:           p.solanaTrackerStartSlot,
+		TrackerStartBlockNumber:    p.solanaTrackerStartBlockNum,
 		TrackedProgram:             p.solanaTrackedProgram,
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
 		RetryTimeoutMiliseconds:    defaultSolanaRetryIntervalMiliseconds,

@@ -152,7 +152,8 @@ func loadTrackerConfigs(
 			TxsReceiver: txsReceiver,
 			Logger:      logger,
 		},
-		Logger: logger.Named(time.Now().UTC().String()),
+		StartFromSlot: config.TrackerStartSlot,
+		Logger:        logger.Named(time.Now().UTC().String()),
 	}, nil
 }
 
