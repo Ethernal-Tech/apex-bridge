@@ -33,16 +33,13 @@ const (
 	solanaMinOperationFeeFlagDesc     = "minimal operation fee for solana chain"
 	solanaTTLNumberIncFlagDesc        = "TTL increment for solana chain"
 	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
-	solanaTrackerStartBlockFlagDesc   = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)"
+	solanaTrackerStartBlockFlagDesc   = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
 	defaultSolanaMinFeeForBridging          = uint64(1_000_010)
 	defaultSolanaMinOperationFee            = uint64(0)
 	defaultSolanaMinColCoinsAllowedToBridge = uint64(1)
-	defaultSolanaSlotBuffSize               = uint8(20)
-	defaultSolanaEventBuffSize              = uint8(100)
-	defaultSolanaErrorBuffSize              = uint8(10)
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
 	defaultSolanaConfirmationTimeout        = int64(60000) // 1 minute
 

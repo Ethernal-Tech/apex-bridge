@@ -40,7 +40,7 @@ func NewConfirmedBlocksSubmitter(
 		return nil, err
 	}
 
-	if config := appConfig.SolanaChains[chainID]; config != nil && config.TrackerStartBlockNumber > latestInfo.BlockNumOrSlot {
+	if config := appConfig.SolanaChains[chainID]; config != nil && config.TrackerStartBlockNumber > latestInfo.BlockNumOrSlot { //nolint:lll
 		latestInfo.BlockNumOrSlot = config.TrackerStartBlockNumber
 		latestInfo.CounterEmpty = 0
 	}
