@@ -154,7 +154,7 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	claims *core.BridgeClaims,
 ) (result []*core.DBBatchInfoEvent, err error) {
-	addInfo := func(batchID uint64, chainIDInt uint8, txHash [32]byte, isFailedClaim bool) error {
+	addInfo := func(batchID uint64, chainIDInt uint8, txHash []byte, isFailedClaim bool) error {
 		chainID := p.appConfig.ChainIDConverter.ToChainIDStr(chainIDInt)
 
 		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
@@ -179,21 +179,21 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 		}
 
 		result = append(result, core.NewDBBatchInfoEvent(
-			batchID, chainIDInt, txHash[:], isFailedClaim, filteredTxs))
+			batchID, chainIDInt, txHash, isFailedClaim, filteredTxs))
 
 		return nil
 	}
 
 	for _, x := range claims.BatchExecutedClaims {
 		if err := addInfo(x.BatchNonceId, x.ChainId,
-			common.Hash(x.ObservedTransactionHash), false); err != nil {
+			x.ObservedTransactionHash, false); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, x := range claims.BatchExecutionFailedClaims {
 		if err := addInfo(x.BatchNonceId, x.ChainId,
-			common.Hash(x.ObservedTransactionHash), true); err != nil {
+			x.ObservedTransactionHash, true); err != nil {
 			return nil, err
 		}
 	}
