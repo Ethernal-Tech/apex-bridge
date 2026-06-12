@@ -225,7 +225,7 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Updating on-chain program version..."))
 	outputter.WriteOutput()
 
-	provider, err := solanawallet.NewProvider(p.rpcURL)
+	provider, err := solanawallet.NewProvider(p.rpcURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create provider: %w", err)
 	}

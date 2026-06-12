@@ -45,7 +45,7 @@ func NewSolanaChainOperations(
 		return nil, fmt.Errorf("failed to load relayer solana private key: %w", err)
 	}
 
-	txProvider, err := wallet.NewProvider(config.TxProviderEndpoint)
+	txProvider, err := wallet.NewProvider(config.TxProviderEndpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tx provider: %w", err)
 	}

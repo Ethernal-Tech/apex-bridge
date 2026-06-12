@@ -8,7 +8,7 @@ require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526180801-71382bb63547
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260605142832-26c541b6415b
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260612112511-e1ebd28108b1
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gagliardetto/solana-go v1.14.0
 	github.com/gorilla/handlers v1.5.2

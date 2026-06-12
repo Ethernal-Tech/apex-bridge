@@ -207,7 +207,7 @@ func (p *initializeProgramParams) validateFlags() error {
 func (p *initializeProgramParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	provider, err := solanawallet.NewProvider(p.rpcURL)
+	provider, err := solanawallet.NewProvider(p.rpcURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create provider: %w", err)
 	}
