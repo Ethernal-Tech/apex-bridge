@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"time"
 
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker"
 	store "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
@@ -38,6 +39,9 @@ func (etw *eventTrackerWrapper) Start() {
 	defer close(etw.notifyClosedCh)
 
 	if etw.eventTracker != nil {
+		// add delay for rpc endpoint cooldown
+		time.Sleep(10 * time.Second)
+
 		etw.eventTracker.Start(etw.ctx)
 	}
 }
