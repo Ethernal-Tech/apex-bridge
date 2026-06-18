@@ -777,14 +777,27 @@ apex-bridge sc-version \
 ```
 ## Solana commands
 
-# How to deploy solana program
+# How to deploy and initialize a Solana Skyline program
+
+Runs `solana program deploy` for the binary, then submits the on-chain initialize transaction. Validator public keys are fetched automatically from the bridge smart contract for the Solana chain (`--bridge-url`, `--bridge-addr`, `--chain-ids-config`). `--program-id` is optional; when omitted, it is derived from the program keypair file (`--key`).
+
 ```shell
 apex-bridge deploy-solana deploy-program \
         --url http://127.0.0.1:8899 \
         --fee-payer ./fee-payer-key.json \
         --key ./solana-program-key.json \
         --build-path ./solana-program.so \
-        --commitment confirmed
+        --commitment confirmed \
+        --admin-key ./admin-keypair.json \
+        --bridge-url http://127.0.0.1:8545 \
+        --bridge-addr 0x... \
+        --chain-ids-config ./chain-ids.json \
+        --last-id 0 \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --min-amount-to-bridge 1000000 \
+        --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --confirmation-timeout-seconds 120
 ```
 
 # How to upgrade an existing Solana program
@@ -802,23 +815,6 @@ apex-bridge deploy-solana upgrade-program \
         --admin-key ./admin-keypair.json \
         --confirmation-timeout-seconds 120 \
         --commitment confirmed
-```
-
-# How to initialize deployed Solana Skyline program
-```shell
-apex-bridge deploy-solana initialize-program \
-        --url http://127.0.0.1:8899 \
-        --program-id <> \
-        --admin-key ./admin-keypair.json \
-        --validator 5fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
-        --validator 6fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
-        --validator 7fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
-        --last-id 0 \
-        --min-operation-fee 1000010 \
-        --min-fee-for-bridging 1000010 \
-        --min-amount-to-bridge 1000000 \
-        --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
-        --confirmation-timeout-seconds 120
 ```
 
 # How to update Solana bridge fee configuration

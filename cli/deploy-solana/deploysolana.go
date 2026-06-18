@@ -7,7 +7,6 @@ import (
 
 const deployProgramCommandUse = "deploy-program"
 const upgradeProgramCommandUse = "upgrade-program"
-const initializeProgramCommandUse = "initialize-program"
 const createALTCommandUse = "create-alt"
 const extendALTCommandUse = "extend-alt"
 const registerLockUnlockTokenCommandUse = "register-lock-unlock-token"
@@ -17,7 +16,6 @@ const updateFeeConfigCommandUse = "update-fee-config"
 
 var deployProgramParamsData = &deployProgramParams{}
 var upgradeProgramParamsData = &upgradeProgramParams{}
-var initializeProgramParamsData = &initializeProgramParams{}
 var createALTParamsData = &createALTParams{}
 var extendALTParamsData = &extendALTParams{}
 var registerLockUnlockTokenParamsData = &registerLockUnlockTokenParams{}
@@ -33,7 +31,7 @@ func GetDeploySolanaCommand() *cobra.Command {
 
 	cmdDeployProgram := &cobra.Command{
 		Use:     deployProgramCommandUse,
-		Short:   "deploy a Solana program using the solana CLI",
+		Short:   "deploy and initialize a Solana skyline program",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(deployProgramParamsData),
 	}
@@ -42,12 +40,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 		Short:   "upgrade an existing Solana program using the solana CLI",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(upgradeProgramParamsData),
-	}
-	cmdInitializeProgram := &cobra.Command{
-		Use:     initializeProgramCommandUse,
-		Short:   "initialize deployed skyline Solana program",
-		PreRunE: runPreRun,
-		Run:     common.GetCliRunCommand(initializeProgramParamsData),
 	}
 	cmdCreateALT := &cobra.Command{
 		Use:     createALTCommandUse,
@@ -88,7 +80,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	upgradeProgramParamsData.setFlags(cmdUpgradeProgram)
-	initializeProgramParamsData.setFlags(cmdInitializeProgram)
 	createALTParamsData.setFlags(cmdCreateALT)
 	extendALTParamsData.setFlags(cmdExtendALT)
 	registerLockUnlockTokenParamsData.setFlags(cmdRegisterLockUnlockToken)
@@ -97,7 +88,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 	updateFeeConfigParamsData.setFlags(cmdUpdateFeeConfig)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdUpgradeProgram)
-	cmdDeploySolana.AddCommand(cmdInitializeProgram)
 	cmdDeploySolana.AddCommand(cmdCreateALT)
 	cmdDeploySolana.AddCommand(cmdExtendALT)
 	cmdDeploySolana.AddCommand(cmdRegisterLockUnlockToken)
@@ -115,10 +105,6 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == upgradeProgramCommandUse {
 		return upgradeProgramParamsData.validateFlags()
-	}
-
-	if cb.Use == initializeProgramCommandUse {
-		return initializeProgramParamsData.validateFlags()
 	}
 
 	if cb.Use == createALTCommandUse {
