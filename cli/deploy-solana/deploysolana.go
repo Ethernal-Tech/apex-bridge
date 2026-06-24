@@ -13,6 +13,7 @@ const registerLockUnlockTokenCommandUse = "register-lock-unlock-token"
 const registerMintBurnTokenCommandUse = "register-mint-burn-token"
 const hotWalletIncrementCommandUse = "hot-wallet-increment"
 const updateFeeConfigCommandUse = "update-fee-config"
+const updateMinBridgingAmountCommandUse = "update-min-bridging-amount"
 
 var deployProgramParamsData = &deployProgramParams{}
 var upgradeProgramParamsData = &upgradeProgramParams{}
@@ -22,6 +23,7 @@ var registerLockUnlockTokenParamsData = &registerLockUnlockTokenParams{}
 var registerMintBurnTokenParamsData = &registerMintBurnTokenParams{}
 var hotWalletIncrementParamsData = &hotWalletIncrementParams{}
 var updateFeeConfigParamsData = &updateFeeConfigParams{}
+var updateMinBridgingAmountParamsData = &updateMinBridgingAmountParams{}
 
 func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana := &cobra.Command{
@@ -77,6 +79,12 @@ func GetDeploySolanaCommand() *cobra.Command {
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(updateFeeConfigParamsData),
 	}
+	cmdUpdateMinBridgingAmount := &cobra.Command{
+		Use:     updateMinBridgingAmountCommandUse,
+		Short:   "update min bridging amount for a registered token on skyline Solana program",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(updateMinBridgingAmountParamsData),
+	}
 
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	upgradeProgramParamsData.setFlags(cmdUpgradeProgram)
@@ -86,6 +94,7 @@ func GetDeploySolanaCommand() *cobra.Command {
 	registerMintBurnTokenParamsData.setFlags(cmdRegisterMintBurnToken)
 	hotWalletIncrementParamsData.setFlags(cmdHotWalletIncrement)
 	updateFeeConfigParamsData.setFlags(cmdUpdateFeeConfig)
+	updateMinBridgingAmountParamsData.setFlags(cmdUpdateMinBridgingAmount)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdUpgradeProgram)
 	cmdDeploySolana.AddCommand(cmdCreateALT)
@@ -94,6 +103,7 @@ func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana.AddCommand(cmdRegisterMintBurnToken)
 	cmdDeploySolana.AddCommand(cmdHotWalletIncrement)
 	cmdDeploySolana.AddCommand(cmdUpdateFeeConfig)
+	cmdDeploySolana.AddCommand(cmdUpdateMinBridgingAmount)
 
 	return cmdDeploySolana
 }
@@ -129,6 +139,10 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == updateFeeConfigCommandUse {
 		return updateFeeConfigParamsData.validateFlags()
+	}
+
+	if cb.Use == updateMinBridgingAmountCommandUse {
+		return updateMinBridgingAmountParamsData.validateFlags()
 	}
 
 	return nil
