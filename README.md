@@ -372,15 +372,14 @@ $ apex-bridge sendtx \
 
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline cardano \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
-        --testnet-src 3311 \
-        --network-id-src 1 \
+        --testnet-src 1097911063 \
+        --network-id-src 0 \
         --chain-src cardano \
         --src-token-id 1 \
         --fee 1_100_000 \
@@ -396,15 +395,14 @@ $ apex-bridge sendtx skyline \
 
 # Example of sending a skyline transaction from the cardano to the nexus
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline cardano \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
-        --testnet-src 3311 \
-        --network-id-src 1 \
+        --testnet-src 1097911063 \
+        --network-id-src 0 \
         --chain-src cardano \
         --src-token-id 1 \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
@@ -417,12 +415,12 @@ $ apex-bridge sendtx skyline \
 ```
 - there is an optional `--stake-key` flag
 - optional `--cardano-cli-binary-name`
+- optional `--dst-token-contract-addr` is used when destination is an EVM chain and the destination token is ERC-20.
 
 # Example of sending a skyline transaction from the nexus to the cardano
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline evm \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type evm \
         --key EVM_WALLET_PRIVATE_KEY \
         --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr 0x3333 \
@@ -439,6 +437,27 @@ $ apex-bridge sendtx skyline \
 - `--src-token-name` flag should be set to `lovelace` only when sending the native currency and omitted in all other cases.
 - there is an optional `--stake-key` flag
 - optional `--cardano-cli-binary-name`
+- optional `--src-token-contract-addr` is used when source token is ERC-20 on an EVM source chain.
+
+# Example of sending a skyline transaction from the solana to the nexus
+```shell
+$ apex-bridge sendtx skyline solana \
+        --chain-ids-config ./chainIDsConfig.json \
+        --key SOLANA_WALLET_PRIVATE_KEY \
+        --solana-url http://localhost:8899 \
+        --program-id CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9 \
+        --addr-treasury-src AXXWYCH6PNm6AGjaasPG1maarfQvRedSw18wj91Nem1F \
+        --chain-src solana \
+        --src-token-id 31 \
+        --fee 6_000_010 \
+        --operation-fee 1_500_000 \
+        --chain-dst nexus \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --receiver 0x1111:1_234_567 \
+        --dst-token-contract-addr 0x86Fb92b4d5888e56BD54900e43f139e1993F73Ce
+```
+- optional `--dst-token-contract-addr` is used when destination is an EVM chain and the destination token is ERC-20.
+- optional `--dst-token-name` is used when destination is an Cardano chain.
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):

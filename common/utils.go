@@ -172,6 +172,27 @@ func WeiToDfm(wei *big.Int) *big.Int {
 	return dfm
 }
 
+func DfmToLamports(dfm *big.Int) *big.Int {
+	lamports := new(big.Int).Set(dfm)
+	base := big.NewInt(10)
+
+	return lamports.Mul(lamports, base.Exp(base, big.NewInt(LamportDecimals-DfmDecimals), nil))
+}
+
+func LamportsToDfm(lamports *big.Int) *big.Int {
+	dfm := new(big.Int).Set(lamports)
+	base := big.NewInt(10)
+
+	return dfm.Div(dfm, base.Exp(base, big.NewInt(LamportDecimals-DfmDecimals), nil))
+}
+
+func LamportsToWei(lamports *big.Int) *big.Int {
+	wei := new(big.Int).Set(lamports)
+	base := big.NewInt(10)
+
+	return wei.Mul(wei, base.Exp(base, big.NewInt(WeiDecimals-LamportDecimals), nil))
+}
+
 func WeiToLamport(wei *big.Int) *big.Int {
 	lamport := new(big.Int).Set(wei)
 	base := big.NewInt(10)

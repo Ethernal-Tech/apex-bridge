@@ -152,6 +152,12 @@ var (
 			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
 			MinColCoinsAllowedToBridge: big.NewInt(1),
 		},
+		ChainIDStrSolana: {
+			MinOperationFee:            big.NewInt(0),
+			MinFeeForBridging:          LamportsToWei(big.NewInt(6_000_000)),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: LamportsToWei(big.NewInt(1)),
+		},
 		"default": {
 			MinOperationFee:            MinOperationFeeDefault,
 			MinFeeForBridging:          MinFeeForBridgingDefault,

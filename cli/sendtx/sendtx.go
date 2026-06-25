@@ -8,36 +8,23 @@ import (
 const sendSkylineTxCommandUse = "skyline"
 
 var (
-	sendtxParamsData        = &sendTxParams{}
-	sendSkylineTxParamsData = &sendSkylineTxParams{}
+	sendtxParamsData = &sendTxParams{}
 )
 
 func GetSendTxCommand() *cobra.Command {
 	cmdSendTx := &cobra.Command{
-		Use:     "sendtx",
-		Short:   "sends apex bridging transaction",
-		PreRunE: runPreRun,
-		Run:     common.GetCliRunCommand(sendtxParamsData),
+		Use:   "sendtx",
+		Short: "sends apex bridging transaction",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return sendtxParamsData.validateFlags()
+		},
+		Run: common.GetCliRunCommand(sendtxParamsData),
 	}
-	cmdSendSkylineTx := &cobra.Command{
-		Use:     sendSkylineTxCommandUse,
-		Short:   "sends the transaction in skyline mode",
-		PreRunE: runPreRun,
-		Run:     common.GetCliRunCommand(sendSkylineTxParamsData),
-	}
+	cmdSendSkylineTx := getSendSkylineTxCommand()
 
 	sendtxParamsData.setFlags(cmdSendTx)
-	sendSkylineTxParamsData.setFlags(cmdSendSkylineTx)
 
 	cmdSendTx.AddCommand(cmdSendSkylineTx)
 
 	return cmdSendTx
-}
-
-func runPreRun(cb *cobra.Command, _ []string) error {
-	if cb.Use == sendSkylineTxCommandUse {
-		return sendSkylineTxParamsData.validateFlags()
-	}
-
-	return sendtxParamsData.validateFlags()
 }
