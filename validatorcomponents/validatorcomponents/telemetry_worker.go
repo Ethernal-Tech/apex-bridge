@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/hashicorp/go-hclog"
 )
@@ -28,10 +29,12 @@ type TelemetryWorker struct {
 	etxHelperWrapper                   *eth.EthHelperWrapper
 	cardanoDBs                         map[string]indexer.Database
 	ethDBs                             map[string]eventTrackerStore.EventTrackerStore
+	solanaDBs                          map[string]solanaTrackerStore.StorageHandler
 	config                             *oracleCommonCore.AppConfig
 	waitTime                           time.Duration
 	latestBlockCardano                 map[string]*indexer.BlockPoint
 	latestBlockEvm                     map[string]uint64
+	latestBlockSolana                  map[string]uint64
 	latestHotWalletState               map[string]*big.Int
 	latestHotWalletStateForNativeToken map[string]*big.Int
 	latestFeeMultisigState             map[string]uint64
@@ -42,6 +45,7 @@ func NewTelemetryWorker(
 	txHelper *eth.EthHelperWrapper,
 	cardanoDBs map[string]indexer.Database,
 	ethDBs map[string]eventTrackerStore.EventTrackerStore,
+	solanaDBs map[string]solanaTrackerStore.StorageHandler,
 	config *oracleCommonCore.AppConfig,
 	waitTime time.Duration,
 	logger hclog.Logger,
@@ -50,9 +54,11 @@ func NewTelemetryWorker(
 		etxHelperWrapper:                   txHelper,
 		cardanoDBs:                         cardanoDBs,
 		ethDBs:                             ethDBs,
+		solanaDBs:                          solanaDBs,
 		config:                             config,
 		latestBlockCardano:                 map[string]*indexer.BlockPoint{},
 		latestBlockEvm:                     map[string]uint64{},
+		latestBlockSolana:                  map[string]uint64{},
 		latestHotWalletState:               map[string]*big.Int{},
 		latestHotWalletStateForNativeToken: map[string]*big.Int{},
 		latestFeeMultisigState:             map[string]uint64{},
@@ -98,6 +104,17 @@ func (ti *TelemetryWorker) execute() {
 		}
 	}
 
+	for chainID, db := range ti.solanaDBs {
+		blockNumber, err := db.GetLatestFinalizedBlockNumber()
+		if err != nil {
+			ti.logger.Warn("failed to retrieve latest finalized block", "chain", chainID, "err", err)
+		} else if cache := ti.latestBlockSolana[chainID]; cache != blockNumber {
+			ti.latestBlockSolana[chainID] = blockNumber
+
+			telemetry.UpdateIndexersBlockCounter(chainID, 1)
+		}
+	}
+
 	ethTxHelper, err := ti.etxHelperWrapper.GetEthHelper()
 	if err != nil {
 		ti.logger.Warn("failed to create eth helper", "err", err)
@@ -123,6 +140,12 @@ func (ti *TelemetryWorker) execute() {
 	for chainID := range ti.ethDBs {
 		if val := ti.getHotWalletState(contract, chainID); val != nil {
 			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToDfm(val).Uint64())
+		}
+	}
+
+	for chainID := range ti.solanaDBs {
+		if val := ti.getHotWalletState(contract, chainID); val != nil {
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToLamport(val).Uint64())
 		}
 	}
 

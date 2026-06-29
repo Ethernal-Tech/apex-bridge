@@ -299,7 +299,7 @@ func NewValidatorComponents(
 		api:               apiObj,
 		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
 		telemetryWorker: NewTelemetryWorker(
-			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
+			ethHelper, cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger:                       logger,
 		bridgingAddressesManager:     bridgingAddressesManager,
