@@ -255,14 +255,9 @@ func (p *sendSkylineTxParams) validateCommonFlags() error {
 	return p.validateDestinationURLFlags()
 }
 
-// validateDestinationURLFlags checks that the destination URL flag provided matches
-// the destination chain type and that its format is valid. Destination URL flags are
-// optional — omitting them simply skips the post-bridge balance wait.
-//
-// Special case: for the Solana source subcommand --solana-url is the source chain URL
-// (required for sending), so it is excluded from the destination mismatch checks.
 func (p *sendSkylineTxParams) validateDestinationURLFlags() error {
 	solanaURLIsDestFlag := p.txType != common.ChainTypeSolanaStr
+	rpcURLIsDestFlag := p.txType != common.ChainTypeEVMStr
 
 	switch {
 	case p.chainIDConverter.IsEVMChainID(p.chainIDDst):
@@ -279,7 +274,7 @@ func (p *sendSkylineTxParams) validateDestinationURLFlags() error {
 		}
 
 	case p.chainIDConverter.IsCardanoChainID(p.chainIDDst):
-		if p.rpcURL != "" {
+		if rpcURLIsDestFlag && p.rpcURL != "" {
 			return fmt.Errorf("--%s should not be used for a Cardano destination; use --%s", rpcURLFlag, ogmiosURLDstFlag)
 		}
 
@@ -292,7 +287,7 @@ func (p *sendSkylineTxParams) validateDestinationURLFlags() error {
 		}
 
 	case p.chainIDConverter.IsSolanaChainID(p.chainIDDst):
-		if p.rpcURL != "" {
+		if rpcURLIsDestFlag && p.rpcURL != "" {
 			return fmt.Errorf("--%s should not be used for a Solana destination; use --%s", rpcURLFlag, solanaURLFlag)
 		}
 
@@ -681,7 +676,7 @@ func addEvmSkylineFlags(cmd *cobra.Command, p *sendSkylineTxParams) {
 		tokenContractAddrSrcFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, rpcURLFlag, solanaURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, solanaURLFlag)
 }
 
 func addSolanaSkylineFlags(cmd *cobra.Command, p *sendSkylineTxParams) {
@@ -1099,7 +1094,7 @@ func waitForSolanaSkylineTx(
 	})
 }
 
-// receiversInDfm converts receiver amounts to DFM — the bridge's canonical unit.
+// receiversInDfm converts receiver amounts to DFM.
 // Cardano inputs are already in DFM; Solana inputs are in lamports; EVM inputs are in Wei.
 func (p *sendSkylineTxParams) receiversInDfm() []*receiverAmount {
 	switch p.txType {
