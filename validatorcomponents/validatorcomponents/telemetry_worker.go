@@ -145,7 +145,7 @@ func (ti *TelemetryWorker) execute() {
 
 	for chainID := range ti.solanaDBs {
 		if val := ti.getHotWalletState(contract, chainID); val != nil {
-			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToLamport(val).Uint64())
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, common.WeiToDfm(val).Uint64())
 		}
 	}
 
