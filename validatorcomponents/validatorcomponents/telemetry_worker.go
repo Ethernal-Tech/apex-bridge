@@ -173,6 +173,7 @@ func (ti *TelemetryWorker) updateFeeHotWalletState(db indexer.Database, chainID 
 		}
 
 		if cache := ti.latestFeeMultisigState[chainID]; cache != stateSum {
+			ti.latestFeeMultisigState[chainID] = stateSum
 			telemetry.UpdateHotWalletState(chainID, feeMetricName, stateSum)
 		}
 	}
