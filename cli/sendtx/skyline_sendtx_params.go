@@ -1110,7 +1110,7 @@ func (p *sendSkylineTxParams) receiversInDfm() []*receiverAmount {
 func (p *sendSkylineTxParams) waitForSkylineDestinationTx(ctx context.Context) (bool, error) {
 	receiversDfm := p.receiversInDfm()
 
-	if p.ogmiosURLDst != "" {
+	if p.chainIDConverter.IsCardanoChainID(p.chainIDDst) && p.ogmiosURLDst != "" {
 		return true, waitForCardanoSkylineTx(
 			ctx,
 			cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
@@ -1119,7 +1119,7 @@ func (p *sendSkylineTxParams) waitForSkylineDestinationTx(ctx context.Context) (
 		)
 	}
 
-	if p.rpcURL != "" {
+	if p.chainIDConverter.IsEVMChainID(p.chainIDDst) && p.rpcURL != "" {
 		txHelper, err := getTxHelper(p.rpcURL)
 		if err != nil {
 			return false, err
@@ -1129,7 +1129,7 @@ func (p *sendSkylineTxParams) waitForSkylineDestinationTx(ctx context.Context) (
 			convertReceiversAmounts(receiversDfm, common.DfmToWei))
 	}
 
-	if p.solanaURL != "" {
+	if p.chainIDConverter.IsSolanaChainID(p.chainIDDst) && p.solanaURL != "" {
 		return true, waitForSolanaSkylineTx(ctx, p.solanaURL, p.tokenFullNameDst,
 			convertReceiversAmounts(receiversDfm, common.DfmToLamports))
 	}
