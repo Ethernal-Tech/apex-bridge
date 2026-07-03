@@ -836,6 +836,14 @@ apex-bridge deploy-solana upgrade-program \
         --commitment confirmed
 ```
 
+# Show solana program version
+
+```shell
+apex-bridge deploy-solana program-version \
+        --url http://127.0.0.1:8899 \
+        --program-id <skyline-program-id>
+```
+
 # How to update Solana bridge fee configuration
 
 The transaction always submits min operation fee and bridging fee (use existing on-chain values when you only change treasury). Optionally set `--update-treasury` with `--new-treasury-address`.
