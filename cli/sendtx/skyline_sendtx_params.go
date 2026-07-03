@@ -323,7 +323,7 @@ func (p *sendSkylineTxParams) validateTokenNames() error {
 		return fmt.Errorf("--%s flag not specified", fullDstTokenNameFlag)
 	}
 
-	if p.chainIDDst == common.ChainIDStrCardano && p.tokenFullNameDst != cardanowallet.AdaTokenName {
+	if p.chainIDConverter.IsCardanoChainID(p.chainIDDst) && p.tokenFullNameDst != cardanowallet.AdaTokenName {
 		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameDst)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullDstTokenNameFlag, p.tokenFullNameDst)
