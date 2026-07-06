@@ -25,8 +25,8 @@ const (
 	hotWalletIncrementConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	hotWalletIncrementRPCURLFlagDesc                     = "Solana RPC URL"
-	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file (alternative to --admin-key)"
-	hotWalletIncrementAdminKeyPathFlagDesc             = "path to Solana admin keypair file"
+	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file (alternative to --admin-key)" //nolint:lll
+	hotWalletIncrementAdminKeyPathFlagDesc               = "path to Solana admin keypair file"
 	hotWalletIncrementMintFlagDesc                       = "token mint public key"
 	hotWalletIncrementAmountFlagDesc                     = "hot wallet increment amount in token base units (lamports for SOL)" //nolint:lll
 	hotWalletIncrementProgramIDFlagDesc                  = "skyline program ID"
