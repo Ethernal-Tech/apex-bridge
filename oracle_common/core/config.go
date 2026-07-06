@@ -88,6 +88,7 @@ type SolanaChainConfig struct {
 	TreasuryAddress            string        `json:"treasuryAddress"`
 	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
 	TrackerStartBlockNumber    uint64        `json:"trackerStartBlockNumber"`
+	DisableRateLimiting        bool          `json:"disableRateLimit"`
 }
 
 type SubmitConfig struct {

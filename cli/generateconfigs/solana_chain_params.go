@@ -17,23 +17,25 @@ import (
 )
 
 const (
-	solanaChainNodeURLFlag        = "sol-node-url"
-	solanaChainTrackedProgramFlag = "sol-tracked-program"
-	solanaBlockFetchDelayFlag     = "sol-block-fetch-delay"
-	solanaMinFeeForBridgingFlag   = "sol-min-fee-for-bridging"
-	solanaMinOperationFeeFlag     = "sol-min-operation-fee"
-	solanaTTLNumberIncFlag        = "sol-ttl-number-inc"
-	solanaConfirmationTimeoutFlag = "sol-confirmation-timeout"
-	solanaTrackerStartBlockFlag   = "sol-tracker-start-block"
+	solanaChainNodeURLFlag            = "sol-node-url"
+	solanaChainTrackedProgramFlag     = "sol-tracked-program"
+	solanaBlockFetchDelayFlag         = "sol-block-fetch-delay"
+	solanaMinFeeForBridgingFlag       = "sol-min-fee-for-bridging"
+	solanaMinOperationFeeFlag         = "sol-min-operation-fee"
+	solanaTTLNumberIncFlag            = "sol-ttl-number-inc"
+	solanaConfirmationTimeoutFlag     = "sol-confirmation-timeout"
+	solanaTrackerStartBlockFlag       = "sol-tracker-start-block"
+	solanaTrackerDisableRateLimitFlag = "disable-rate-limiting"
 
-	solanaChainNodeURLFlagDesc        = "solana chain node URL"
-	solanaChainTrackedProgramFlagDesc = "(mandatory) solana program address to track"
-	solanaBlockFetchDelayFlagDesc     = "delay in milliseconds between block fetches for solana chain"
-	solanaMinFeeForBridgingFlagDesc   = "minimal bridging fee for solana chain"
-	solanaMinOperationFeeFlagDesc     = "minimal operation fee for solana chain"
-	solanaTTLNumberIncFlagDesc        = "TTL increment for solana chain"
-	solanaConfirmationTimeoutFlagDesc = "confirmation timeout for solana chain txs in milliseconds"
-	solanaTrackerStartBlockFlagDesc   = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
+	solanaChainNodeURLFlagDesc            = "solana chain node URL"
+	solanaChainTrackedProgramFlagDesc     = "(mandatory) solana program address to track"
+	solanaBlockFetchDelayFlagDesc         = "delay in milliseconds between block fetches for solana chain"
+	solanaMinFeeForBridgingFlagDesc       = "minimal bridging fee for solana chain"
+	solanaMinOperationFeeFlagDesc         = "minimal operation fee for solana chain"
+	solanaTTLNumberIncFlagDesc            = "TTL increment for solana chain"
+	solanaConfirmationTimeoutFlagDesc     = "confirmation timeout for solana chain txs in milliseconds"
+	solanaTrackerStartBlockFlagDesc       = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
+	solanaTrackerDisableRateLimitFlagDesc = "disable rate limiting for solana chain tracker"
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -65,6 +67,8 @@ type solanaChainGenerateConfigsParams struct {
 
 	solanaTrackerStartSlot     uint64
 	solanaTrackerStartBlockNum uint64
+
+	solanaTrackerDisableRateLimit bool
 
 	emptyBlocksThreshold      uint
 	solanaTTLNumberInc        uint64
@@ -242,6 +246,12 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		relayerConfigPathFlagDesc,
 	)
+	cmd.Flags().BoolVar(
+		&p.solanaTrackerDisableRateLimit,
+		solanaTrackerDisableRateLimitFlag,
+		false,
+		solanaTrackerDisableRateLimitFlagDesc,
+	)
 
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
@@ -284,6 +294,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		MinColCoinsAllowedToBridge: defaultSolanaMinColCoinsAllowedToBridge,
 		MinOperationFee:            p.solanaMinOperationFee,
 		TreasuryAddress:            p.treasuryAddress,
+		DisableRateLimiting:        p.solanaTrackerDisableRateLimit,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
