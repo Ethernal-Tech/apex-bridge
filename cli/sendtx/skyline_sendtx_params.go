@@ -37,6 +37,7 @@ const (
 	nativeTokenWalletContractAddrFlag = "native-token-wallet-contract-addr"
 	solanaURLFlag                     = "solana-url"
 	solanaProgramIDFlag               = "program-id"
+	rpcURLDstFlag                     = "rpc-url-dst"
 
 	operationFeeFlagDesc                  = "operation fee"
 	fullSrcTokenNameFlagDesc              = "denom of the token to transfer from source chain"    //nolint:gosec
@@ -47,6 +48,7 @@ const (
 	nativeTokenWalletContractAddrFlagDesc = "address of native token wallet contract"
 	solanaURLFlagDesc                     = "solana rpc url"
 	solanaProgramIDFlagDesc               = "source skyline solana program id"
+	rpcURLDstFlagDesc                     = "destination evm chain rpc url (EVM source chains only)"
 
 	apexTokenID = uint16(1)
 	adaTokenID  = uint16(2)
@@ -80,6 +82,7 @@ type sendSkylineTxParams struct {
 	gatewayAddress                   string
 	nativeTokenWalletContractAddress string
 	rpcURL                           string
+	rpcURLDst                        string
 	tokenContractAddrSrc             string
 	tokenContractAddrDst             string
 
@@ -273,9 +276,17 @@ func (p *sendSkylineTxParams) validateDestinationURLFlags() error {
 			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, p.rpcURL)
 		}
 
+		if p.rpcURLDst != "" && !common.IsValidHTTPURL(p.rpcURLDst) {
+			return fmt.Errorf("invalid --%s: %s", rpcURLDstFlag, p.rpcURLDst)
+		}
+
 	case p.chainIDConverter.IsCardanoChainID(p.chainIDDst):
 		if rpcURLIsDestFlag && p.rpcURL != "" {
 			return fmt.Errorf("--%s should not be used for a Cardano destination; use --%s", rpcURLFlag, ogmiosURLDstFlag)
+		}
+
+		if p.rpcURLDst != "" {
+			return fmt.Errorf("--%s should not be used for a Cardano destination; use --%s", rpcURLDstFlag, ogmiosURLDstFlag)
 		}
 
 		if solanaURLIsDestFlag && p.solanaURL != "" {
@@ -289,6 +300,10 @@ func (p *sendSkylineTxParams) validateDestinationURLFlags() error {
 	case p.chainIDConverter.IsSolanaChainID(p.chainIDDst):
 		if rpcURLIsDestFlag && p.rpcURL != "" {
 			return fmt.Errorf("--%s should not be used for a Solana destination; use --%s", rpcURLFlag, solanaURLFlag)
+		}
+
+		if p.rpcURLDst != "" {
+			return fmt.Errorf("--%s should not be used for a Solana destination; use --%s", rpcURLDstFlag, solanaURLFlag)
 		}
 
 		if p.ogmiosURLDst != "" {
@@ -675,8 +690,14 @@ func addEvmSkylineFlags(cmd *cobra.Command, p *sendSkylineTxParams) {
 		"",
 		tokenContractAddrSrcFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.rpcURLDst,
+		rpcURLDstFlag,
+		"",
+		rpcURLDstFlagDesc,
+	)
 
-	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, solanaURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, solanaURLFlag, rpcURLDstFlag)
 }
 
 func addSolanaSkylineFlags(cmd *cobra.Command, p *sendSkylineTxParams) {
@@ -1119,14 +1140,23 @@ func (p *sendSkylineTxParams) waitForSkylineDestinationTx(ctx context.Context) (
 		)
 	}
 
-	if p.chainIDConverter.IsEVMChainID(p.chainIDDst) && p.rpcURL != "" {
-		txHelper, err := getTxHelper(p.rpcURL)
-		if err != nil {
-			return false, err
+	if p.chainIDConverter.IsEVMChainID(p.chainIDDst) {
+		rpcURLDst := p.rpcURL
+		if p.txType == common.ChainTypeEVMStr {
+			rpcURLDst = p.rpcURLDst
 		}
 
-		return true, waitForEvmSkylineTx(ctx, txHelper.GetClient(), p.tokenContractAddrDst,
-			convertReceiversAmounts(receiversDfm, common.DfmToWei))
+		if rpcURLDst != "" {
+			txHelper, err := getTxHelper(rpcURLDst)
+			if err != nil {
+				return false, err
+			}
+
+			return true, waitForEvmSkylineTx(ctx, txHelper.GetClient(), p.tokenContractAddrDst,
+				convertReceiversAmounts(receiversDfm, common.DfmToWei))
+		}
+
+		return false, nil
 	}
 
 	if p.chainIDConverter.IsSolanaChainID(p.chainIDDst) && p.solanaURL != "" {
