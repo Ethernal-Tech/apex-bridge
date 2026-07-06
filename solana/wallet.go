@@ -218,6 +218,25 @@ func GenerateAndStoreSolanaProgramPrivateKey(
 	return generateAndStoreSolanaPrivateKey(mngr, GetKeyNameForSolanaProgram(), forceRegenerate)
 }
 
+func StoreSolanaPrivateKey(mngr secrets.SecretsManager, keyName string, privateKey solana.PrivateKey) error {
+	if mngr.HasSecret(keyName) {
+		if err := mngr.RemoveSecret(keyName); err != nil {
+			return err
+		}
+	}
+
+	bytes, err := json.Marshal(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal wallet: %w", err)
+	}
+
+	if err := mngr.SetSecret(keyName, bytes); err != nil {
+		return fmt.Errorf("failed to store wallet: %w", err)
+	}
+
+	return nil
+}
+
 type ApexSolanaWallet struct {
 	BridgeWallet *solanawallet.Wallet
 	FeeWallet    *solanawallet.Wallet

@@ -21,7 +21,7 @@ func GetWalletCreateCommand() *cobra.Command {
 	}
 	walletCreateBladeCmd := &cobra.Command{
 		Use:     bladeAdminCommandUse,
-		Short:   "create blade admin or proxy admin wallets using secret manager",
+		Short:   "create blade admin, proxy admin, or solana wallets using secret manager",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(walletCreateBladeParamsData),
 	}

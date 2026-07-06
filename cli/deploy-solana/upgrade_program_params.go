@@ -55,16 +55,15 @@ func (p *upgradeProgramParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag (must be a valid http or https URL)", rpcURLFlag)
 	}
 
-	if p.feePayerKeyPath == "" {
-		return fmt.Errorf("fee payer key path not specified: --%s", feePayerKeyFlag)
-	}
+	if p.feePayerKeyPath != "" {
+		p.feePayerKeyPath = filepath.Clean(p.feePayerKeyPath)
+		if _, err := os.Stat(p.feePayerKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("fee payer key file does not exist: %s", p.feePayerKeyPath)
+			}
 
-	if _, err := os.Stat(p.feePayerKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("fee payer key file does not exist: %s", p.feePayerKeyPath)
+			return fmt.Errorf("failed to check fee payer key file: %w", err)
 		}
-
-		return fmt.Errorf("failed to check fee payer key file: %w", err)
 	}
 
 	if p.programKeyPath == "" {
@@ -227,10 +226,15 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 
 	defer cleanupAdminKey()
 
+	feePayerKeyPath := p.feePayerKeyPath
+	if feePayerKeyPath == "" {
+		feePayerKeyPath = adminKeyPath
+	}
+
 	args := []string{
 		"program", "deploy",
 		"--url", p.rpcURL,
-		"--fee-payer", p.feePayerKeyPath,
+		"--fee-payer", feePayerKeyPath,
 		"-k", p.programKeyPath,
 		"--program-id", p.programID,
 		"--upgrade-authority", adminKeyPath,

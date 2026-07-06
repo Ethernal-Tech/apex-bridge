@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solsendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
@@ -24,7 +25,8 @@ const (
 	hotWalletIncrementConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	hotWalletIncrementRPCURLFlagDesc                     = "Solana RPC URL"
-	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file"
+	hotWalletIncrementKeyPathFlagDesc                    = "path to Solana signer keypair file (alternative to --admin-key)"
+	hotWalletIncrementAdminKeyPathFlagDesc             = "path to Solana admin keypair file"
 	hotWalletIncrementMintFlagDesc                       = "token mint public key"
 	hotWalletIncrementAmountFlagDesc                     = "hot wallet increment amount in token base units (lamports for SOL)" //nolint:lll
 	hotWalletIncrementProgramIDFlagDesc                  = "skyline program ID"
@@ -36,6 +38,8 @@ const (
 type hotWalletIncrementParams struct {
 	rpcURL                     string
 	keyPath                    string
+	adminKeyPath               string
+	privateKeyConfig           string
 	mintAddress                string
 	amount                     uint64
 	programID                  string
@@ -58,6 +62,18 @@ func (p *hotWalletIncrementParams) setFlags(cmd *cobra.Command) {
 		hotWalletIncrementKeyPathFlag,
 		"",
 		hotWalletIncrementKeyPathFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.adminKeyPath,
+		adminKeyPathFlag,
+		"",
+		hotWalletIncrementAdminKeyPathFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.mintAddress,
@@ -83,6 +99,10 @@ func (p *hotWalletIncrementParams) setFlags(cmd *cobra.Command) {
 		defaultHotWalletIncrementConfirmationTimeoutSeconds,
 		hotWalletIncrementConfirmationTimeoutSecondsFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(hotWalletIncrementKeyPathFlag, adminKeyPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(hotWalletIncrementKeyPathFlag, privateKeyConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(adminKeyPathFlag, privateKeyConfigFlag)
 }
 
 func (p *hotWalletIncrementParams) validateFlags() error {
@@ -93,22 +113,18 @@ func (p *hotWalletIncrementParams) validateFlags() error {
 		)
 	}
 
-	if p.keyPath == "" {
-		return fmt.Errorf("key path not specified: --%s", hotWalletIncrementKeyPathFlag)
+	if p.keyPath == "" && p.adminKeyPath == "" && p.privateKeyConfig == "" {
+		return fmt.Errorf(
+			"specify one of: --%s, --%s, or --%s",
+			hotWalletIncrementKeyPathFlag,
+			adminKeyPathFlag,
+			privateKeyConfigFlag,
+		)
 	}
 
-	p.keyPath = filepath.Clean(p.keyPath)
-	if _, err := os.Stat(p.keyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("key file does not exist: %s", p.keyPath)
-		}
-
-		return fmt.Errorf("failed to check key file: %w", err)
-	}
-
-	senderPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.keyPath)
+	senderPrivateKey, err := p.loadSignerPrivateKey()
 	if err != nil {
-		return fmt.Errorf("failed to load signer keypair file: %w", err)
+		return err
 	}
 
 	p.senderPrivateKey = senderPrivateKey
@@ -146,6 +162,45 @@ func (p *hotWalletIncrementParams) validateFlags() error {
 	p.confirmationTimeout = time.Duration(p.confirmationTimeoutSeconds) * time.Second //nolint:gosec
 
 	return nil
+}
+
+func (p *hotWalletIncrementParams) loadSignerPrivateKey() (solana.PrivateKey, error) {
+	if p.keyPath != "" {
+		p.keyPath = filepath.Clean(p.keyPath)
+		if _, err := os.Stat(p.keyPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("key file does not exist: %s", p.keyPath)
+			}
+
+			return nil, fmt.Errorf("failed to check key file: %w", err)
+		}
+
+		senderPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load signer keypair file: %w", err)
+		}
+
+		return senderPrivateKey, nil
+	}
+
+	if p.privateKeyConfig == "" {
+		p.adminKeyPath = filepath.Clean(p.adminKeyPath)
+		if _, err := os.Stat(p.adminKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+			}
+
+			return nil, fmt.Errorf("failed to check admin key file: %w", err)
+		}
+	}
+
+	adminPrivateKey, err := solanatx.GetSolanaPrivateKey(
+		p.adminKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForSolanaAdmin())
+	if err != nil {
+		return nil, fmt.Errorf("failed to load admin key: %w", err)
+	}
+
+	return adminPrivateKey, nil
 }
 
 func (p *hotWalletIncrementParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
