@@ -27,7 +27,7 @@ type updateMinBridgingAmountParams struct {
 }
 
 func (p *updateMinBridgingAmountParams) setFlags(cmd *cobra.Command) {
-	p.setCommonFlags(cmd.Flags())
+	p.setCommonFlagsOnCommand(cmd)
 
 	cmd.Flags().Uint16Var(
 		&p.tokenID,

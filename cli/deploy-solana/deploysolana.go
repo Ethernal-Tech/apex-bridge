@@ -15,6 +15,7 @@ const hotWalletIncrementCommandUse = "hot-wallet-increment"
 const updateFeeConfigCommandUse = "update-fee-config"
 const updateMinBridgingAmountCommandUse = "update-min-bridging-amount"
 const programVersionCommandUse = "program-version"
+const exportKeypairCommandUse = "export-keypair"
 
 var deployProgramParamsData = &deployProgramParams{}
 var upgradeProgramParamsData = &upgradeProgramParams{}
@@ -26,6 +27,7 @@ var hotWalletIncrementParamsData = &hotWalletIncrementParams{}
 var updateFeeConfigParamsData = &updateFeeConfigParams{}
 var updateMinBridgingAmountParamsData = &updateMinBridgingAmountParams{}
 var programVersionParamsData = &programVersionParams{}
+var exportKeypairParamsData = &exportKeypairParams{}
 
 func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana := &cobra.Command{
@@ -93,6 +95,12 @@ func GetDeploySolanaCommand() *cobra.Command {
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(programVersionParamsData),
 	}
+	cmdExportKeypair := &cobra.Command{
+		Use:     exportKeypairCommandUse,
+		Short:   "write a solana wallet private key string to a keypair json file",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(exportKeypairParamsData),
+	}
 
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	upgradeProgramParamsData.setFlags(cmdUpgradeProgram)
@@ -104,6 +112,7 @@ func GetDeploySolanaCommand() *cobra.Command {
 	updateFeeConfigParamsData.setFlags(cmdUpdateFeeConfig)
 	updateMinBridgingAmountParamsData.setFlags(cmdUpdateMinBridgingAmount)
 	programVersionParamsData.setFlags(cmdProgramVersion)
+	exportKeypairParamsData.setFlags(cmdExportKeypair)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdUpgradeProgram)
 	cmdDeploySolana.AddCommand(cmdCreateALT)
@@ -114,6 +123,7 @@ func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana.AddCommand(cmdUpdateFeeConfig)
 	cmdDeploySolana.AddCommand(cmdUpdateMinBridgingAmount)
 	cmdDeploySolana.AddCommand(cmdProgramVersion)
+	cmdDeploySolana.AddCommand(cmdExportKeypair)
 
 	return cmdDeploySolana
 }
@@ -157,6 +167,10 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == programVersionCommandUse {
 		return programVersionParamsData.validateFlags()
+	}
+
+	if cb.Use == exportKeypairCommandUse {
+		return exportKeypairParamsData.validateFlags()
 	}
 
 	return nil

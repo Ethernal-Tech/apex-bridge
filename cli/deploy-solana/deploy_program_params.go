@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solsendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -54,6 +55,9 @@ const (
 	treasuryAddressFlagDesc            = "treasury wallet address"
 	confirmationTimeoutSecondsFlagDesc = "max wait time in seconds for initialize tx finalization"
 
+	privateKeyConfigFlag     = "key-config"
+	privateKeyConfigFlagDesc = "path to secrets manager config file"
+
 	defaultConfirmationTimeoutSeconds = uint64(120)
 )
 
@@ -74,12 +78,14 @@ type deployProgramParams struct {
 	minAmountToBridge          uint64
 	treasuryAddress            string
 	confirmationTimeoutSeconds uint64
+	privateKeyConfig           string
 
-	adminPrivateKey     solana.PrivateKey
-	treasuryPublicKey   solana.PublicKey
-	confirmationTimeout time.Duration
-	programPublicKey    solana.PublicKey
-	chainIDConverter    *common.ChainIDConverter
+	adminPrivateKey      solana.PrivateKey
+	programPrivateKey    solana.PrivateKey
+	treasuryPublicKey    solana.PublicKey
+	confirmationTimeout  time.Duration
+	programPublicKey     solana.PublicKey
+	chainIDConverter     *common.ChainIDConverter
 }
 
 func (p *deployProgramParams) validateFlags() error {
@@ -99,17 +105,19 @@ func (p *deployProgramParams) validateFlags() error {
 		return fmt.Errorf("failed to check fee payer key file: %w", err)
 	}
 
-	if p.programKeyPath == "" {
-		return fmt.Errorf("program key path not specified: --%s", programKeyFlag)
+	if p.programKeyPath == "" && p.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", programKeyFlag, privateKeyConfigFlag)
 	}
 
-	p.programKeyPath = filepath.Clean(p.programKeyPath)
-	if _, err := os.Stat(p.programKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("program key file does not exist: %s", p.programKeyPath)
-		}
+	if p.privateKeyConfig == "" {
+		p.programKeyPath = filepath.Clean(p.programKeyPath)
+		if _, err := os.Stat(p.programKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("program key file does not exist: %s", p.programKeyPath)
+			}
 
-		return fmt.Errorf("failed to check program key file: %w", err)
+			return fmt.Errorf("failed to check program key file: %w", err)
+		}
 	}
 
 	if p.buildPath == "" {
@@ -128,25 +136,36 @@ func (p *deployProgramParams) validateFlags() error {
 		p.commitment = defaultCommitment
 	}
 
-	if p.adminKeyPath == "" {
-		return fmt.Errorf("admin key path not specified: --%s", adminKeyPathFlag)
+	if p.adminKeyPath == "" && p.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", adminKeyPathFlag, privateKeyConfigFlag)
 	}
 
-	p.adminKeyPath = filepath.Clean(p.adminKeyPath)
-	if _, err := os.Stat(p.adminKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+	if p.privateKeyConfig == "" {
+		p.adminKeyPath = filepath.Clean(p.adminKeyPath)
+		if _, err := os.Stat(p.adminKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+			}
+
+			return fmt.Errorf("failed to check admin key file: %w", err)
 		}
-
-		return fmt.Errorf("failed to check admin key file: %w", err)
 	}
 
-	adminPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.adminKeyPath)
+	adminPrivateKey, err := solanatx.GetSolanaPrivateKey(
+		p.adminKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForSolanaAdmin())
 	if err != nil {
-		return fmt.Errorf("failed to load admin keypair file: %w", err)
+		return fmt.Errorf("failed to load admin key: %w", err)
 	}
 
 	p.adminPrivateKey = adminPrivateKey
+
+	programPrivateKey, err := solanatx.GetSolanaPrivateKey(
+		p.programKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForSolanaProgram())
+	if err != nil {
+		return fmt.Errorf("failed to load program key: %w", err)
+	}
+
+	p.programPrivateKey = programPrivateKey
 
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
@@ -176,12 +195,7 @@ func (p *deployProgramParams) validateFlags() error {
 	p.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if p.programID == "" {
-		programPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.programKeyPath)
-		if err != nil {
-			return fmt.Errorf("failed to load program keypair file: %w", err)
-		}
-
-		p.programPublicKey = programPrivateKey.PublicKey()
+		p.programPublicKey = p.programPrivateKey.PublicKey()
 	} else {
 		programPublicKey, err := solanawallet.PublicKeyFromAddress(p.programID)
 		if err != nil {
@@ -308,6 +322,15 @@ func (p *deployProgramParams) setFlags(cmd *cobra.Command) {
 		defaultConfirmationTimeoutSeconds,
 		confirmationTimeoutSecondsFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(adminKeyPathFlag, privateKeyConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(programKeyFlag, privateKeyConfigFlag)
 }
 
 func (p *deployProgramParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -330,6 +353,13 @@ func (p *deployProgramParams) Execute(outputter common.OutputFormatter) (common.
 func (p *deployProgramParams) deployProgram(outputter common.OutputFormatter) (string, error) {
 	buildPath := filepath.Clean(p.buildPath)
 
+	programKeyPath, cleanupProgramKey, err := p.solanaKeypairPathForCLI(p.programKeyPath, p.programPrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("prepare program keypair: %w", err)
+	}
+
+	defer cleanupProgramKey()
+
 	_, _ = outputter.Write([]byte("Deploying Solana program..."))
 	outputter.WriteOutput()
 
@@ -337,7 +367,8 @@ func (p *deployProgramParams) deployProgram(outputter common.OutputFormatter) (s
 		"program", "deploy",
 		"--url", p.rpcURL,
 		"--fee-payer", p.feePayerKeyPath,
-		"-k", p.programKeyPath,
+		"-k", programKeyPath,
+		"--upgrade-authority", p.adminPrivateKey.PublicKey().String(),
 		"--commitment", p.commitment,
 		buildPath,
 	}
@@ -457,6 +488,21 @@ func (p *deployProgramParams) getValidatorPubkeys(
 	}
 
 	return solanaValidatorPubkeysFromChainData(validatorsData)
+}
+
+func (p *deployProgramParams) solanaKeypairPathForCLI(
+	path string, privateKey solana.PrivateKey,
+) (string, func(), error) {
+	if path != "" {
+		return path, func() {}, nil
+	}
+
+	tempPath, err := solanatx.WriteSolanaKeypairTempFile(privateKey)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return tempPath, func() { _ = os.Remove(tempPath) }, nil
 }
 
 func solanaValidatorPubkeysFromChainData(validatorsData []eth.ValidatorChainData) ([]string, error) {

@@ -818,6 +818,7 @@ apex-bridge deploy-solana deploy-program \
         --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
         --confirmation-timeout-seconds 120
 ```
+- instead of `--key` and `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to upgrade an existing Solana program
 
@@ -835,6 +836,8 @@ apex-bridge deploy-solana upgrade-program \
         --confirmation-timeout-seconds 120 \
         --commitment confirmed
 ```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # Show solana program version
 
@@ -858,6 +861,8 @@ apex-bridge deploy-solana update-fee-config \
         --confirmation-timeout-seconds 120
 ```
 
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
 ```shell
 apex-bridge deploy-solana update-fee-config \
         --url http://127.0.0.1:8899 \
@@ -870,6 +875,8 @@ apex-bridge deploy-solana update-fee-config \
         --confirmation-timeout-seconds 120
 ```
 
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
 # How to create Solana ALT (Address Lookup Table)
 ```shell
 apex-bridge deploy-solana create-alt \
@@ -878,6 +885,8 @@ apex-bridge deploy-solana create-alt \
         --admin-key ./admin-keypair.json \
         --confirmation-timeout-seconds 120
 ```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to extend Solana ALT for bridge transaction
 ```shell
@@ -892,6 +901,7 @@ apex-bridge deploy-solana extend-alt \
         --confirmation-timeout-seconds 120
 ```
 - run `extend-alt` again with new `--token-id-and-mint` values when new tokens are registered.
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to register lock/unlock Solana token
 ```shell
@@ -905,6 +915,8 @@ apex-bridge deploy-solana register-lock-unlock-token \
         --min-bridging-amount 1000000 \
         --confirmation-timeout-seconds 120
 ```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to register mint/burn Solana token
 ```shell
@@ -922,11 +934,13 @@ apex-bridge deploy-solana register-mint-burn-token \
         --confirmation-timeout-seconds 120
 ```
 
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
 # How to submit Solana hot wallet increment tx
 ```shell
 apex-bridge deploy-solana hot-wallet-increment \
         --url http://127.0.0.1:8899 \
-        --key ./admin-keypair.json \
+        --key ./keypair.json \
         --program-id <SKYLINE_PROGRAM_ADDRESS> \
         --mint <TOKEN_MINT_ADDRESS> \
         --amount 1000000 \

@@ -31,7 +31,7 @@ type extendALTParams struct {
 }
 
 func (p *extendALTParams) setFlags(cmd *cobra.Command) {
-	p.setCommonFlags(cmd.Flags())
+	p.setCommonFlagsOnCommand(cmd)
 
 	cmd.Flags().StringVar(
 		&p.altAddress,

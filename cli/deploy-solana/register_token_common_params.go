@@ -9,6 +9,7 @@ import (
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -25,10 +26,10 @@ type registerTokenCommonParams struct {
 	treasuryPublicKey solana.PublicKey
 }
 
-func (p *registerTokenCommonParams) setRegisterTokenCommonFlags(cmd commonFlagSetter) {
-	p.setCommonFlags(cmd)
+func (p *registerTokenCommonParams) setRegisterTokenCommonFlags(cmd *cobra.Command) {
+	p.setCommonFlagsOnCommand(cmd)
 
-	cmd.StringVar(
+	cmd.Flags().StringVar(
 		&p.treasuryAddress,
 		registerTokenTreasuryAddressFlag,
 		"",

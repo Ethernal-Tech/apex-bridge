@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solsendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
@@ -41,6 +42,7 @@ type upgradeProgramParams struct {
 	commitment                 string
 	upgradeProgramVersion      string
 	adminKeyPath               string
+	privateKeyConfig           string
 	confirmationTimeoutSeconds uint64
 
 	programPublicKey    solana.PublicKey
@@ -113,22 +115,25 @@ func (p *upgradeProgramParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s: %w", upgradeProgramVersionFlag, err)
 	}
 
-	if p.adminKeyPath == "" {
-		return fmt.Errorf("admin key path not specified: --%s", upgradeProgramAdminKeyPathFlag)
+	if p.adminKeyPath == "" && p.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", upgradeProgramAdminKeyPathFlag, privateKeyConfigFlag)
 	}
 
-	p.adminKeyPath = filepath.Clean(p.adminKeyPath)
-	if _, err := os.Stat(p.adminKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+	if p.privateKeyConfig == "" {
+		p.adminKeyPath = filepath.Clean(p.adminKeyPath)
+		if _, err := os.Stat(p.adminKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+			}
+
+			return fmt.Errorf("failed to check admin key file: %w", err)
 		}
-
-		return fmt.Errorf("failed to check admin key file: %w", err)
 	}
 
-	adminPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.adminKeyPath)
+	adminPrivateKey, err := solanatx.GetSolanaPrivateKey(
+		p.adminKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForSolanaAdmin())
 	if err != nil {
-		return fmt.Errorf("failed to load admin keypair file: %w", err)
+		return fmt.Errorf("failed to load admin key: %w", err)
 	}
 
 	p.adminPrivateKey = adminPrivateKey
@@ -192,12 +197,20 @@ func (p *upgradeProgramParams) setFlags(cmd *cobra.Command) {
 		"",
 		upgradeProgramAdminKeyPathFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
 	cmd.Flags().Uint64Var(
 		&p.confirmationTimeoutSeconds,
 		upgradeProgramConfirmationTimeoutSecondsFlag,
 		defaultUpgradeProgramConfirmationTimeoutSeconds,
 		upgradeProgramConfirmationTimeoutSecondsFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(upgradeProgramAdminKeyPathFlag, privateKeyConfigFlag)
 }
 
 func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -213,6 +226,7 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 		"--fee-payer", p.feePayerKeyPath,
 		"-k", p.programKeyPath,
 		"--program-id", p.programID,
+		"--upgrade-authority", p.adminPrivateKey.PublicKey().String(),
 		"--commitment", p.commitment,
 		buildPath,
 	}

@@ -25,10 +25,13 @@ const (
 	validatorDataDirFlagDesc = "(mandatory validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc  = "(mandatory validator-data not specified) path to bridge chain secrets manager config file"                       //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
-	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, etc)"
+	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, solana_admin, solana_program, etc)"
 	networkIDFlagDesc        = "network id"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
 	showPrivateKeyFlagDesc   = "show private key in output"
+
+	solanaAdminKeyType   = "solana_admin"
+	solanaProgramKeyType = "solana_program"
 )
 
 type walletCreateParams struct {
@@ -170,6 +173,34 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 
 		return &evmCmdResult{
 			ChainID:        ip.chainID,
+			PrivateKey:     privateKey.String(),
+			PublicKey:      privateKey.PublicKey().String(),
+			Address:        privateKey.PublicKey().String(),
+			showPrivateKey: ip.showPrivateKey,
+		}, nil
+
+	case solanaAdminKeyType:
+		privateKey, err := solanatx.GenerateAndStoreSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
+		if err != nil {
+			return nil, err
+		}
+
+		return &evmCmdResult{
+			ChainID:        solanaAdminKeyType,
+			PrivateKey:     privateKey.String(),
+			PublicKey:      privateKey.PublicKey().String(),
+			Address:        privateKey.PublicKey().String(),
+			showPrivateKey: ip.showPrivateKey,
+		}, nil
+
+	case solanaProgramKeyType:
+		privateKey, err := solanatx.GenerateAndStoreSolanaProgramPrivateKey(secretsManager, ip.forceRegenerate)
+		if err != nil {
+			return nil, err
+		}
+
+		return &evmCmdResult{
+			ChainID:        solanaProgramKeyType,
 			PrivateKey:     privateKey.String(),
 			PublicKey:      privateKey.PublicKey().String(),
 			Address:        privateKey.PublicKey().String(),

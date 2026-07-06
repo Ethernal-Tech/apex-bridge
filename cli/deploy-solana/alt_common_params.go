@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -29,6 +31,7 @@ type altCommonParams struct {
 	rpcURL                     string
 	programID                  string
 	adminKeyPath               string
+	privateKeyConfig           string
 	confirmationTimeoutSeconds uint64
 
 	adminPrivateKey     solana.PrivateKey
@@ -55,12 +58,23 @@ func (p *altCommonParams) setCommonFlags(cmd commonFlagSetter) {
 		"",
 		altAdminKeyPathFlagDesc,
 	)
+	cmd.StringVar(
+		&p.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
 	cmd.Uint64Var(
 		&p.confirmationTimeoutSeconds,
 		altConfirmationTimeoutSecondsFlag,
 		defaultALTConfirmationTimeoutSeconds,
 		altConfirmationTimeoutSecondsFlagDesc,
 	)
+}
+
+func (p *altCommonParams) setCommonFlagsOnCommand(cmd *cobra.Command) {
+	p.setCommonFlags(cmd.Flags())
+	cmd.MarkFlagsMutuallyExclusive(altAdminKeyPathFlag, privateKeyConfigFlag)
 }
 
 func (p *altCommonParams) validateCommonFlags() error {
@@ -71,27 +85,29 @@ func (p *altCommonParams) validateCommonFlags() error {
 		)
 	}
 
-	if p.adminKeyPath == "" {
-		return fmt.Errorf("admin key path not specified: --%s", altAdminKeyPathFlag)
+	if p.adminKeyPath == "" && p.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", altAdminKeyPathFlag, privateKeyConfigFlag)
 	}
 
 	if p.programID == "" {
 		return fmt.Errorf("program ID not specified: --%s", altProgramIDFlag)
 	}
 
-	p.adminKeyPath = filepath.Clean(p.adminKeyPath)
+	if p.privateKeyConfig == "" {
+		p.adminKeyPath = filepath.Clean(p.adminKeyPath)
+		if _, err := os.Stat(p.adminKeyPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+			}
 
-	if _, err := os.Stat(p.adminKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
+			return fmt.Errorf("failed to check admin key file: %w", err)
 		}
-
-		return fmt.Errorf("failed to check admin key file: %w", err)
 	}
 
-	adminPrivateKey, err := solana.PrivateKeyFromSolanaKeygenFile(p.adminKeyPath)
+	adminPrivateKey, err := solanatx.GetSolanaPrivateKey(
+		p.adminKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForSolanaAdmin())
 	if err != nil {
-		return fmt.Errorf("failed to load admin keypair file: %w", err)
+		return fmt.Errorf("failed to load admin key: %w", err)
 	}
 
 	p.adminPrivateKey = adminPrivateKey

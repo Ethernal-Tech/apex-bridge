@@ -30,7 +30,7 @@ type registerLockUnlockTokenParams struct {
 }
 
 func (p *registerLockUnlockTokenParams) setFlags(cmd *cobra.Command) {
-	p.setRegisterTokenCommonFlags(cmd.Flags())
+	p.setRegisterTokenCommonFlags(cmd)
 
 	cmd.Flags().Uint16Var(
 		&p.tokenID,

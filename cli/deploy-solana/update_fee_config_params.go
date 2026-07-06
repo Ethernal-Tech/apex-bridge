@@ -35,7 +35,7 @@ type updateFeeConfigParams struct {
 }
 
 func (p *updateFeeConfigParams) setFlags(cmd *cobra.Command) {
-	p.setCommonFlags(cmd.Flags())
+	p.setCommonFlagsOnCommand(cmd)
 
 	cmd.Flags().Uint64Var(
 		&p.minOperationFee,

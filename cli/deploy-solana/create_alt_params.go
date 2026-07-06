@@ -16,7 +16,7 @@ type createALTParams struct {
 }
 
 func (p *createALTParams) setFlags(cmd *cobra.Command) {
-	p.setCommonFlags(cmd.Flags())
+	p.setCommonFlagsOnCommand(cmd)
 }
 
 func (p *createALTParams) validateFlags() error {
