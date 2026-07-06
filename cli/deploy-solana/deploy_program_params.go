@@ -80,12 +80,12 @@ type deployProgramParams struct {
 	confirmationTimeoutSeconds uint64
 	privateKeyConfig           string
 
-	adminPrivateKey      solana.PrivateKey
-	programPrivateKey    solana.PrivateKey
-	treasuryPublicKey    solana.PublicKey
-	confirmationTimeout  time.Duration
-	programPublicKey     solana.PublicKey
-	chainIDConverter     *common.ChainIDConverter
+	adminPrivateKey     solana.PrivateKey
+	programPrivateKey   solana.PrivateKey
+	treasuryPublicKey   solana.PublicKey
+	confirmationTimeout time.Duration
+	programPublicKey    solana.PublicKey
+	chainIDConverter    *common.ChainIDConverter
 }
 
 func (p *deployProgramParams) validateFlags() error {
@@ -353,12 +353,19 @@ func (p *deployProgramParams) Execute(outputter common.OutputFormatter) (common.
 func (p *deployProgramParams) deployProgram(outputter common.OutputFormatter) (string, error) {
 	buildPath := filepath.Clean(p.buildPath)
 
-	programKeyPath, cleanupProgramKey, err := p.solanaKeypairPathForCLI(p.programKeyPath, p.programPrivateKey)
+	programKeyPath, cleanupProgramKey, err := solanaKeypairPathForCLI(p.programKeyPath, p.programPrivateKey)
 	if err != nil {
 		return "", fmt.Errorf("prepare program keypair: %w", err)
 	}
 
 	defer cleanupProgramKey()
+
+	adminKeyPath, cleanupAdminKey, err := solanaKeypairPathForCLI(p.adminKeyPath, p.adminPrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("prepare admin keypair: %w", err)
+	}
+
+	defer cleanupAdminKey()
 
 	_, _ = outputter.Write([]byte("Deploying Solana program..."))
 	outputter.WriteOutput()
@@ -368,7 +375,7 @@ func (p *deployProgramParams) deployProgram(outputter common.OutputFormatter) (s
 		"--url", p.rpcURL,
 		"--fee-payer", p.feePayerKeyPath,
 		"-k", programKeyPath,
-		"--upgrade-authority", p.adminPrivateKey.PublicKey().String(),
+		"--upgrade-authority", adminKeyPath,
 		"--commitment", p.commitment,
 		buildPath,
 	}
@@ -490,7 +497,7 @@ func (p *deployProgramParams) getValidatorPubkeys(
 	return solanaValidatorPubkeysFromChainData(validatorsData)
 }
 
-func (p *deployProgramParams) solanaKeypairPathForCLI(
+func solanaKeypairPathForCLI(
 	path string, privateKey solana.PrivateKey,
 ) (string, func(), error) {
 	if path != "" {

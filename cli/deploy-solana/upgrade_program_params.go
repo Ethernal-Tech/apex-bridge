@@ -220,13 +220,20 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Upgrading Solana program..."))
 	outputter.WriteOutput()
 
+	adminKeyPath, cleanupAdminKey, err := solanaKeypairPathForCLI(p.adminKeyPath, p.adminPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("prepare admin keypair: %w", err)
+	}
+
+	defer cleanupAdminKey()
+
 	args := []string{
 		"program", "deploy",
 		"--url", p.rpcURL,
 		"--fee-payer", p.feePayerKeyPath,
 		"-k", p.programKeyPath,
 		"--program-id", p.programID,
-		"--upgrade-authority", p.adminPrivateKey.PublicKey().String(),
+		"--upgrade-authority", adminKeyPath,
 		"--commitment", p.commitment,
 		buildPath,
 	}
