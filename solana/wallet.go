@@ -36,13 +36,26 @@ func GetSolanaPrivateKey(keyPath, config, keyName string) (solana.PrivateKey, er
 		return nil, fmt.Errorf("failed to load solana private key: %w", err)
 	}
 
-	var privateKey solana.PrivateKey
-
-	if err := json.Unmarshal(bytes, &privateKey); err != nil {
+	privateKey, err := decodeSolanaPrivateKeySecret(bytes)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal solana private key: %w", err)
 	}
 
 	return privateKey, nil
+}
+
+func decodeSolanaPrivateKeySecret(bytes []byte) (solana.PrivateKey, error) {
+	var privateKey solana.PrivateKey
+	if err := json.Unmarshal(bytes, &privateKey); err == nil {
+		return privateKey, nil
+	}
+
+	var encoded string
+	if err := json.Unmarshal(bytes, &encoded); err == nil {
+		return PrivateKeyFromWalletString(encoded)
+	}
+
+	return PrivateKeyFromWalletString(string(bytes))
 }
 
 func MarshalSolanaKeygenFileContent(privateKey solana.PrivateKey) ([]byte, error) {
@@ -197,9 +210,8 @@ func loadSolanaPrivateKeyFromSecretsManager(
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	var privateKey solana.PrivateKey
-
-	if err := json.Unmarshal(bytes, &privateKey); err != nil {
+	privateKey, err := decodeSolanaPrivateKeySecret(bytes)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
@@ -282,13 +294,12 @@ func LoadBatcherSolanaPrivateKey(mngr secrets.SecretsManager, chain string) (*so
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	var solanaPrivateKey *solana.PrivateKey
-
-	if err := json.Unmarshal(bytes, &solanaPrivateKey); err != nil {
+	solanaPrivateKey, err := decodeSolanaPrivateKeySecret(bytes)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	return solanaPrivateKey, nil
+	return &solanaPrivateKey, nil
 }
 
 func GenerateAndStoreRelayerSolanaPrivateKey(
@@ -331,11 +342,10 @@ func LoadRelayerSolanaPrivateKey(mngr secrets.SecretsManager, chain string) (*so
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	var solanaPrivateKey *solana.PrivateKey
-
-	if err := json.Unmarshal(bytes, &solanaPrivateKey); err != nil {
+	solanaPrivateKey, err := decodeSolanaPrivateKeySecret(bytes)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	return solanaPrivateKey, nil
+	return &solanaPrivateKey, nil
 }
