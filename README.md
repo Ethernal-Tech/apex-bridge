@@ -2,8 +2,8 @@
 
 # How to go get private repo
 ```shell
-$ git config url."git@github.com:Ethernal-Tech/cardano-infrastructure.git".insteadOf "https://github.com/Ethernal-Tech/cardano-infrastructure"
-$ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get github.com/Ethernal-Tech/cardano-infrastructure
+$ git config url."git@github.com:Ethernal-Tech/solana-infrastructure.git".insteadOf "https://github.com/Ethernal-Tech/solana-infrastructure"
+$ GOPRIVATE=github.com/Ethernal-Tech/solana-infrastructure go get github.com/Ethernal-Tech/solana-infrastructure@dev
 ```
 
 # How to generate go binding for smart contract(s)
@@ -40,6 +40,9 @@ abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi -
        --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
 ```
 
+# Solana binaries
+Required solana binaries could be installed using: https://solana.com/docs/intro/installation
+
 # How to generate blade secrets
 ```shell
 $ blade secrets init --insecure --data-dir ./blade-secrets
@@ -66,6 +69,13 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
+# How to generate key for solana batcher(s)
+```shell
+$ go run ./main.go wallet-create --chain solana --validator-data-dir /home/bbs/cardano --type batcher-solana --show-pk
+```
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
+`--validator-config path_to_config/config.json`
+
 # How to generate ecdsa keys for evm relayer(s)
 ```shell
 $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --type relayer-evm --show-pk
@@ -73,9 +83,14 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
-# How to generate key cardano relayer
+# How to generate key for cardano relayer
 ```shell
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-cardano --network-id 1
+```
+
+# How to generate key for solana relayer
+```shell
+$ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-solana --network-id 2
 ```
 
 # How to generate key for blade admin
@@ -249,6 +264,41 @@ $ apex-bridge generate-configs evm-chain \
         --output-validator-components-file-name "vc_config.json"
 ```
 
+Solana chain config all options
+``` shell
+$ apex-bridge generate-configs solana-chain \
+        --chain-id <solana chain id> \
+        --sol-node-url <solana RPC URL (http or https)> \
+        --sol-tracked-program <bridge program id to track> \
+        --sol-block-fetch-delay <delay in ms between block fetches> \
+        --sol-min-fee-for-bridging <minimal bridging fee (lamports)> \
+        --sol-min-operation-fee <minimal operation fee> \
+        --slot-rounding-threshold <slot rounding threshold> \
+        --sol-tracker-start-block <block to start solana chain tracker from. format slot:blockNumber> \
+        --treasury-address <solana treasury public key> \
+        --alt-public-key <address lookup table public key> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
+        --sol-ttl-number-inc <TTL increment for solana chain> \
+        --sol-confirmation-timeout <confirmation timeout for solana chain txs in milliseconds> \
+        --output-validator-components-file-name <validator components config json output file name> \
+        --output-relayer-file-name <relayer config json output file name> \
+        --dbs-path <path to where databases will be stored> \
+        --relayer-config <path to relayer secrets manager config file> \
+        --relayer-data-dir <path to relayer secret directory when using local secrets manager> \
+        --output-dir <path to config jsons output directory>
+```
+
+Add solana chain config minimal example
+``` shell
+$ apex-bridge generate-configs solana-chain \
+        --chain-id "solana" \
+        --sol-node-url https://api.devnet.solana.com \
+        --sol-tracked-program F3rcR9BR4hnyHyPWKh3PotJrtLa7AiAo4YVtki9LC2xC \
+        --treasury-address Ggc6De36VRJrgDQG8KFkGPTDbQBKQ1PSpyP9JLappixz \
+        --output-validator-components-file-name "vc_config.json"
+```
+The keys and program id above are valid-format placeholders from tests; substitute your deployment values. Use `--relayer-data-dir` or `--relayer-config` when the generated relayer config must reference your secrets layout (same semantics as EVM). `--sol-node-url` must be a valid `http` or `https` URL. Bridging fee amount in the generated config comes from `--sol-min-fee-for-bridging` (default `1000010` lamports).
+
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
@@ -322,15 +372,14 @@ $ apex-bridge sendtx \
 
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline cardano \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
-        --testnet-src 3311 \
-        --network-id-src 1 \
+        --testnet-src 1097911063 \
+        --network-id-src 0 \
         --chain-src cardano \
         --src-token-id 1 \
         --fee 1_100_000 \
@@ -346,15 +395,14 @@ $ apex-bridge sendtx skyline \
 
 # Example of sending a skyline transaction from the cardano to the nexus
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline cardano \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
-        --testnet-src 3311 \
-        --network-id-src 1 \
+        --testnet-src 1097911063 \
+        --network-id-src 0 \
         --chain-src cardano \
         --src-token-id 1 \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
@@ -367,12 +415,12 @@ $ apex-bridge sendtx skyline \
 ```
 - there is an optional `--stake-key` flag
 - optional `--cardano-cli-binary-name`
+- optional `--dst-token-contract-addr` is used when destination is an EVM chain and the destination token is ERC-20.
 
 # Example of sending a skyline transaction from the nexus to the cardano
 ```shell
-$ apex-bridge sendtx skyline \
+$ apex-bridge sendtx skyline evm \
         --chain-ids-config ./chainIDsConfig.json \
-        --tx-type evm \
         --key EVM_WALLET_PRIVATE_KEY \
         --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr 0x3333 \
@@ -389,6 +437,27 @@ $ apex-bridge sendtx skyline \
 - `--src-token-name` flag should be set to `lovelace` only when sending the native currency and omitted in all other cases.
 - there is an optional `--stake-key` flag
 - optional `--cardano-cli-binary-name`
+- optional `--src-token-contract-addr` is used when source token is ERC-20 on an EVM source chain.
+
+# Example of sending a skyline transaction from the solana to the nexus
+```shell
+$ apex-bridge sendtx skyline solana \
+        --chain-ids-config ./chainIDsConfig.json \
+        --key SOLANA_WALLET_PRIVATE_KEY \
+        --solana-url http://localhost:8899 \
+        --program-id CkTNcuk9EELmuR65eCfzKfz8XpDvJ27FPFHauGHVD1E9 \
+        --addr-treasury-src AXXWYCH6PNm6AGjaasPG1maarfQvRedSw18wj91Nem1F \
+        --chain-src solana \
+        --src-token-id 31 \
+        --fee 6_000_010 \
+        --operation-fee 1_500_000 \
+        --chain-dst nexus \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --receiver 0x1111:1_234_567 \
+        --dst-token-contract-addr 0x86Fb92b4d5888e56BD54900e43f139e1993F73Ce
+```
+- optional `--dst-token-contract-addr` is used when destination is an EVM chain and the destination token is ERC-20.
+- optional `--dst-token-name` is used when destination is an Cardano chain.
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
@@ -515,6 +584,16 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - optional `--is-wrapped-token` bool flag
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin update-chain-max-number-of-transactions \
+        --chain-ids-config ./chainIDsConfig.json \
+        --bridge-url http://localhost:12013 \
+        --chain nexus \
+        --max-number-of-transactions 10 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
@@ -714,4 +793,156 @@ apex-bridge sc-version \
         --addr 0xaBef000000000000000000000000000000000004:Slots \
         --addr 0xaBef000000000000000000000000000000000005:Validators \
         --addr 0xaBef000000000000000000000000000000000006:Admin \
+```
+## Solana commands
+
+# How to deploy and initialize a Solana Skyline program
+
+Runs `solana program deploy` for the binary, then submits the on-chain initialize transaction. Validator public keys are fetched automatically from the bridge smart contract for the Solana chain (`--bridge-url`, `--bridge-addr`, `--chain-ids-config`). `--program-id` is optional; when omitted, it is derived from the program keypair file (`--key`).
+
+```shell
+apex-bridge deploy-solana deploy-program \
+        --url http://127.0.0.1:8899 \
+        --fee-payer ./fee-payer-key.json \
+        --key ./solana-program-key.json \
+        --build-path ./solana-program.so \
+        --commitment confirmed \
+        --admin-key ./admin-keypair.json \
+        --bridge-url http://127.0.0.1:8545 \
+        --bridge-addr 0x... \
+        --chain-ids-config ./chain-ids.json \
+        --last-id 0 \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --min-amount-to-bridge 1000000 \
+        --treasury-address 8fRCHd6Kq4jQ4mLQ5VZQYhK3MnU9V3J8NTQq2q84h2jq \
+        --confirmation-timeout-seconds 120
+```
+- instead of `--key` and `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to upgrade an existing Solana program
+
+Runs `solana program deploy` for the binary, then submits `update_program_version` so `ProgramConfig` matches the deployment. The new semver (`--upgrade-program-version`) must not be ordered before the version already stored on-chain. `--admin-key` must be the bridge authority stored in program config.
+
+```shell
+apex-bridge deploy-solana upgrade-program \
+        --url http://127.0.0.1:8899 \
+        --fee-payer ./fee-payer-key.json \
+        --key ./solana-program-key.json \
+        --program-id <> \
+        --build-path ./solana-program.so \
+        --upgrade-program-version 1.2.3 \
+        --admin-key ./admin-keypair.json \
+        --confirmation-timeout-seconds 120 \
+        --commitment confirmed
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# Show solana program version
+
+```shell
+apex-bridge deploy-solana program-version \
+        --url http://127.0.0.1:8899 \
+        --program-id <skyline-program-id>
+```
+
+# How to update Solana bridge fee configuration
+
+The transaction always submits min operation fee and bridging fee (use existing on-chain values when you only change treasury). Optionally set `--update-treasury` with `--new-treasury-address`.
+
+```shell
+apex-bridge deploy-solana update-fee-config \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --confirmation-timeout-seconds 120
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+apex-bridge deploy-solana update-fee-config \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --min-operation-fee 1000010 \
+        --min-fee-for-bridging 1000010 \
+        --update-treasury \
+        --new-treasury-address <NEW_TREASURY> \
+        --confirmation-timeout-seconds 120
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to create Solana ALT (Address Lookup Table)
+```shell
+apex-bridge deploy-solana create-alt \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --confirmation-timeout-seconds 120
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to extend Solana ALT for bridge transaction
+```shell
+apex-bridge deploy-solana extend-alt \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --alt-address <ALT_PUBLIC_KEY_FROM_CREATE_ALT> \
+        --token-id-and-mint <TOKEN_ID_1:TOKEN_MINT_1> \
+        --token-id-and-mint <TOKEN_ID_2:TOKEN_MINT_2> \
+        --token-id-and-mint <TOKEN_ID_3:TOKEN_MINT_3> \
+        --confirmation-timeout-seconds 120
+```
+- run `extend-alt` again with new `--token-id-and-mint` values when new tokens are registered.
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to register lock/unlock Solana token
+```shell
+apex-bridge deploy-solana register-lock-unlock-token \
+        --url http://127.0.0.1:8899 \
+        --admin-key ./admin-keypair.json \
+        --program-id <> \
+        --treasury-address <TREASURY_ADDRESS> \
+        --token-id 1 \
+        --token-mint <EXISTING_TOKEN_MINT> \
+        --min-bridging-amount 1000000 \
+        --confirmation-timeout-seconds 120
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to register mint/burn Solana token
+```shell
+apex-bridge deploy-solana register-mint-burn-token \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --admin-key ./admin-keypair.json \
+        --treasury-address <TREASURY_ADDRESS> \
+        --token-id 2 \
+        --token-name TOKEN2 \
+        --token-symbol TOKEN2 \
+        --token-uri "" \
+        --token-decimals 9 \
+        --min-bridging-amount 1000000 \
+        --confirmation-timeout-seconds 120
+```
+
+- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to submit Solana hot wallet increment tx
+```shell
+apex-bridge deploy-solana hot-wallet-increment \
+        --url http://127.0.0.1:8899 \
+        --key ./keypair.json \
+        --program-id <SKYLINE_PROGRAM_ADDRESS> \
+        --mint <TOKEN_MINT_ADDRESS> \
+        --amount 1000000 \
+        --confirmation-timeout-seconds 120
 ```

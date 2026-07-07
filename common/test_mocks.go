@@ -121,7 +121,7 @@ func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
-	txs []BridgingRequestStateKey, destinationTxHash Hash, dstChainID string,
+	txs []BridgingRequestStateKey, destinationTxHash []byte, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
@@ -140,6 +140,7 @@ func NewTestChainIDConverter() *ChainIDConverter {
 			ChainIDStrNexus:   ChainIDIntNexus,
 			ChainIDStrCardano: ChainIDIntCardano,
 			ChainIDStrPolygon: ChainIDIntPolygon,
+			ChainIDStrSolana:  ChainIDIntSolana,
 		},
 		IntToStr: map[ChainIDNum]string{
 			ChainIDIntPrime:   ChainIDStrPrime,
@@ -147,6 +148,7 @@ func NewTestChainIDConverter() *ChainIDConverter {
 			ChainIDIntNexus:   ChainIDStrNexus,
 			ChainIDIntCardano: ChainIDStrCardano,
 			ChainIDIntPolygon: ChainIDStrPolygon,
+			ChainIDIntSolana:  ChainIDStrSolana,
 		},
 		EvmChains: []string{
 			ChainIDStrNexus,

@@ -103,10 +103,11 @@ func TestBatcherExecuteOnlyBridging(t *testing.T) {
 		require.Equal(t, batchNonceID, batchID)
 	})
 
+	hash := common.NewHashFromHexString("0x6674")
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
+			ObservedTransactionHash: hash[:],
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
@@ -223,10 +224,11 @@ func TestBatcherExecuteOnlyStaking(t *testing.T) {
 		require.Equal(t, batchNonceID, batchID)
 	})
 
+	hash := common.NewHashFromHexString("0x6674")
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
+			ObservedTransactionHash: hash[:],
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.StakeConfirmedTxType),
@@ -340,10 +342,13 @@ func TestBatcherExecuteMix(t *testing.T) {
 		require.Equal(t, batchNonceID, batchID)
 	})
 
+	hash1 := common.NewHashFromHexString("0x6674")
+	hash2 := common.NewHashFromHexString("0x6675")
+
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
+			ObservedTransactionHash: hash1[:],
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.StakeConfirmedTxType),
@@ -353,7 +358,7 @@ func TestBatcherExecuteMix(t *testing.T) {
 		},
 		{
 			Nonce:                   6,
-			ObservedTransactionHash: common.NewHashFromHexString("0x6675"),
+			ObservedTransactionHash: hash2[:],
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
@@ -581,41 +586,41 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 
 		res := b.getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
 			{
-				ObservedTransactionHash: included[0],
+				ObservedTransactionHash: included[0][:],
 				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   4,
 			},
 			{
-				ObservedTransactionHash: [32]byte{2},
+				ObservedTransactionHash: []byte{2},
 				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   2,
 			},
 			{
-				ObservedTransactionHash: [32]byte{3},
+				ObservedTransactionHash: []byte{3},
 				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   6,
 			},
 			{
-				ObservedTransactionHash: included[1],
+				ObservedTransactionHash: included[1][:],
 				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   3,
 			},
 			{
-				ObservedTransactionHash: included[2],
+				ObservedTransactionHash: included[2][:],
 				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   5,
 			},
 			{
-				ObservedTransactionHash: [32]byte{6},
+				ObservedTransactionHash: []byte{6},
 				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   2,
 			},
 		}, 3, 5)
 
 		require.Equal(t, []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[0], false),
-			common.NewBridgingRequestStateKey(common.ChainIDStrVector, included[1], false),
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[2], false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[0][:], false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, included[1][:], false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[2][:], false),
 		}, res)
 	})
 }

@@ -63,6 +63,12 @@ func NewSettingsResponse(
 		minColCoinsAllowedToBridgeMap[chainID] = fmt.Sprintf("%v", ethConfig.MinColCoinsAllowedToBridge)
 	}
 
+	for chainID, solConfig := range appConfig.SolanaChains {
+		minFeeForBridgingMap[chainID] = fmt.Sprintf("%v", solConfig.MinFeeForBridging)
+		minOperationFeeMap[chainID] = fmt.Sprintf("%v", solConfig.MinOperationFee)
+		minColCoinsAllowedToBridgeMap[chainID] = fmt.Sprintf("%v", solConfig.MinColCoinsAllowedToBridge)
+	}
+
 	return &SettingsResponse{
 		MinChainFeeForBridging:         minFeeForBridgingMap,
 		MinChainFeeForBridgingTokens:   minFeeForBridgingTokensMap,

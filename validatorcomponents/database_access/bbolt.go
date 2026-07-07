@@ -85,7 +85,7 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *common.BridgingReques
 
 // GetBridgingRequestState implements core.Database.
 func (bd *BBoltDatabase) GetBridgingRequestState(
-	sourceChainID string, sourceTxHash common.Hash,
+	sourceChainID string, sourceTxHash []byte,
 ) (
 	result *common.BridgingRequestState, err error,
 ) {

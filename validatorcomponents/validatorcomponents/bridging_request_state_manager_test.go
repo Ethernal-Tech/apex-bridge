@@ -12,10 +12,10 @@ import (
 )
 
 func TestBridgingRequestStateManager(t *testing.T) {
-	txHash := common.NewHashFromHexString("0xFF")
+	txHash := []byte{255}
 	srcChainID := common.ChainIDStrPrime
 	dstChainID := common.ChainIDStrVector
-	srcTxHash := common.NewHashFromHexString("0xff")
+	srcTxHash := []byte{255}
 
 	t.Run("New 1", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
@@ -519,7 +519,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
-		err := sm.ExecutedOnDestination([]common.BridgingRequestStateKey{}, common.Hash{}, dstChainID)
+		err := sm.ExecutedOnDestination([]common.BridgingRequestStateKey{}, []byte{}, dstChainID)
 		require.NoError(t, err)
 
 		db.AssertExpectations(t)
@@ -639,7 +639,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
-		states, err := sm.GetMultiple(common.ChainIDStrPrime, []common.Hash{
+		states, err := sm.GetMultiple(common.ChainIDStrPrime, [][]byte{
 			txHash,
 		})
 		require.Error(t, err)
@@ -655,7 +655,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
-		states, err := sm.GetMultiple(common.ChainIDStrPrime, []common.Hash{
+		states, err := sm.GetMultiple(common.ChainIDStrPrime, [][]byte{
 			txHash,
 		})
 		require.NoError(t, err)
@@ -670,7 +670,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
-		states, err := sm.GetMultiple(common.ChainIDStrPrime, []common.Hash{
+		states, err := sm.GetMultiple(common.ChainIDStrPrime, [][]byte{
 			txHash,
 		})
 		require.NoError(t, err)

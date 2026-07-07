@@ -118,7 +118,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			return nil, nil, nil, err
 		}
 
-		typeRegister := cCore.NewTypeRegisterWithChains(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
+		typeRegister := cCore.NewTypeRegisterWithChains(appConfig, reflect.TypeOf(core.CardanoTx{}), nil, nil)
 
 		oracleDB := &databaseaccess.BBoltDatabase{}
 		oracleDB.Init(boltDB, appConfig, typeRegister)
@@ -349,7 +349,19 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		oracleDB, primeDB, vectorDB, err := createDbs()
 		require.NoError(t, err)
 
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
+		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAA"))
+
+		validTxProc := &core.CardanoTxSuccessProcessorMock{
+			ShouldAddClaim: true,
+			Type:           "test",
+			AddClaimCallback: func(claims *cCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
+					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime),
+					DestinationChainId:      appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrVector),
+					ObservedTransactionHash: txHash[:],
+				})
+			},
+		}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
@@ -373,8 +385,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		const (
 			originChainID = common.ChainIDStrPrime
 		)
-
-		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAA"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -409,7 +419,19 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		oracleDB, primeDB, vectorDB, err := createDbs()
 		require.NoError(t, err)
 
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
+		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAABB"))
+
+		validTxProc := &core.CardanoTxSuccessProcessorMock{
+			ShouldAddClaim: true,
+			Type:           "test",
+			AddClaimCallback: func(claims *cCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
+					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime),
+					DestinationChainId:      appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrVector),
+					ObservedTransactionHash: txHash[:],
+				})
+			},
+		}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
@@ -433,8 +455,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		const (
 			originChainID = common.ChainIDStrPrime
 		)
-
-		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAABB"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -1368,7 +1388,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
-					ObservedTransactionHash: txHash,
+					ObservedTransactionHash: txHash[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1577,7 +1597,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
-					ObservedTransactionHash: tx1.Hash,
+					ObservedTransactionHash: tx1.Hash[:],
 					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
@@ -1588,12 +1608,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		becProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, cCore.BatchExecutedClaim{
-					ObservedTransactionHash: txBatch.Hash,
+					ObservedTransactionHash: txBatch.Hash[:],
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntVector,
 				})
 				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{
-					ObservedTransactionHash: txBatchFailed.Hash,
+					ObservedTransactionHash: txBatchFailed.Hash[:],
 					BatchNonceId:            1,
 					ChainId:                 common.ChainIDIntVector,
 				})
@@ -1607,14 +1627,14 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: tx1.Hash,
+					ObservedTransactionHash: tx1.Hash[:],
 				},
 			}, error(nil))
 		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: tx2.Hash,
+					ObservedTransactionHash: tx2.Hash[:],
 				},
 			}, error(nil))
 

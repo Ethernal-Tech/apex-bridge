@@ -70,7 +70,7 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: common.Hash(tx.Hash),
+					SourceTxHash: tx.Hash[:],
 					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
 				},
 			)

@@ -12,6 +12,7 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -30,6 +31,7 @@ func NewBatcherManager(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	cardanoIndexerDbs map[string]indexer.Database,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
+	solanaIndexerDbs map[string]solanaTrackerStore.StorageHandler,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgingAddressesManager common.BridgingAddressesManager,
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
@@ -61,6 +63,16 @@ func NewBatcherManager(
 			}
 		case common.ChainTypeEVMStr:
 			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
+			if err != nil {
+				return nil, err
+			}
+		case common.ChainTypeSolanaStr:
+			operations, err = getSolanaOperations(GetSolanaOpsParams{
+				Config:          chainConfig,
+				SolanaIndexerDB: solanaIndexerDbs,
+				SecretsManager:  secretsManager,
+				Logger:          logger,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -107,6 +119,15 @@ type GetCardanoOpsParams struct {
 	Logger                       hclog.Logger
 }
 
+type GetSolanaOpsParams struct {
+	Config             core.ChainConfig
+	ChainIDConverter   *common.ChainIDConverter
+	SolanaIndexerDB    map[string]solanaTrackerStore.StorageHandler
+	SecretsManager     secrets.SecretsManager
+	TxProviderEndpoint string
+	Logger             hclog.Logger
+}
+
 func getCardanoOperations(params GetCardanoOpsParams) (core.ChainOperations, error) {
 	chainID := params.Config.ChainID
 
@@ -143,6 +164,29 @@ func getEthOperations(
 
 	operations, err := batcher.NewEVMChainOperations(
 		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return operations, nil
+}
+
+func getSolanaOperations(params GetSolanaOpsParams) (core.ChainOperations, error) {
+	chainID := params.Config.ChainID
+
+	db, exists := params.SolanaIndexerDB[chainID]
+	if !exists {
+		return nil, fmt.Errorf("database not exists for chain: %s", chainID)
+	}
+
+	operations, err := batcher.NewSolanaChainOperations(
+		params.Config.ChainSpecific,
+		params.ChainIDConverter,
+		db,
+		params.SecretsManager,
+		params.Config.ChainID,
+		params.Logger,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,8 @@ const (
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
+	WSOLTokenMint = "So11111111111111111111111111111111111111112"
+
 	PotentialFeeDefault           = 250_000
 	MaxInputsPerBridgingTxDefault = 50
 
@@ -34,11 +36,11 @@ type TxOutputIndex uint16
 
 type BridgingRequestStateKey struct {
 	SourceChainID string
-	SourceTxHash  Hash
+	SourceTxHash  []byte
 	IsRefund      bool
 }
 
-func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash, isRefund bool) BridgingRequestStateKey {
+func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash []byte, isRefund bool) BridgingRequestStateKey {
 	return BridgingRequestStateKey{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
@@ -47,7 +49,7 @@ func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash, isRefun
 }
 
 type NewBridgingRequestStateModel struct {
-	SourceTxHash Hash
+	SourceTxHash []byte
 	IsRefund     bool
 }
 

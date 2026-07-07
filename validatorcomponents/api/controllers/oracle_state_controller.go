@@ -12,12 +12,15 @@ import (
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	processorSol "github.com/Ethernal-Tech/apex-bridge/oracle_solana/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
+	utils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	vcUtils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/utils"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanaTrackerStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -26,6 +29,7 @@ type OracleStateControllerImpl struct {
 	bridgingRequestStateManager core.BridgingRequestStateManager
 	cardanoIndexerDBs           map[string]indexer.Database
 	ethIndexerDBs               map[string]eventTrackerStore.EventTrackerStore
+	solanaIndexerDBs            map[string]solanaTrackerStore.StorageHandler
 	adressesMap                 map[string][]string
 	logger                      hclog.Logger
 }
@@ -37,6 +41,7 @@ func NewOracleStateController(
 	bridgingRequestStateManager core.BridgingRequestStateManager,
 	cardanoIndexerDBs map[string]indexer.Database,
 	ethIndexerDBs map[string]eventTrackerStore.EventTrackerStore,
+	solanaIndexerDBs map[string]solanaTrackerStore.StorageHandler,
 	adressesMap map[string][]string,
 	logger hclog.Logger,
 ) *OracleStateControllerImpl {
@@ -45,6 +50,7 @@ func NewOracleStateController(
 		bridgingRequestStateManager: bridgingRequestStateManager,
 		cardanoIndexerDBs:           cardanoIndexerDBs,
 		ethIndexerDBs:               ethIndexerDBs,
+		solanaIndexerDBs:            solanaIndexerDBs,
 		adressesMap:                 adressesMap,
 		logger:                      logger,
 	}
@@ -222,8 +228,8 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 func (c *OracleStateControllerImpl) hasTxFailed(
 	chainID string, txHash string, ttl *big.Int,
 ) (bool, error) {
-	cardanoConfig, ethConfig := vcUtils.GetChainConfig(c.appConfig, chainID)
-	if cardanoConfig == nil && ethConfig == nil {
+	cardanoConfig, ethConfig, solanaConfig := vcUtils.GetChainConfig(c.appConfig, chainID)
+	if cardanoConfig == nil && ethConfig == nil && solanaConfig == nil {
 		return false, fmt.Errorf("invalid chainID: %s", chainID)
 	}
 
@@ -233,6 +239,11 @@ func (c *OracleStateControllerImpl) hasTxFailed(
 	if ethConfig != nil {
 		findTxFunc = c.findEthTx
 		passedTTLFunc = c.passedEthTTL
+	}
+
+	if solanaConfig != nil {
+		findTxFunc = c.findSolanaTx
+		passedTTLFunc = c.passedSolanaTTL
 	}
 
 	var (
@@ -276,6 +287,52 @@ func (c *OracleStateControllerImpl) findEthTx(chainID string, txHash string) (bo
 	}
 
 	return state != nil, nil
+}
+
+func (c *OracleStateControllerImpl) findSolanaTx(chainID string, txHash string) (bool, error) {
+	db, existsDB := c.solanaIndexerDBs[chainID]
+	if !existsDB {
+		return false, fmt.Errorf("couldn't find indexer db")
+	}
+
+	unprocessed, err := db.GetAllUnprocessedTransactions()
+	if err != nil {
+		return false, fmt.Errorf("couldn't fetch indexer txs: %w", err)
+	}
+
+	sig, err := utils.ParseSolanaTxHash(txHash)
+	if err != nil {
+		return false, err
+	}
+
+	for _, s := range unprocessed {
+		if s.Equals(sig) {
+			return true, nil
+		}
+	}
+
+	state, err := c.bridgingRequestStateManager.Get(chainID, sig[:])
+	if err != nil {
+		return false, fmt.Errorf("failed to get bridging request state. err: %w", err)
+	}
+
+	return state != nil, nil
+}
+
+func (c *OracleStateControllerImpl) passedSolanaTTL(chainID string, ttl *big.Int) (bool, error) {
+	db, existsDB := c.solanaIndexerDBs[chainID]
+	if !existsDB {
+		return false, fmt.Errorf("couldn't find indexer db")
+	}
+
+	blockNumber, err := db.GetLatestFinalizedBlockNumber()
+	if err != nil {
+		return false, fmt.Errorf("couldn't fetch indexer latest block point. err: %w", err)
+	}
+
+	ttlWithInsurance := new(big.Int).Add(ttl, big.NewInt(processorSol.TTLInsuranceOffset))
+
+	return new(big.Int).SetUint64(blockNumber).Cmp(ttlWithInsurance) == 1, nil
 }
 
 func (c *OracleStateControllerImpl) passedCardanoTTL(chainID string, ttl *big.Int) (bool, error) {
@@ -330,7 +387,7 @@ func (c *OracleStateControllerImpl) findBridgingRequestState(
 		return nil, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
 	}
 
-	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
+	state, err := c.bridgingRequestStateManager.Get(chainID, hashBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bridging request state. err: %w", err)
 	}

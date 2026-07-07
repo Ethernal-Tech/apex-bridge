@@ -51,7 +51,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
-		require.Equal(t, [32]byte{}, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
+		require.Equal(t, [32]byte{}, [32]byte(claims.BatchExecutionFailedClaims[0].ObservedTransactionHash))
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
@@ -73,7 +73,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
-		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash, [32]byte(claims.BatchExecutionFailedClaims[0].ObservedTransactionHash))
 		require.Equal(t, batchNonceID, claims.BatchExecutionFailedClaims[0].BatchNonceId)
 	})
 }

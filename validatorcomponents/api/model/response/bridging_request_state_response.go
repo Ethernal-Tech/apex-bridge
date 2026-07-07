@@ -22,9 +22,9 @@ type BridgingRequestStateResponse struct {
 func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
 		SourceChainID:      state.SourceChainID,
-		SourceTxHash:       state.SourceTxHash.String(),
+		SourceTxHash:       common.TxHashBytesToString(state.SourceTxHash),
 		DestinationChainID: state.DestinationChainID,
-		DestinationTxHash:  state.DestinationTxHash.String(),
+		DestinationTxHash:  common.TxHashBytesToString(state.DestinationTxHash),
 		Status:             state.Status,
 		IsRefund:           state.IsRefund,
 	}

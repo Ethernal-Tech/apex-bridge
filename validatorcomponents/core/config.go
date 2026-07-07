@@ -10,6 +10,7 @@ import (
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 )
 
@@ -21,6 +22,7 @@ type AppConfig struct {
 	ChainIDConverter             *common.ChainIDConverter                  `json:"-"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
+	SolanaChains                 map[string]*oracleCore.SolanaChainConfig  `json:"solanaChains"`
 	DirectionConfig              map[string]common.DirectionConfig         `json:"directionConfig"`
 	Bridge                       oracleCore.BridgeConfig                   `json:"bridge"`
 	BridgingSettings             oracleCore.BridgingSettings               `json:"bridgingSettings"`
@@ -43,7 +45,8 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
 
 	for chainID, directionConfig := range directionConfig.Directions {
-		if appConfig.ChainIDConverter.IsEVMChainID(chainID) {
+		switch {
+		case appConfig.ChainIDConverter.IsEVMChainID(chainID):
 			if _, ok := appConfig.EthChains[chainID]; !ok {
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
@@ -53,7 +56,7 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.DestinationChains = directionConfig.DestinationChains
 			data.Tokens = directionConfig.Tokens
 			appConfig.EthChains[chainID] = data
-		} else {
+		case appConfig.ChainIDConverter.IsCardanoChainID(chainID):
 			if _, ok := appConfig.CardanoChains[chainID]; !ok {
 				return fmt.Errorf("invalid cardano chain while setting up direction config. %s", chainID)
 			}
@@ -63,6 +66,17 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			data.CardanoChainConfig.Tokens = directionConfig.Tokens
 			data.CardanoChainConfig.AlwaysTrackCurrencyAndWrappedCurrency = directionConfig.AlwaysTrackCurrencyAndWrappedCurrency
 			appConfig.CardanoChains[chainID] = data
+		case appConfig.ChainIDConverter.IsSolanaChainID(chainID):
+			if _, ok := appConfig.SolanaChains[chainID]; !ok {
+				return fmt.Errorf("invalid solana chain while setting up direction config. %s", chainID)
+			}
+
+			data := appConfig.SolanaChains[chainID]
+			data.DestinationChains = directionConfig.DestinationChains
+			data.Tokens = directionConfig.Tokens
+			appConfig.SolanaChains[chainID] = data
+		default:
+			return fmt.Errorf("invalid chain while setting up direction config. %s", chainID)
 		}
 	}
 
@@ -73,8 +87,10 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
 ) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
-	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	batcherChains := make(
+		[]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains)+len(appConfig.SolanaChains))
 	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
+	oracleSolanaChains := make(map[string]*oracleCore.SolanaChainConfig, len(appConfig.SolanaChains))
 
 	for _, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[ccConfig.ChainID] = ccConfig
@@ -108,6 +124,17 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		})
 	}
 
+	for _, scConfig := range appConfig.SolanaChains {
+		oracleSolanaChains[scConfig.ChainID] = scConfig
+
+		chainSpecificJSONRaw, _ := scConfig.SolanaChainConfig.Serialize()
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainID:       scConfig.ChainID,
+			ChainType:     common.ChainTypeSolanaStr,
+			ChainSpecific: chainSpecificJSONRaw,
+		})
+	}
+
 	oracleConfig := &oracleCore.AppConfig{
 		RunMode:                  appConfig.RunMode,
 		RefundEnabled:            appConfig.RefundEnabled,
@@ -120,6 +147,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
+		SolanaChains:             oracleSolanaChains,
 		ChainIDConverter:         appConfig.ChainIDConverter,
 	}
 
@@ -147,13 +175,17 @@ func (appConfig *AppConfig) ValidateDirectionConfig() error {
 		ecosystemTokensMap[tok.ID] = tok.Name
 	}
 
-	allChains := make([]string, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	allChains := make([]string, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains)+len(appConfig.SolanaChains))
 	for _, cc := range appConfig.CardanoChains {
 		allChains = append(allChains, cc.ChainID)
 	}
 
 	for _, ec := range appConfig.EthChains {
 		allChains = append(allChains, ec.ChainID)
+	}
+
+	for _, sc := range appConfig.SolanaChains {
+		allChains = append(allChains, sc.ChainID)
 	}
 
 	for _, chainID := range allChains {
@@ -204,6 +236,20 @@ func (appConfig *AppConfig) ValidateDirectionConfig() error {
 				if len(tok.ChainSpecific) == 0 || !goEthCommon.IsHexAddress(tok.ChainSpecific) {
 					return fmt.Errorf("invalid eth token contract addr %s in direction config for chain: %s",
 						tok.ChainSpecific, ec.ChainID)
+				}
+			}
+		}
+	}
+
+	for _, sc := range appConfig.SolanaChains {
+		dirConfig := appConfig.DirectionConfig[sc.ChainID]
+
+		for _, tok := range dirConfig.Tokens {
+			if tok.ChainSpecific != wallet.AdaTokenName {
+				err := solanawallet.ValidateAddress(tok.ChainSpecific, true)
+				if len(tok.ChainSpecific) == 0 || err != nil {
+					return fmt.Errorf("invalid solana token address %s in direction config for chain: %s",
+						tok.ChainSpecific, sc.ChainID)
 				}
 			}
 		}

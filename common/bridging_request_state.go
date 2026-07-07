@@ -23,10 +23,10 @@ const (
 
 type BridgingRequestState struct {
 	SourceChainID      string
-	SourceTxHash       Hash
+	SourceTxHash       []byte
 	DestinationChainID string
 	Status             BridgingRequestStatus
-	DestinationTxHash  Hash
+	DestinationTxHash  []byte
 	IsRefund           bool
 }
 
@@ -57,11 +57,11 @@ func BridgingRequestStateStatusStr(status BridgingRequestStatus, isRefund bool) 
 	}
 }
 
-func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash Hash) []byte {
+func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash []byte) []byte {
 	return append(append([]byte(sourceChainID), '_'), sourceTxHash[:]...)
 }
 
-func NewBridgingRequestState(sourceChainID string, sourceTxHash Hash, isRefund bool) *BridgingRequestState {
+func NewBridgingRequestState(sourceChainID string, sourceTxHash []byte, isRefund bool) *BridgingRequestState {
 	return &BridgingRequestState{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
@@ -90,7 +90,7 @@ func (s *BridgingRequestState) ToFailedToExecuteOnDestination() {
 	s.Status = BridgingRequestStatusFailedToExecuteOnDestination
 }
 
-func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash Hash) {
+func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash []byte) {
 	s.Status = BridgingRequestStatusExecutedOnDestination
 	s.DestinationTxHash = destinationTxHash
 }

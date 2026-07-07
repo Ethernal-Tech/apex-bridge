@@ -59,7 +59,7 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 	metadata *common.BatchExecutedMetadata, chainIDConverter *common.ChainIDConverter,
 ) {
 	claim := cCore.BatchExecutionFailedClaim{
-		ObservedTransactionHash: tx.Hash,
+		ObservedTransactionHash: tx.Hash[:],
 		ChainId:                 chainIDConverter.ToChainIDNum(tx.ChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 	}

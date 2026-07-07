@@ -26,6 +26,8 @@ import (
 	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
+	solanaOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solanaOracle "github.com/Ethernal-Tech/apex-bridge/oracle_solana/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -34,6 +36,7 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	solanaStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -50,8 +53,10 @@ type ValidatorComponentsImpl struct {
 	oracleDB                     *bbolt.DB
 	db                           core.Database
 	cardanoIndexerDbs            map[string]indexer.Database
+	solanaIndexerDbs             map[string]solanaStore.StorageHandler
 	oracle                       *cardanoOracle.OracleImpl
 	ethOracle                    *ethOracle.OracleImpl
+	solanaOracle                 *solanaOracle.OracleImpl
 	batcherManager               batcherCore.BatcherManager
 	relayerImitator              core.RelayerImitator
 	api                          apiCore.API
@@ -132,6 +137,20 @@ func NewValidatorComponents(
 		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
+	solanaIndexerDbs := make(map[string]solanaStore.StorageHandler, len(oracleConfig.SolanaChains))
+
+	for _, solanaChainConfig := range oracleConfig.SolanaChains {
+		indexerDB, err := solanaStore.NewBoltStorageHandler(
+			filepath.Join(appConfig.Settings.DbsPath, solanaChainConfig.ChainID+".db"),
+			false,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", solanaChainConfig.ChainID, err)
+		}
+
+		solanaIndexerDbs[solanaChainConfig.ChainID] = indexerDB
+	}
+
 	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(appConfig.EthChains))
 
 	for _, ethChainConfig := range oracleConfig.EthChains {
@@ -154,7 +173,8 @@ func NewValidatorComponents(
 		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_cardano"))
 
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
-		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
+		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}),
+		reflect.TypeOf(ethOracleCore.EthTx{}), reflect.TypeOf(solanaOracleCore.SolanaTx{}))
 
 	bridgingAddressesManager, err := bam.NewBridgingAdressesManager(
 		ctx,
@@ -207,12 +227,26 @@ func NewValidatorComponents(
 		}
 	}
 
+	var solanaOracleObj *solanaOracle.OracleImpl
+
+	if len(appConfig.SolanaChains) > 0 {
+		solanaBridgeSubmitter := oracleCommonBridge.NewBridgeSubmitter(
+			ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_solana"))
+
+		solanaOracleObj, err = solanaOracle.NewSolanaOracle(
+			ctx, oracleDB, typeRegister, oracleConfig, cardanoChainInfos, oracleBridgeSmartContract,
+			solanaBridgeSubmitter, logger.Named("oracle_solana"), solanaIndexerDbs, bridgingRequestStateManager)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create oracle_solana. err %w", err)
+		}
+	}
+
 	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
 		"contract", appConfig.Bridge.SmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
+		cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
 		bridgingAddressesCoordinator, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
@@ -236,7 +270,7 @@ func NewValidatorComponents(
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),
 			controllers.NewOracleStateController(
-				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
+				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs,
 				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(
@@ -256,14 +290,16 @@ func NewValidatorComponents(
 		oracleDB:          oracleDB,
 		db:                db,
 		cardanoIndexerDbs: cardanoIndexerDbs,
+		solanaIndexerDbs:  solanaIndexerDbs,
 		oracle:            cardanoOracleObj,
 		ethOracle:         ethOracleObj,
+		solanaOracle:      solanaOracleObj,
 		batcherManager:    batcherManager,
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
 		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
 		telemetryWorker: NewTelemetryWorker(
-			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
+			ethHelper, cardanoIndexerDbs, ethIndexerDbs, solanaIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger:                       logger,
 		bridgingAddressesManager:     bridgingAddressesManager,
@@ -283,6 +319,13 @@ func (v *ValidatorComponentsImpl) Start() error {
 		err = v.ethOracle.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start oracle_eth. error: %w", err)
+		}
+	}
+
+	if v.solanaOracle != nil {
+		err = v.solanaOracle.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start oracle_solana. error: %w", err)
 		}
 	}
 
@@ -320,6 +363,14 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		}
 	}
 
+	for _, indexerDB := range v.solanaIndexerDbs {
+		err := indexerDB.Close()
+		if err != nil {
+			v.logger.Error("Failed to close solana indexer db", "err", err)
+			errs = append(errs, fmt.Errorf("failed to close solana indexer db. err %w", err))
+		}
+	}
+
 	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
@@ -329,6 +380,13 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		if err := v.ethOracle.Dispose(); err != nil {
 			v.logger.Error("error while disposing oracle_eth", "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing oracle_eth. err: %w", err))
+		}
+	}
+
+	if v.solanaOracle != nil {
+		if err := v.solanaOracle.Dispose(); err != nil {
+			v.logger.Error("error while disposing oracle_solana", "err", err)
+			errs = append(errs, fmt.Errorf("error while disposing oracle_solana. err: %w", err))
 		}
 	}
 
@@ -390,6 +448,7 @@ func fixChainsInConfig(
 
 	cardanoChains := make(map[string]*oracleCommonCore.CardanoChainConfig)
 	ethChains := make(map[string]*oracleCommonCore.EthChainConfig)
+	solanaChains := make(map[string]*oracleCommonCore.SolanaChainConfig)
 
 	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
@@ -423,6 +482,14 @@ func fixChainsInConfig(
 			}
 
 			ethChains[chainID] = ethChainConfig
+		case common.ChainTypeSolana:
+			solanaChainConfig, exists := config.SolanaChains[chainID]
+			if !exists {
+				return fmt.Errorf("no configuration for solana chain: %s", chainID)
+			}
+
+			solanaChainConfig.ChainID = chainID
+			solanaChains[chainID] = solanaChainConfig
 		default:
 			logger.Debug("Do not know how to handle chain type", "chainID", chainID, "type", regChain.ChainType)
 		}
@@ -430,6 +497,7 @@ func fixChainsInConfig(
 
 	config.CardanoChains = cardanoChains
 	config.EthChains = ethChains
+	config.SolanaChains = solanaChains
 
 	return nil
 }

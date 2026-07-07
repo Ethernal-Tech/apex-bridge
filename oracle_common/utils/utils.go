@@ -22,6 +22,48 @@ func GetChainConfig(appConfig *core.AppConfig, chainID string) (*core.CardanoCha
 	return nil, nil
 }
 
+type ChainConfigResult struct {
+	Cardano *core.CardanoChainConfig
+	Eth     *core.EthChainConfig
+	Solana  *core.SolanaChainConfig
+}
+
+func GetChainConfigResult(appConfig *core.AppConfig, chainID string) ChainConfigResult {
+	if cfg, exists := appConfig.CardanoChains[chainID]; exists {
+		return ChainConfigResult{Cardano: cfg}
+	}
+
+	if cfg, exists := appConfig.EthChains[chainID]; exists {
+		return ChainConfigResult{Eth: cfg}
+	}
+
+	if cfg, exists := appConfig.SolanaChains[chainID]; exists {
+		return ChainConfigResult{Solana: cfg}
+	}
+
+	return ChainConfigResult{}
+}
+
+func (ccr *ChainConfigResult) IsNone() bool {
+	return ccr.Cardano == nil && ccr.Eth == nil && ccr.Solana == nil
+}
+
+func (ccr *ChainConfigResult) GetChainType() string {
+	if ccr.Cardano != nil {
+		return common.ChainTypeCardanoStr
+	}
+
+	if ccr.Eth != nil {
+		return common.ChainTypeEVMStr
+	}
+
+	if ccr.Solana != nil {
+		return common.ChainTypeSolanaStr
+	}
+
+	return ""
+}
+
 func GetTxPriority(txProcessorType common.BridgingTxType) uint8 {
 	if txProcessorType == common.BridgingTxTypeBatchExecution || txProcessorType == common.TxTypeHotWalletFund {
 		return 0
@@ -106,7 +148,40 @@ func GetDestChainInfo(
 			MinColCoinsAllowedToBridge: ethDestConfig.MinColCoinsAllowedToBridge,
 		}, nil
 	default:
-		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)
+		return nil, fmt.Errorf("destination chain not registered ovde: %s", destChainID)
+	}
+}
+
+func GetDestChainInfoResult(
+	destChainID string,
+	destChainConfig ChainConfigResult,
+	appConfig *core.AppConfig,
+) (*DestChainInfo, error) {
+	if destChainConfig.IsNone() {
+		return nil, fmt.Errorf("destination chain not registered")
+	}
+
+	switch {
+	case destChainConfig.Cardano != nil:
+		return GetDestChainInfo(destChainConfig.Cardano.ChainID, appConfig, destChainConfig.Cardano, nil)
+	case destChainConfig.Eth != nil:
+		return GetDestChainInfo(destChainConfig.Eth.ChainID, appConfig, nil, destChainConfig.Eth)
+	case destChainConfig.Solana != nil:
+		currencyDestID, err := destChainConfig.Solana.GetCurrencyID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", destChainID, err)
+		}
+
+		return &DestChainInfo{
+			FeeAddress: common.EthZeroAddr,
+			FeeAddrBridgingWei: common.LamportToWei(
+				new(big.Int).SetUint64(destChainConfig.Solana.FeeAddrBridgingAmount)),
+			CurrencyTokenID: currencyDestID,
+			MinColCoinsAllowedToBridge: common.LamportToWei(
+				new(big.Int).SetUint64(destChainConfig.Solana.MinColCoinsAllowedToBridge)),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown destination chain config")
 	}
 }
 

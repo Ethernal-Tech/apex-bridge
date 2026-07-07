@@ -20,11 +20,12 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
+		txHash := common.NewHashFromHexString("0x11")
 		_, err := bridgeSubmitter.SubmitClaims(&cCore.BridgeClaims{
 			ContractClaims: cCore.ContractClaims{
 				BridgingRequestClaims: []cCore.BridgingRequestClaim{
 					{
-						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
+						ObservedTransactionHash: txHash[:],
 						SourceChainId:           common.ChainIDIntVector,
 						DestinationChainId:      common.ChainIDIntPrime,
 						Receivers:               []cCore.BridgingRequestReceiver{},
@@ -32,7 +33,7 @@ func TestBridgeSubmitter(t *testing.T) {
 				},
 				BatchExecutedClaims: []cCore.BatchExecutedClaim{
 					{
-						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
+						ObservedTransactionHash: txHash[:],
 						BatchNonceId:            1,
 					},
 				},

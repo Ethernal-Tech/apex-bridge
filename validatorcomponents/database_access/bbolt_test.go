@@ -55,7 +55,7 @@ func TestBoltDatabase(t *testing.T) {
 
 	const primeChainID = "chainId"
 
-	testTxHash := common.Hash{1, 2, 89, 188}
+	testTxHash := []byte{1, 2, 89, 188}
 
 	t.Run("AddBridgingRequestState", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
@@ -83,7 +83,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddBridgingRequestState(common.NewBridgingRequestState(primeChainID, testTxHash, false))
 		require.NoError(t, err)
 
-		state, err := db.GetBridgingRequestState("vect", common.Hash{89, 8})
+		state, err := db.GetBridgingRequestState("vect", []byte{89, 8})
 		require.NoError(t, err)
 		require.Nil(t, state)
 

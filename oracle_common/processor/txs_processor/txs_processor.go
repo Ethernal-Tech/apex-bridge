@@ -84,6 +84,10 @@ func (p *TxsProcessorImpl) getSortedChainIDs() []string {
 		for k := range p.appConfig.EthChains {
 			keys = append(keys, k)
 		}
+	case common.ChainTypeSolanaStr:
+		for k := range p.appConfig.SolanaChains {
+			keys = append(keys, k)
+		}
 	default:
 		p.logger.Error("Invalid chainType", "chainType", p.stateProcessor.GetChainType())
 	}
@@ -150,7 +154,7 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	claims *core.BridgeClaims,
 ) (result []*core.DBBatchInfoEvent, err error) {
-	addInfo := func(batchID uint64, chainIDInt uint8, txHash [32]byte, isFailedClaim bool) error {
+	addInfo := func(batchID uint64, chainIDInt uint8, txHash []byte, isFailedClaim bool) error {
 		chainID := p.appConfig.ChainIDConverter.ToChainIDStr(chainIDInt)
 
 		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
@@ -181,13 +185,15 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	}
 
 	for _, x := range claims.BatchExecutedClaims {
-		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, false); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId,
+			x.ObservedTransactionHash, false); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, x := range claims.BatchExecutionFailedClaims {
-		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, true); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId,
+			x.ObservedTransactionHash, true); err != nil {
 			return nil, err
 		}
 	}

@@ -8,6 +8,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -74,6 +75,22 @@ type CardanoChainConfig struct {
 	TreasuryAddress            string                   `json:"treasuryAddress"`
 }
 
+type SolanaChainConfig struct {
+	solana.SolanaChainConfig
+	ChainID                    string        `json:"-"`
+	TrackedProgram             string        `json:"trackedProgram"`
+	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
+	RetryTimeoutMiliseconds    time.Duration `json:"retryTimeoutMs"`
+	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount      uint64        `json:"feeAddressBridgingAmount"`
+	MinColCoinsAllowedToBridge uint64        `json:"minColCoinsAllowedToBridge"`
+	MinOperationFee            uint64        `json:"minOperationFee"`
+	TreasuryAddress            string        `json:"treasuryAddress"`
+	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
+	TrackerStartBlockNumber    uint64        `json:"trackerStartBlockNumber"`
+	DisableRateLimiting        bool          `json:"disableRateLimit"`
+}
+
 type SubmitConfig struct {
 	ConfirmedBlocksThreshold  int             `json:"confirmedBlocksThreshold"`
 	ConfirmedBlocksSubmitTime int             `json:"confirmedBlocksSubmitTime"`
@@ -120,6 +137,7 @@ type AppConfig struct {
 	ChainIDConverter         *common.ChainIDConverter        `json:"chainIdConverter"`
 	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
+	SolanaChains             map[string]*SolanaChainConfig   `json:"solanaChains"`
 	Bridge                   BridgeConfig                    `json:"bridge"`
 	Settings                 AppSettings                     `json:"appSettings"`
 	BridgingSettings         BridgingSettings                `json:"bridgingSettings"`
@@ -140,7 +158,13 @@ func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []strin
 }
 
 func (appConfig *AppConfig) GetTreasuryAddress(chainID string) string {
-	return appConfig.CardanoChains[chainID].TreasuryAddress
+	if _, exists := appConfig.CardanoChains[chainID]; exists {
+		return appConfig.CardanoChains[chainID].TreasuryAddress
+	} else if _, exists := appConfig.SolanaChains[chainID]; exists {
+		return appConfig.SolanaChains[chainID].TreasuryAddress
+	} else {
+		return ""
+	}
 }
 
 func (appConfig *AppConfig) FillOut() {
@@ -150,6 +174,10 @@ func (appConfig *AppConfig) FillOut() {
 
 	for chainID, ethChainConfig := range appConfig.EthChains {
 		ethChainConfig.ChainID = chainID
+	}
+
+	for chainID, solanaChainConfig := range appConfig.SolanaChains {
+		solanaChainConfig.ChainID = chainID
 	}
 }
 
@@ -172,6 +200,27 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 func (config EthChainConfig) GetCurrencyID() (uint16, error) {
 	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency id not found for chain %s", config.ChainID)
+}
+
+func (config SolanaChainConfig) GetTokenIDByName(tokenName string) (tokenID uint16, err error) {
+	for tokenID, token := range config.Tokens {
+		if token.ChainSpecific == tokenName {
+			return tokenID, nil
+		}
+	}
+
+	return 0, fmt.Errorf("token not found in chain config")
+}
+
+func (config SolanaChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		// wTODO: Replace with the actual currency token name in solana-infra
 		if token.ChainSpecific == cardanowallet.AdaTokenName {
 			return id, nil
 		}

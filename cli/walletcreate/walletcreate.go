@@ -15,13 +15,13 @@ var (
 func GetWalletCreateCommand() *cobra.Command {
 	walletCreateCmd := &cobra.Command{
 		Use:     "wallet-create",
-		Short:   "creates cardano wallet for specific chain id",
+		Short:   "creates cardano/evm/solana wallet for specific chain id",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(walletCreateParamsData),
 	}
 	walletCreateBladeCmd := &cobra.Command{
 		Use:     bladeAdminCommandUse,
-		Short:   "create blade admin or proxy admin wallets using secret manager",
+		Short:   "create blade admin, proxy admin, or solana wallets using secret manager",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(walletCreateBladeParamsData),
 	}

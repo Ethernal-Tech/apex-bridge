@@ -80,7 +80,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
 		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
-		OriginTransactionHash:    tx.Hash,
+		OriginTransactionHash:    tx.Hash[:],
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             tx.Value,
 		OriginWrappedAmount:      big.NewInt(0),

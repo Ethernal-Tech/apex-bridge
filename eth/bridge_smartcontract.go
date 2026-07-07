@@ -22,6 +22,7 @@ type IBridgeSmartContract interface {
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch, gasLimit uint64) error
 	SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch, gasLimit uint64) error
+	SubmitSignedBatchSolana(ctx context.Context, signedBatch SignedBatch, gasLimit uint64) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (CardanoBlock, error)
@@ -126,6 +127,43 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(
 	})
 	if err != nil {
 		return fmt.Errorf("error while SendTx SubmitSignedBatchEVM: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return nil
+}
+
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatchSolana(
+	ctx context.Context, signedBatch SignedBatch, gasLimit uint64,
+) error {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	receipt, err := bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		opts.GasLimit = gasLimit
+
+		return contract.SubmitSignedBatchSolana(opts, signedBatch)
+	})
+	if err != nil {
+		if receipt != nil {
+			bsc.ethHelper.logger.Error("SubmitSignedBatchSolana tx failed",
+				"txHash", receipt.TxHash.String(),
+				"status", receipt.Status,
+				"block", receipt.BlockNumber,
+				"gasUsed", receipt.GasUsed,
+				"logsCount", len(receipt.Logs),
+			)
+		}
+
+		return fmt.Errorf("error while SendTx SubmitSignedBatchSolana: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return nil

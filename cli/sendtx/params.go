@@ -45,7 +45,7 @@ const (
 	privateKeyFlagDesc           = "wallet payment signing key"
 	stakePrivateKeyFlagDesc      = "wallet stake signing key"
 	ogmiosURLSrcFlagDesc         = "source chain ogmios url"
-	receiverFlagDesc             = "receiver addr:amount"
+	receiverFlagDesc             = "receiver addr:amount, amounts are in DFM units"
 	testnetMagicFlagDesc         = "source testnet magic number. leave 0 for mainnet"
 	networkIDSrcFlagDesc         = "source network id"
 	srcChainIDFlagDesc           = "source chain ID (prime, vector, etc)"

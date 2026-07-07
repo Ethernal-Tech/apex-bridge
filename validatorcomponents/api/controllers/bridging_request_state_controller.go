@@ -9,6 +9,7 @@ import (
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
+	utils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -75,9 +76,17 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	}
 
 	chainID := chainIDArr[0]
-	txHash := common.NewHashFromHexString(txHashArr[0])
 
-	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
+	txHashBytes, err := utils.ParseTxHashToBytes(chainID, txHashArr[0])
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("invalid txHash: %w", err), c.logger)
+
+		return
+	}
+
+	state, err := c.bridgingRequestStateManager.Get(chainID, txHashBytes)
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
@@ -124,10 +133,19 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 	chainID := chainIDArr[0]
 
 	txHashesStrs := queryValues["txHash"]
-	txHashes := make([]common.Hash, len(txHashesStrs))
+	txHashes := make([][]byte, len(txHashesStrs))
 
 	for i, x := range txHashesStrs {
-		txHashes[i] = common.NewHashFromHexString(x)
+		txHashBytes, err := utils.ParseTxHashToBytes(chainID, x)
+		if err != nil {
+			apiUtils.WriteErrorResponse(
+				w, r, http.StatusBadRequest,
+				fmt.Errorf("invalid txHash: %w", err), c.logger)
+
+			return
+		}
+
+		txHashes[i] = txHashBytes
 	}
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
@@ -141,7 +159,8 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	statesResponse := make(map[string]*response.BridgingRequestStateResponse, len(states))
 	for _, state := range states {
-		statesResponse[state.SourceTxHash.String()] = response.NewBridgingRequestStateResponse(state)
+		statesResponse[common.TxHashBytesToString(state.SourceTxHash)] =
+			response.NewBridgingRequestStateResponse(state)
 	}
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)
