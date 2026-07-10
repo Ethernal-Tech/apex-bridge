@@ -12,6 +12,7 @@ import (
 	oChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -144,6 +145,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 					FeeAddrBridgingAmount:      feeAddrBridgingAmountEvm,
 					MinColCoinsAllowedToBridge: minColCoinsAllowedToBridgeWei,
+				},
+			},
+			SolanaChains: map[string]*oCore.SolanaChainConfig{
+				common.ChainIDStrSolana: {
+					SolanaChainConfig: solanatx.SolanaChainConfig{
+						Tokens: map[uint16]common.Token{
+							cardanoCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						},
+					},
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
@@ -495,6 +505,42 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
+	})
+
+	t.Run("ValidateAndAddClaim more than max receivers in metadata for solana", func(t *testing.T) {
+		moreThanMaxReceiversReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrSolana,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestEthMetadataTransaction{
+				{Address: primeBridgingFeeAddr, Amount: big.NewInt(2)},
+				{Address: primeBridgingFeeAddr, Amount: big.NewInt(2)},
+			},
+			BridgingFee:  big.NewInt(0),
+			OperationFee: common.DfmToWei(big.NewInt(minOperationFee)),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, moreThanMaxReceiversReceiversMetadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		ethTx := &core.EthTx{
+			Metadata:      moreThanMaxReceiversReceiversMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessorSkyline(refundRequestProcessorMock, hclog.NewNullLogger(), getChainInfos())
+
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "solana destination chain does not support multiple receivers")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {

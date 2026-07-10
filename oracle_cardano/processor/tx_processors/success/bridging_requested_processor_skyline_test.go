@@ -14,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -161,6 +162,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						nexusCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						usdtTokenID:         {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
 						primeWrappedTokenID: {ChainSpecific: "0x22", LockUnlock: false, IsWrappedCurrency: false},
+					},
+				},
+			},
+			SolanaChains: map[string]*cCore.SolanaChainConfig{
+				common.ChainIDStrSolana: {
+					SolanaChainConfig: solanatx.SolanaChainConfig{
+						Tokens: map[uint16]common.Token{
+							cardanoCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						},
 					},
 				},
 			},
@@ -1062,6 +1072,59 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
+	})
+
+	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed for solana", func(t *testing.T) {
+		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrSolana,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
+				{Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
+			},
+			OperationFee: minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, feeAddrNotInReceiversMetadata)
+
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
+		}
+
+		tx := indexer.Tx{
+			Metadata: feeAddrNotInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: srcChain,
+		}
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "solana destination chain does not support multiple receivers")
 	})
 
 	//nolint:dupl
