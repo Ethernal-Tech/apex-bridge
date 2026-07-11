@@ -952,7 +952,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	chainID := p.chainIDConverter.ToChainIDNum(p.chainIDDst)
 	receivers, totalTokenAmount := toSkylineGatewayStruct(p.receiversParsed, p.tokenIDSrc)
 
-	if p.chainIDConverter.IsSolanaChainID(p.chainIDDst) && len(receivers) > 0 {
+	if p.chainIDConverter.IsSolanaChainID(p.chainIDDst) && len(receivers) > 1 {
 		return nil, fmt.Errorf("solana destination chain does not support multiple receivers")
 	}
 
