@@ -229,6 +229,31 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
 	})
 
+	t.Run("ValidateAndAddClaim more than max receivers for solana dest", func(t *testing.T) {
+		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrSolana,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestSolMetadataTransaction{
+				{Address: validCardanoTestAddr, Amount: big.NewInt(1), TokenID: solanaCurrencyID},
+				{Address: validCardanoTestAddr, Amount: big.NewInt(1), TokenID: solanaCurrencyID},
+			},
+			OperationFee: minOperationFee,
+			BridgingFee:  minFeeForBridging,
+		})
+		require.NoError(t, err)
+
+		claims := &oCore.BridgeClaims{}
+		appConfig := getAppConfig()
+
+		err = proc.ValidateAndAddClaim(claims, &core.SolanaTx{
+			Metadata:      metadata,
+			OriginChainID: common.ChainIDStrSolana,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "solana destination chain does not support multiple receivers")
+	})
+
 	t.Run("ValidateAndAddClaim transaction direction not allowed", func(t *testing.T) {
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,

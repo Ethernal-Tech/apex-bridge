@@ -308,6 +308,10 @@ func (p *BridgingRequestedProcessorImpl) validateOperationAndReceiverLimits(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
+	if appConfig.ChainIDConverter.IsSolanaChainID(metadata.DestinationChainID) && len(metadata.Transactions) > 1 {
+		return fmt.Errorf("solana destination chain does not support multiple receivers: %v", metadata)
+	}
+
 	return nil
 }
 
