@@ -582,7 +582,9 @@ func (p *BridgingRequestedProcessorImpl) calculateMinUtxo(
 		return 0, fmt.Errorf("chain info not found for chainID: %s", config.ChainID)
 	}
 
-	builder.SetProtocolParameters(chainInfo.ProtocolParams)
+	protocolParams := chainInfo.GetProtocolParams()
+
+	builder.SetProtocolParameters(protocolParams)
 
 	tokenAmounts := make([]cardanowallet.TokenAmount, 0, len(nativeTokensSum))
 

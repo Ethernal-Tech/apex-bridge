@@ -195,10 +195,9 @@ func NewValidatorComponents(
 	cardanoChainInfos := make(map[string]*oracleCommonChain.CardanoChainInfo, len(appConfig.CardanoChains))
 
 	for _, cc := range appConfig.CardanoChains {
-		info := oracleCommonChain.NewCardanoChainInfo(cc)
-
-		if err := info.Populate(ctx); err != nil {
-			return nil, err
+		info, err := oracleCommonChain.NewCardanoChainInfo(ctx, cc, db, logger.Named("cardano_chain_info_"+cc.ChainID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cardano chain info for chainID: %s, err: %w", cc.ChainID, err)
 		}
 
 		cardanoChainInfos[cc.ChainID] = info
