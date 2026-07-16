@@ -25,6 +25,8 @@ const (
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
 	evmChainFeeAddrBridgingFlag        = "evm-fee-addr-bridging"
 	evmNumBlockConfirmationsFlag       = "evm-num-block-confirmations"
+	evmPollIntervalFlag                = "evm-poll-interval"
+	evmSyncBatchSizeFlag               = "evm-sync-batch-size"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
@@ -34,10 +36,12 @@ const (
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
 	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer"
+	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
+	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
-	defaultEvmPoolIntervalMiliseconds   = 5000
+	defaultEvmPollIntervalMiliseconds   = 5000
 	defaultEvmNoBatchPeriodPercent      = 0.2
 	defaultEvmTTLBlockRoundingThreshold = 10
 	defaultEvmTTLBlockNumberInc         = 20
@@ -60,6 +64,8 @@ type evmChainGenerateConfigsParams struct {
 	evmChainFeeAddrBridgingStr     string
 	evmChainFeeAddrBridging        *big.Int
 	evmNumBlockConfirmations       uint64
+	evmSyncBatchSize               uint64
+	evmPollIntervalMiliseconds     time.Duration
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
@@ -165,6 +171,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmRelayerGasFeeMultiplierFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.evmSyncBatchSize,
+		evmSyncBatchSizeFlag,
+		defaultEvmSyncBatchSize,
+		evmSyncBatchSizeFlagDesc,
+	)
+
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
@@ -225,6 +238,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		dbsPathFlagDesc,
 	)
 
+	cmd.Flags().DurationVar(
+		&p.evmPollIntervalMiliseconds,
+		evmPollIntervalFlag,
+		defaultEvmPollIntervalMiliseconds,
+		evmPollIntervalFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
 
@@ -247,10 +267,10 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
 		NodeURL:                    p.evmChainNodeURL,
-		SyncBatchSize:              defaultEvmSyncBatchSize,
+		SyncBatchSize:              p.evmSyncBatchSize,
 		NumBlockConfirmations:      p.evmNumBlockConfirmations,
 		StartBlockNumber:           p.evmChainStartingBlock,
-		PoolIntervalMiliseconds:    defaultEvmPoolIntervalMiliseconds,
+		PoolIntervalMiliseconds:    p.evmPollIntervalMiliseconds,
 		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
 		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
 		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
