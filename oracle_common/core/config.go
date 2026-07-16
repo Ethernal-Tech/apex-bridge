@@ -44,7 +44,7 @@ type EthChainConfig struct {
 	SyncBatchSize                         uint64                       `json:"syncBatchSize"`
 	NumBlockConfirmations                 uint64                       `json:"numBlockConfirmations"`
 	StartBlockNumber                      uint64                       `json:"startBlockNumber"`
-	PoolIntervalMiliseconds               time.Duration                `json:"poolIntervalMs"`
+	PoolIntervalMiliseconds               uint64                       `json:"poolIntervalMs"`
 	TTLBlockNumberInc                     uint64                       `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold                uint64                       `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent                  float64                      `json:"noBatchPeriodPercent"`

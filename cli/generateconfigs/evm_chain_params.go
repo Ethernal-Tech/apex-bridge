@@ -65,7 +65,7 @@ type evmChainGenerateConfigsParams struct {
 	evmChainFeeAddrBridging        *big.Int
 	evmNumBlockConfirmations       uint64
 	evmSyncBatchSize               uint64
-	evmPollIntervalMiliseconds     time.Duration
+	evmPollIntervalMiliseconds     uint64
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
@@ -178,6 +178,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmSyncBatchSizeFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.evmPollIntervalMiliseconds,
+		evmPollIntervalFlag,
+		defaultEvmPollIntervalMiliseconds,
+		evmPollIntervalFlagDesc,
+	)
+
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
@@ -236,13 +243,6 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		dbsPathFlag,
 		defaultDBsPath,
 		dbsPathFlagDesc,
-	)
-
-	cmd.Flags().DurationVar(
-		&p.evmPollIntervalMiliseconds,
-		evmPollIntervalFlag,
-		defaultEvmPollIntervalMiliseconds,
-		evmPollIntervalFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
