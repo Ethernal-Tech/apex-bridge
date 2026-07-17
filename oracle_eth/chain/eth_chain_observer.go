@@ -139,7 +139,7 @@ func loadTrackerConfigs(
 
 	return &eventTracker.EventTrackerConfig{
 		RPCEndpoint:            config.NodeURL,
-		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
+		PollInterval:           time.Duration(config.PoolIntervalMiliseconds) * time.Millisecond, //nolint:gosec
 		SyncBatchSize:          config.SyncBatchSize,
 		NumBlockConfirmations:  config.NumBlockConfirmations,
 		NumOfBlocksToReconcile: uint64(0),
