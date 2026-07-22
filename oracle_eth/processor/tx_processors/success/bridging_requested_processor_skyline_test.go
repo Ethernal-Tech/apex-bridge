@@ -1,10 +1,12 @@
 package successtxprocessors
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -174,9 +176,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		chainInfos := make(map[string]*oChain.CardanoChainInfo, len(appConfig.CardanoChains))
 
 		for _, cc := range appConfig.CardanoChains {
-			info := oChain.NewCardanoChainInfo(cc)
+			cc.OgmiosURL = "http://ogmios.mock" // never contacted: params are pre-seeded and fresh
 
-			info.ProtocolParams = protocolParameters
+			db := &oCore.ProtocolParamsDBMock{Params: protocolParameters, ExpiresAt: time.Now().UTC().Add(time.Hour)}
+
+			info, err := oChain.NewCardanoChainInfo(context.Background(), cc, db, hclog.NewNullLogger())
+			require.NoError(t, err)
 
 			chainInfos[cc.ChainID] = info
 		}

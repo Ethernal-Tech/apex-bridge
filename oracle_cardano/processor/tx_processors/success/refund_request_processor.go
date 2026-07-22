@@ -216,7 +216,9 @@ func calculateMinUtxoForRefund(
 		return 0, fmt.Errorf("chain info for chainID: %s, not found", config.ChainID)
 	}
 
-	builder.SetProtocolParameters(chainInfo.ProtocolParams)
+	protocolParams := chainInfo.GetProtocolParams()
+
+	builder.SetProtocolParameters(protocolParams)
 
 	tokenNameToAmount := make(map[string]uint64)
 

@@ -3,6 +3,7 @@ package databaseaccess
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -15,6 +16,7 @@ type BBoltDatabase struct {
 
 var (
 	bridgingRequestStatesBucket = []byte("BridgingRequestStates")
+	protocolParamsBucket        = []byte("ProtocolParams")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -28,7 +30,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{bridgingRequestStatesBucket} {
+		for _, bn := range [][]byte{bridgingRequestStatesBucket, protocolParamsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -81,6 +83,46 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *common.BridgingReques
 
 		return nil
 	})
+}
+
+type protocolParamsRecord struct {
+	ProtocolParams []byte    `json:"protocolParams"`
+	ExpiresAt      time.Time `json:"expiresAt"`
+}
+
+func (bd *BBoltDatabase) SaveProtocolParams(chainID string, protocolParams []byte, expiresAt time.Time) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		bytes, err := json.Marshal(protocolParamsRecord{
+			ProtocolParams: protocolParams,
+			ExpiresAt:      expiresAt,
+		})
+		if err != nil {
+			return fmt.Errorf("could not marshal protocol params: %w", err)
+		}
+
+		if err := tx.Bucket(protocolParamsBucket).Put([]byte(chainID), bytes); err != nil {
+			return fmt.Errorf("protocol params write error: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (bd *BBoltDatabase) GetProtocolParams(chainID string) ([]byte, time.Time, error) {
+	var record protocolParamsRecord
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		if data := tx.Bucket(protocolParamsBucket).Get([]byte(chainID)); len(data) > 0 {
+			return json.Unmarshal(data, &record)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	return record.ProtocolParams, record.ExpiresAt, nil
 }
 
 // GetBridgingRequestState implements core.Database.

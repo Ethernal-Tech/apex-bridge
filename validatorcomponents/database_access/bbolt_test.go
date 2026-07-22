@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/stretchr/testify/require"
@@ -123,5 +124,40 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, state)
 		require.Equal(t, common.BridgingRequestStatusInvalidRequest, state.Status)
+	})
+
+	t.Run("SaveGetProtocolParams", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		result, expiresAt, err := db.GetProtocolParams(primeChainID)
+		require.NoError(t, err)
+		require.Nil(t, result)
+		require.True(t, expiresAt.IsZero())
+
+		protocolParams := []byte(`{"maxTxSize":16384}`)
+		expiry := time.Now().UTC().Add(time.Hour)
+
+		err = db.SaveProtocolParams(primeChainID, protocolParams, expiry)
+		require.NoError(t, err)
+
+		result, expiresAt, err = db.GetProtocolParams(primeChainID)
+		require.NoError(t, err)
+		require.Equal(t, protocolParams, result)
+		require.True(t, expiry.Equal(expiresAt))
+
+		updatedParams := []byte(`{"maxTxSize":32768}`)
+		updatedExpiry := expiry.Add(time.Hour)
+
+		err = db.SaveProtocolParams(primeChainID, updatedParams, updatedExpiry)
+		require.NoError(t, err)
+
+		result, expiresAt, err = db.GetProtocolParams(primeChainID)
+		require.NoError(t, err)
+		require.Equal(t, updatedParams, result)
+		require.True(t, updatedExpiry.Equal(expiresAt))
 	})
 }

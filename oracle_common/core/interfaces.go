@@ -90,3 +90,8 @@ type BlockSubmitterDB interface {
 	GetBlocksSubmitterInfo(chainID string) (BlocksSubmitterInfo, error)
 	SetBlocksSubmitterInfo(chainID string, info BlocksSubmitterInfo) error
 }
+
+type ProtocolParamsDB interface {
+	SaveProtocolParams(chainID string, protocolParams []byte, expiresAt time.Time) error
+	GetProtocolParams(chainID string) ([]byte, time.Time, error)
+}

@@ -1,6 +1,10 @@
 package core
 
-import "github.com/stretchr/testify/mock"
+import (
+	"time"
+
+	"github.com/stretchr/testify/mock"
+)
 
 type TxsProcessorMock struct {
 	mock.Mock
@@ -21,3 +25,33 @@ func (m *ExpectedTxsFetcherMock) Start() {
 }
 
 var _ ExpectedTxsFetcher = (*ExpectedTxsFetcherMock)(nil)
+
+type ProtocolParamsDBMock struct {
+	Params    []byte
+	ExpiresAt time.Time
+	SaveErr   error
+	GetErr    error
+}
+
+var _ ProtocolParamsDB = (*ProtocolParamsDBMock)(nil)
+
+func (m *ProtocolParamsDBMock) SaveProtocolParams(
+	chainID string, protocolParams []byte, expiresAt time.Time,
+) error {
+	if m.SaveErr != nil {
+		return m.SaveErr
+	}
+
+	m.Params = protocolParams
+	m.ExpiresAt = expiresAt
+
+	return nil
+}
+
+func (m *ProtocolParamsDBMock) GetProtocolParams(chainID string) ([]byte, time.Time, error) {
+	if m.GetErr != nil {
+		return nil, time.Time{}, m.GetErr
+	}
+
+	return m.Params, m.ExpiresAt, nil
+}

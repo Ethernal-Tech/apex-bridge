@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	oracleCC "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 )
 
 type BridgingRequestStateDB interface {
@@ -12,6 +13,7 @@ type BridgingRequestStateDB interface {
 
 type Database interface {
 	BridgingRequestStateDB
+	oracleCC.ProtocolParamsDB
 	Init(filePath string) error
 	Close() error
 }

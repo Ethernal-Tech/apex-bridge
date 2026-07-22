@@ -1,10 +1,12 @@
 package successtxprocessors
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -126,9 +128,12 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		chainInfos := make(map[string]*cChain.CardanoChainInfo, len(appConfig.CardanoChains))
 
 		for _, cc := range appConfig.CardanoChains {
-			info := cChain.NewCardanoChainInfo(cc)
+			cc.OgmiosURL = mockOgmiosURL
 
-			info.ProtocolParams = protocolParameters
+			db := &cCore.ProtocolParamsDBMock{Params: protocolParameters, ExpiresAt: time.Now().UTC().Add(time.Hour)}
+
+			info, err := cChain.NewCardanoChainInfo(context.Background(), cc, db, hclog.NewNullLogger())
+			require.NoError(t, err)
 
 			chainInfos[cc.ChainID] = info
 		}
