@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260729095053-2813bafad52e
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260729110535-2dbeea9df52f
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260708125444-e939e6f8e40a
 	github.com/ethereum/go-ethereum v1.13.14
