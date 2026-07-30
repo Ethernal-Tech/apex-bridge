@@ -9,7 +9,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	solanaAB "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
-	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -70,8 +69,9 @@ func TestSolanaChainObserver(t *testing.T) {
 		indexerDB.On("ReadSlot").Return(uint64(1), nil)
 		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 		indexerDB.On("UseTransactions").Return(false)
-		indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
-		indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
+		indexerDB.On("GetAllUnprocessedTransactions").Return([]store.TxPoint{}, nil)
+		indexerDB.On("GetLastProcessedTransaction").Return(store.TxPoint{}, nil)
+		indexerDB.On("GetLatestQueriedTransaction").Return(store.TxPoint{}, nil)
 
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
@@ -105,8 +105,9 @@ func TestSolanaChainObserver(t *testing.T) {
 		// Tracker.Start() calls ReadSlot once; health-check goroutine calls ReadSlot each time the timer fires.
 		indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 		indexerDB.On("UseTransactions").Return(false)
-		indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
-		indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
+		indexerDB.On("GetAllUnprocessedTransactions").Return([]store.TxPoint{}, nil)
+		indexerDB.On("GetLastProcessedTransaction").Return(store.TxPoint{}, nil)
+		indexerDB.On("GetLatestQueriedTransaction").Return(store.TxPoint{}, nil)
 
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
@@ -166,8 +167,9 @@ func TestSolanaChainObserver_Dispose(t *testing.T) {
 	indexerDB.On("ReadSlot").Return(uint64(1), nil)
 	indexerDB.On("GetLatestBlockPoint").Return(&store.BlockPoint{BlockSlot: 1}, nil)
 	indexerDB.On("UseTransactions").Return(false)
-	indexerDB.On("GetAllUnprocessedTransactions").Return([]solana.Signature{}, nil)
-	indexerDB.On("GetLastProcessedTransaction").Return(solana.Signature{}, nil)
+	indexerDB.On("GetAllUnprocessedTransactions").Return([]store.TxPoint{}, nil)
+	indexerDB.On("GetLastProcessedTransaction").Return(store.TxPoint{}, nil)
+	indexerDB.On("GetLatestQueriedTransaction").Return(store.TxPoint{}, nil)
 
 	testConfig := &oCore.SolanaChainConfig{
 		ChainID: "solana-devnet",
