@@ -34,7 +34,8 @@ type TelemetryWorker struct {
 	waitTime                           time.Duration
 	latestBlockCardano                 map[string]*indexer.BlockPoint
 	latestBlockEvm                     map[string]uint64
-	latestBlockSolana                  map[string]uint64
+	latestBlockSolana                  map[string]*solanaTrackerStore.BlockPoint
+	latestFinalizedBlockSolana         map[string]uint64
 	latestHotWalletState               map[string]*big.Int
 	latestHotWalletStateForNativeToken map[string]*big.Int
 	latestFeeMultisigState             map[string]uint64
@@ -58,7 +59,8 @@ func NewTelemetryWorker(
 		config:                             config,
 		latestBlockCardano:                 map[string]*indexer.BlockPoint{},
 		latestBlockEvm:                     map[string]uint64{},
-		latestBlockSolana:                  map[string]uint64{},
+		latestBlockSolana:                  map[string]*solanaTrackerStore.BlockPoint{},
+		latestFinalizedBlockSolana:         map[string]uint64{},
 		latestHotWalletState:               map[string]*big.Int{},
 		latestHotWalletStateForNativeToken: map[string]*big.Int{},
 		latestFeeMultisigState:             map[string]uint64{},
@@ -105,13 +107,25 @@ func (ti *TelemetryWorker) execute() {
 	}
 
 	for chainID, db := range ti.solanaDBs {
+		bp, err := db.GetLatestBlockPoint()
+		if err != nil {
+			ti.logger.Warn("failed to retrieve block point", "chain", chainID, "err", err)
+		} else if bp == nil {
+			ti.logger.Debug("no block point available yet", "chain", chainID)
+		} else if cache := ti.latestBlockSolana[chainID]; cache == nil ||
+			cache.BlockHash != bp.BlockHash || cache.BlockSlot != bp.BlockSlot {
+			ti.latestBlockSolana[chainID] = bp
+
+			telemetry.UpdateIndexersBlockCounter(chainID, 1)
+		}
+
 		blockNumber, err := db.GetLatestFinalizedBlockNumber()
 		if err != nil {
 			ti.logger.Warn("failed to retrieve latest finalized block", "chain", chainID, "err", err)
-		} else if cache := ti.latestBlockSolana[chainID]; cache != blockNumber {
-			ti.latestBlockSolana[chainID] = blockNumber
+		} else if cache := ti.latestFinalizedBlockSolana[chainID]; cache != blockNumber {
+			ti.latestFinalizedBlockSolana[chainID] = blockNumber
 
-			telemetry.UpdateIndexersBlockCounter(chainID, 1)
+			telemetry.UpdateIndexersFinalizedBlockCounter(chainID, 1)
 		}
 	}
 

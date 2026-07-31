@@ -41,6 +41,10 @@ func UpdateIndexersBlockCounter(chain string, cnt int) {
 	metrics.IncrCounter([]string{indexersMetricsPrefix, "block_counter", chain}, float32(cnt))
 }
 
+func UpdateIndexersFinalizedBlockCounter(chain string, cnt int) {
+	metrics.IncrCounter([]string{indexersMetricsPrefix, "finalized_block_counter", chain}, float32(cnt))
+}
+
 func UpdateHotWalletState(chain string, typeWallet string, val uint64) {
 	stateLow := fmt.Sprintf("%s_%s_low", hotWalletMetricsPrefix, typeWallet)
 	stateHigh := fmt.Sprintf("%s_%s_high", hotWalletMetricsPrefix, typeWallet)
