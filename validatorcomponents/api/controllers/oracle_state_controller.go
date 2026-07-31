@@ -306,7 +306,7 @@ func (c *OracleStateControllerImpl) findSolanaTx(chainID string, txHash string) 
 	}
 
 	for _, s := range unprocessed {
-		if s.Equals(sig) {
+		if s.TxSignature.Equals(sig) {
 			return true, nil
 		}
 	}
