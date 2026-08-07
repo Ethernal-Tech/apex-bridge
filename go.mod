@@ -3,7 +3,7 @@ module github.com/Ethernal-Tech/apex-bridge
 go 1.23.1
 
 require (
-	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e
+	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260806125200-a31862150760
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260526180801-71382bb63547
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
