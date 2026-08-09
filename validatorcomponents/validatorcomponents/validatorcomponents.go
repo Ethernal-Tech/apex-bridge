@@ -142,7 +142,6 @@ func NewValidatorComponents(
 	for _, solanaChainConfig := range oracleConfig.SolanaChains {
 		indexerDB, err := solanaStore.NewBoltStorageHandler(
 			filepath.Join(appConfig.Settings.DbsPath, solanaChainConfig.ChainID+".db"),
-			false,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", solanaChainConfig.ChainID, err)
