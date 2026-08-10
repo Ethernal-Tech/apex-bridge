@@ -36,12 +36,12 @@ github.com/DataDog/sketches-go v1.4.2 h1:gppNudE9d19cQ98RYABOetxIhpTCl4m7CnbRZjv
 github.com/DataDog/sketches-go v1.4.2/go.mod h1:xJIXldczJyyjnbDop7ZZcLxJdV3+7Kra7H1KMgpgkLk=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
-github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e h1:ljPSlj5pMPZ21htohSLk/dA2xLlNzu9rvj8By6aXTJo=
-github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260429071118-b747dcfebc8e/go.mod h1:PVyFIDYImtT8fzpX5Q9xLi0TqAVENf5oif0uxvBQbXU=
+github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260806125200-a31862150760 h1:2eFGjy6J9YNMrgw78phDlZJNrqfjWBxkD2EwMevOjo8=
+github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260806125200-a31862150760/go.mod h1:PVyFIDYImtT8fzpX5Q9xLi0TqAVENf5oif0uxvBQbXU=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19 h1:a96KsZz67W/Nn6Kx55A4eaMngFNsm5A5A6MRYF2xu8U=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19/go.mod h1:ikj6EuZ/ISPyR1DYKnqoE5F2geyI3KzVllndxg7vFs8=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260729110535-2dbeea9df52f h1:n4bQW4hZqifoQZgmpDsoUOPjNhQGLsBFi4r6KIhyDLg=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260729110535-2dbeea9df52f/go.mod h1:v0z3aaYeuDhLfmO/s+1lq1WBPnLQyHIAjpPiEiecMeU=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260807135647-e42207b951a3 h1:2EMEHvOW7WtizTroeUIczVl1Urmwe+S0TiSVPj+w+bI=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260807135647-e42207b951a3/go.mod h1:v0z3aaYeuDhLfmO/s+1lq1WBPnLQyHIAjpPiEiecMeU=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94 h1:xUvsP9JPf8BKZ0ZJt0kC0UlernoKTkAzm4JVo4Mig/M=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94/go.mod h1:B8gumPuc8eynSJmAcMd2CEjhlOSE8CynwFx9G3AlaQ8=
 github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260809184014-697d0cea5697 h1:qesMOfA5DG4L8R6lilmj+7G1+8qdlqAWoYc52SqFRY0=
