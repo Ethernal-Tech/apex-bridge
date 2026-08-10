@@ -26,7 +26,6 @@ type SolanaTxsDB interface {
 	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedSolanaTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedSolanaTx, error)
 	ClearAllTxs(chainID string) error
-	MoveProcessedExpectedTxs(chainID string) error
 	GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedSolanaTx, unprocessedTxs []*SolanaTx) error
 	UpdateTxs(data *SolanaUpdateTxsData, chainIDConverter *common.ChainIDConverter) error

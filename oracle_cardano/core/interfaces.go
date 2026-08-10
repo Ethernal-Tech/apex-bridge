@@ -22,7 +22,6 @@ type CardanoTxsDB interface {
 	GetUnprocessedBatchEvents(chainID string) ([]*cCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error
 	ClearAllTxs(chainID string) error
-	MoveProcessedExpectedTxs(chainID string) error
 	UpdateTxs(data *CardanoUpdateTxsData, chainIDConverter *common.ChainIDConverter) error
 }
 

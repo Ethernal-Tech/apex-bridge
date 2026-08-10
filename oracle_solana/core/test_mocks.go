@@ -168,12 +168,6 @@ func (m *SolanaTxsProcessorDBMock) ClearAllTxs(chainID string) error {
 	return args.Error(0)
 }
 
-func (m *SolanaTxsProcessorDBMock) MoveProcessedExpectedTxs(chainID string) error {
-	args := m.Called(chainID)
-
-	return args.Error(0)
-}
-
 func (m *SolanaTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedSolanaTx, unprocessedTxs []*SolanaTx) error {
 	args := m.Called(processedTxs, unprocessedTxs)
 
