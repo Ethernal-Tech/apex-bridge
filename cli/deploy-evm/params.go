@@ -23,7 +23,7 @@ import (
 const (
 	defaultGasFeeMultiplier   = 200 // 170%
 	defaultGasLimitValue      = uint64(5_242_880)
-	defaultGasLimitMultiplier = float64(1.1)
+	defaultGasLimitMultiplier = float64(2.0)
 
 	ercProxyContractName = "ERC1967Proxy"
 
