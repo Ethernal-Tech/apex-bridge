@@ -142,7 +142,6 @@ func NewValidatorComponents(
 	for _, solanaChainConfig := range oracleConfig.SolanaChains {
 		indexerDB, err := solanaStore.NewBoltStorageHandler(
 			filepath.Join(appConfig.Settings.DbsPath, solanaChainConfig.ChainID+".db"),
-			false,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", solanaChainConfig.ChainID, err)
@@ -274,7 +273,7 @@ func NewValidatorComponents(
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(
 				bridgingAddressesCoordinator, bridgingAddressesManager,
-				*appConfig.ChainIDConverter, apiLogger.Named("bridging_address_controller")),
+				*appConfig.ChainIDConverter, oracleConfig, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))

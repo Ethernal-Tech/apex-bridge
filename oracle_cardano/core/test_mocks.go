@@ -221,10 +221,6 @@ func (m *CardanoTxsProcessorDBMock) UpdateTxs(
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) MoveProcessedExpectedTxs(chainID string) error {
-	return nil
-}
-
 var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
 
 type BridgeSubmitterMock struct {

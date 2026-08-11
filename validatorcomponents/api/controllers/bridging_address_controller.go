@@ -9,6 +9,7 @@ import (
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/hashicorp/go-hclog"
 )
@@ -17,6 +18,7 @@ type BridgingAddressControllerImpl struct {
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
 	bridgingAddressManager       common.BridgingAddressesManager
 	chainIDConverter             common.ChainIDConverter
+	oracleConfig                 *oCore.AppConfig
 	logger                       hclog.Logger
 }
 
@@ -26,12 +28,14 @@ func NewBridgingAddressController(
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	bridgingAddressManager common.BridgingAddressesManager,
 	chainIDConverter common.ChainIDConverter,
+	oracleConfig *oCore.AppConfig,
 	logger hclog.Logger,
 ) *BridgingAddressControllerImpl {
 	return &BridgingAddressControllerImpl{
 		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
 		bridgingAddressManager:       bridgingAddressManager,
 		chainIDConverter:             chainIDConverter,
+		oracleConfig:                 oracleConfig,
 		logger:                       logger,
 	}
 }
@@ -110,7 +114,20 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	chainIDStr := chainIDArr[0]
 	chainID := c.chainIDConverter.ToChainIDNum(chainIDStr)
 
-	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
+	var bridgingAddresses []string
+
+	switch {
+	case c.chainIDConverter.IsCardanoChainID(chainIDStr):
+		bridgingAddresses = c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
+	case c.chainIDConverter.IsEVMChainID(chainIDStr):
+		if cfg, ok := c.oracleConfig.EthChains[chainIDStr]; ok {
+			bridgingAddresses = []string{cfg.BridgingAddresses.BridgingAddress}
+		}
+	case c.chainIDConverter.IsSolanaChainID(chainIDStr):
+		if cfg, ok := c.oracleConfig.SolanaChains[chainIDStr]; ok {
+			bridgingAddresses = []string{cfg.TrackedProgram}
+		}
+	}
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewAllBridgingAddressesResponse(
 		bridgingAddresses), c.logger)

@@ -288,16 +288,6 @@ func TestBoltDatabase(t *testing.T) {
 		require.NotNil(t, pendingTx)
 	})
 
-	t.Run("MoveProcessedExpectedTxs", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db, err := createDB(filePath)
-		require.NoError(t, err)
-
-		err = db.MoveProcessedExpectedTxs(common.ChainIDStrSolana)
-		require.NoError(t, err)
-	})
-
 	t.Run("GetUnprocessedBatchEvents", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
