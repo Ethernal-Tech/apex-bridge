@@ -273,7 +273,7 @@ func NewValidatorComponents(
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(
 				bridgingAddressesCoordinator, bridgingAddressesManager,
-				*appConfig.ChainIDConverter, apiLogger.Named("bridging_address_controller")),
+				*appConfig.ChainIDConverter, oracleConfig, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
