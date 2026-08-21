@@ -10,6 +10,7 @@ import (
 	oChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
+	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/bridge"
 	sol_chain "github.com/Ethernal-Tech/apex-bridge/oracle_solana/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
@@ -123,11 +124,18 @@ func NewSolanaOracle(
 
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
+		indexerLogger, err := oUtils.NewIndexerLogger(
+			appConfig.Settings.Logger, solanaChainConfig.ChainID, logger)
+		if err != nil {
+			return nil, err
+		}
+
 		solanaChainObserver, err := sol_chain.NewSolanaChainObserver(
 			solanaChainConfig,
 			solanaTxsReceiver,
 			indexerDB,
-			logger.Named("solana_chain_observer_"+solanaChainConfig.ChainID),
+			indexerLogger.Named("solana_indexer"),
+			logger.Named("solana_chain_observer"),
 		)
 		if err != nil {
 			return nil, err

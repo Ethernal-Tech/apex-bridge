@@ -41,6 +41,7 @@ func NewCardanoChainObserver(
 	txsReceiver core.CardanoTxsReceiver, oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
 	bridgingAddressesManager common.BridgingAddressesManager,
+	indexerLogger hclog.Logger,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config, chainIDConverter, bridgingAddressesManager)
@@ -78,8 +79,9 @@ func NewCardanoChainObserver(
 		return nil
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	blockIndexer := indexer.NewBlockIndexer(
+		indexerConfig, confirmedBlockHandler, indexerDB, indexerLogger.Named("block_indexer"))
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, indexerLogger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,

@@ -10,6 +10,7 @@ import (
 	oChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
+	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
 	eth_chain "github.com/Ethernal-Tech/apex-bridge/oracle_eth/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -123,8 +124,15 @@ func NewEthOracle(
 
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
+		indexerLogger, err := oUtils.NewIndexerLogger(
+			appConfig.Settings.Logger, ethChainConfig.ChainID, logger)
+		if err != nil {
+			return nil, err
+		}
+
 		eco, err := eth_chain.NewEthChainObserver(
 			ethChainConfig, ethTxsReceiver, db, indexerDB,
+			indexerLogger.Named("eth_indexer_"+ethChainConfig.ChainID),
 			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create eth chain observer for `%s`: %w", ethChainConfig.ChainID, err)

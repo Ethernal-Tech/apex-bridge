@@ -17,6 +17,7 @@ import (
 	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
+	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -119,9 +120,16 @@ func NewCardanoOracle(
 
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
+		indexerLogger, err := cUtils.NewIndexerLogger(
+			appConfig.Settings.Logger, cardanoChainConfig.ChainID, logger)
+		if err != nil {
+			return nil, err
+		}
+
 		cco, err := chain.NewCardanoChainObserver(
 			ctx, cardanoChainConfig, appConfig.ChainIDConverter,
 			cardanoTxsReceiver, db, indexerDB, appConfig.BridgingAddressesManager,
+			indexerLogger.Named("cardano_indexer_"+cardanoChainConfig.ChainID),
 			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)

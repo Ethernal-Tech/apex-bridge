@@ -15,12 +15,13 @@ import (
 )
 
 type EthChainObserverImpl struct {
-	config      *oCore.EthChainConfig
-	indexerDB   eventTrackerStore.EventTrackerStore
-	txsReceiver ethOracleCore.EthTxsReceiver
-	lastBlock   uint64
-	closedCh    chan struct{}
-	logger      hclog.Logger
+	config        *oCore.EthChainConfig
+	indexerDB     eventTrackerStore.EventTrackerStore
+	txsReceiver   ethOracleCore.EthTxsReceiver
+	lastBlock     uint64
+	closedCh      chan struct{}
+	indexerLogger hclog.Logger
+	logger        hclog.Logger
 }
 
 var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
@@ -30,6 +31,7 @@ func NewEthChainObserver(
 	txsReceiver ethOracleCore.EthTxsReceiver,
 	oracleDB ethOracleCore.EthTxsProcessorDB,
 	indexerDB eventTrackerStore.EventTrackerStore,
+	indexerLogger hclog.Logger,
 	logger hclog.Logger,
 ) (*EthChainObserverImpl, error) {
 	err := initOracleState(indexerDB, oracleDB, config.StartBlockNumber, config.ChainID, logger)
@@ -38,18 +40,19 @@ func NewEthChainObserver(
 	}
 
 	return &EthChainObserverImpl{
-		config:      config,
-		indexerDB:   indexerDB,
-		txsReceiver: txsReceiver,
-		closedCh:    make(chan struct{}),
-		logger:      logger,
+		config:        config,
+		indexerDB:     indexerDB,
+		txsReceiver:   txsReceiver,
+		closedCh:      make(chan struct{}),
+		indexerLogger: indexerLogger,
+		logger:        logger,
 	}, nil
 }
 
 func (co *EthChainObserverImpl) Start() error {
 	co.logger.Debug("Starting eth chain observer", "endpoint", co.config.NodeURL)
 
-	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.logger)
+	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.indexerLogger, co.logger)
 
 	tracker, notifyClosedCh, err := newEventTrackerWrapper(trackerConfig, co.indexerDB)
 	if err != nil {
@@ -120,7 +123,7 @@ func (co *EthChainObserverImpl) updateIsTrackerAlive() bool {
 
 func loadTrackerConfigs(
 	config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
-	logger hclog.Logger,
+	indexerLogger hclog.Logger, logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	bridgingAddress := config.BridgingAddresses.BridgingAddress
 	scAddress := ethgo.HexToAddress(bridgingAddress)
@@ -150,8 +153,7 @@ func loadTrackerConfigs(
 		},
 		StartBlockFromGenesis: config.StartBlockNumber,
 		LogFilter:             logFilter,
-		// add timestamp to the logger to differentiate between multiple instances
-		Logger: logger.Named(time.Now().UTC().String()),
+		Logger:                indexerLogger,
 	}
 }
 
