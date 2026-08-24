@@ -157,7 +157,7 @@ func loadTrackerConfigs(
 			Logger:      logger,
 		},
 		StartFromSlot:       config.TrackerStartSlot,
-		Logger:              indexerLogger,
+		Logger:              indexerLogger.Named(time.Now().UTC().String()),
 		DisableRateLimiting: config.DisableRateLimiting,
 	}, nil
 }

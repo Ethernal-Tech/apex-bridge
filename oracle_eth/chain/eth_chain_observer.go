@@ -153,7 +153,8 @@ func loadTrackerConfigs(
 		},
 		StartBlockFromGenesis: config.StartBlockNumber,
 		LogFilter:             logFilter,
-		Logger:                indexerLogger,
+		// add timestamp to the logger to differentiate between multiple instances
+		Logger: indexerLogger.Named(time.Now().UTC().String()),
 	}
 }
 
