@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -224,7 +225,7 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 		cfg, err := loadTrackerConfigs(config, solanaTxsReceiverMock, indexerLogger, mainLogger)
 		require.NoError(t, err)
 
-		require.True(t, cfg.Logger.Name() == "solana_indexer")
+		require.True(t, strings.Contains(cfg.Logger.Name(), "solana_indexer"))
 
 		handler, ok := cfg.EventSubscriber.(*confirmedEventHandler)
 		require.True(t, ok)

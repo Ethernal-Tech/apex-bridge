@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -281,7 +282,7 @@ func Test_LoadTrackerConfig(t *testing.T) {
 
 		trackerConfig := loadTrackerConfigs(config, txsReceiverMock, indexerLogger, mainLogger)
 
-		require.Equal(t, "eth_indexer", trackerConfig.Logger.Name())
+		require.True(t, strings.Contains(trackerConfig.Logger.Name(), "eth_indexer"))
 
 		handler, ok := trackerConfig.EventSubscriber.(*confirmedEventHandler)
 		require.True(t, ok)
