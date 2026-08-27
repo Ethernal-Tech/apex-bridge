@@ -134,8 +134,8 @@ func NewSolanaOracle(
 			solanaChainConfig,
 			solanaTxsReceiver,
 			indexerDB,
-			indexerLogger.Named("solana_indexer"),
-			logger.Named("solana_chain_observer"),
+			indexerLogger.Named("solana_indexer"+solanaChainConfig.ChainID),
+			logger.Named("solana_chain_observer"+solanaChainConfig.ChainID),
 		)
 		if err != nil {
 			return nil, err
