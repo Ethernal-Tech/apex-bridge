@@ -12,12 +12,13 @@ import (
 )
 
 type SolanaChainObserverImpl struct {
-	config      *oCore.SolanaChainConfig
-	indexerDB   store.StorageHandler
-	txsReceiver core.SolanaTxsReceiver
-	lastSlot    uint64
-	closedCh    chan struct{}
-	logger      hclog.Logger
+	config        *oCore.SolanaChainConfig
+	indexerDB     store.StorageHandler
+	txsReceiver   core.SolanaTxsReceiver
+	lastSlot      uint64
+	closedCh      chan struct{}
+	indexerLogger hclog.Logger
+	logger        hclog.Logger
 }
 
 var _ core.SolanaChainObserver = (*SolanaChainObserverImpl)(nil)
@@ -26,21 +27,23 @@ func NewSolanaChainObserver(
 	config *oCore.SolanaChainConfig,
 	txsReceiver core.SolanaTxsReceiver,
 	indexerDB store.StorageHandler,
+	indexerLogger hclog.Logger,
 	logger hclog.Logger,
 ) (*SolanaChainObserverImpl, error) {
 	return &SolanaChainObserverImpl{
-		config:      config,
-		indexerDB:   indexerDB,
-		txsReceiver: txsReceiver,
-		closedCh:    make(chan struct{}),
-		logger:      logger,
+		config:        config,
+		indexerDB:     indexerDB,
+		txsReceiver:   txsReceiver,
+		closedCh:      make(chan struct{}),
+		indexerLogger: indexerLogger,
+		logger:        logger,
 	}, nil
 }
 
 func (so *SolanaChainObserverImpl) Start() error {
 	so.logger.Debug("Starting solana chain observer", "endpoint", so.config.TxProviderEndpoint)
 
-	trackerConfig, err := loadTrackerConfigs(so.config, so.txsReceiver, so.logger)
+	trackerConfig, err := loadTrackerConfigs(so.config, so.txsReceiver, so.indexerLogger, so.logger)
 	if err != nil {
 		so.logger.Error("Failed to load tracker configs", "error", err)
 
@@ -119,6 +122,7 @@ func (so *SolanaChainObserverImpl) updateIsTrackerAlive() bool {
 func loadTrackerConfigs(
 	config *oCore.SolanaChainConfig,
 	txsReceiver core.SolanaTxsReceiver,
+	indexerLogger hclog.Logger,
 	logger hclog.Logger,
 ) (*tracker.EventTrackerConfig, error) {
 	specs := tracker.ProgramEventSpecs{}
@@ -153,7 +157,7 @@ func loadTrackerConfigs(
 			Logger:      logger,
 		},
 		StartFromSlot:       config.TrackerStartSlot,
-		Logger:              logger.Named(time.Now().UTC().String()),
+		Logger:              indexerLogger.Named(time.Now().UTC().String()),
 		DisableRateLimiting: config.DisableRateLimiting,
 	}, nil
 }

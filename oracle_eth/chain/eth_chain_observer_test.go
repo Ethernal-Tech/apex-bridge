@@ -2,9 +2,11 @@ package chain
 
 import (
 	"errors"
+	"io"
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,7 +49,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
@@ -59,7 +61,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
@@ -72,7 +74,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, co)
 
@@ -88,7 +90,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
 
-		chainObserver, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -133,7 +135,7 @@ func TestEthChainObserver(t *testing.T) {
 		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
 		require.NoError(t, err)
 
-		chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -271,7 +273,20 @@ func Test_LoadTrackerConfig(t *testing.T) {
 	config := &oCore.EthChainConfig{}
 
 	t.Run("loadTrackerConfigs successful", func(t *testing.T) {
-		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsReceiverMock, logger))
+		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsReceiverMock, logger, logger))
+	})
+
+	t.Run("loadTrackerConfigs sends only the tracker output to the indexer logger", func(t *testing.T) {
+		indexerLogger := hclog.New(&hclog.LoggerOptions{Name: "eth_indexer", Output: io.Discard})
+		mainLogger := hclog.New(&hclog.LoggerOptions{Name: "validatorcomponents", Output: io.Discard})
+
+		trackerConfig := loadTrackerConfigs(config, txsReceiverMock, indexerLogger, mainLogger)
+
+		require.True(t, strings.Contains(trackerConfig.Logger.Name(), "eth_indexer"))
+
+		handler, ok := trackerConfig.EventSubscriber.(*confirmedEventHandler)
+		require.True(t, ok)
+		require.Equal(t, "validatorcomponents", handler.Logger.Name())
 	})
 }
 
@@ -333,7 +348,7 @@ func TestEthChainObserver_Dispose(t *testing.T) {
 	indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
 	require.NoError(t, err)
 
-	chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
+	chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger, logger)
 	require.NoError(t, err)
 	require.NotNil(t, chainObserver)
 

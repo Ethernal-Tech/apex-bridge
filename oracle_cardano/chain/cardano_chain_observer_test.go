@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
@@ -118,7 +119,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		indexerDB := initDB(t)
 
 		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, chainIDConverter, txsReceiverMock, db,
-			indexerDB, brAddrManagerMock, hclog.NewNullLogger())
+			indexerDB, brAddrManagerMock, hclog.NewNullLogger(), hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -137,7 +138,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		indexerDB := initDB(t)
 
 		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, chainIDConverter, txsReceiverMock, db,
-			indexerDB, brAddrManagerMock, hclog.NewNullLogger())
+			indexerDB, brAddrManagerMock, hclog.NewNullLogger(), hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -165,7 +166,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, chainIDConverter, txsReceiverMock, db, indexerDB, brAddrManagerMock, logger)
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, chainIDConverter, txsReceiverMock, db, indexerDB, brAddrManagerMock, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -179,6 +180,51 @@ func TestCardanoChainObserver(t *testing.T) {
 		require.NotContains(t, output, "Failed to close indexerDB")
 	})
 
+	t.Run("indexer output is written to its own log file", func(t *testing.T) {
+		t.Cleanup(foldersCleanup)
+
+		db := &core.CardanoTxsProcessorDBMock{}
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
+
+		indexerDB := initDB(t)
+
+		logsDir := t.TempDir()
+		mainLogFilePath := filepath.Join(logsDir, "validator-components.log")
+		loggerConfig := logger.LoggerConfig{
+			LogFilePath: mainLogFilePath,
+			LogLevel:    hclog.Debug,
+			AppendFile:  true,
+		}
+
+		mainLogger, err := logger.NewLogger(loggerConfig)
+		require.NoError(t, err)
+
+		indexerLogger, err := cUtils.NewIndexerLogger(loggerConfig, chainConfig.ChainID, mainLogger)
+		require.NoError(t, err)
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, chainIDConverter, txsReceiverMock, db,
+			indexerDB, brAddrManagerMock,
+			indexerLogger.Named("cardano_indexer_"+chainConfig.ChainID), mainLogger)
+		require.NoError(t, err)
+
+		require.NoError(t, chainObserver.Start())
+		require.NoError(t, chainObserver.Dispose())
+
+		require.FileExists(t, filepath.Join(logsDir, chainConfig.ChainID+"-indexer.log"))
+
+		mainLog, err := os.ReadFile(mainLogFilePath)
+		require.NoError(t, err)
+
+		// the observer keeps reporting its own lifecycle in the main log file ...
+		require.Contains(t, string(mainLog), "Started...")
+		// ... while the indexer and the syncer no longer write there at all
+		require.NotContains(t, string(mainLog), "block_indexer")
+		require.NotContains(t, string(mainLog), "block_syncer")
+	})
+
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
@@ -190,7 +236,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, chainIDConverter, txsReceiverMock, db, indexerDB, brAddrManagerMock, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, chainIDConverter, txsReceiverMock, db, indexerDB, brAddrManagerMock, hclog.NewNullLogger(), hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 

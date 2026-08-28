@@ -2,6 +2,8 @@ package chain
 
 import (
 	"errors"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +42,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-		co, err := NewSolanaChainObserver(&badConfig, solanaTxsReceiverMock, indexerDB, logger)
+		co, err := NewSolanaChainObserver(&badConfig, solanaTxsReceiverMock, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, co)
 
@@ -57,7 +59,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-		co, err := NewSolanaChainObserver(config, solanaTxsReceiverMock, indexerDB, logger)
+		co, err := NewSolanaChainObserver(config, solanaTxsReceiverMock, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, co)
 		require.Equal(t, co.GetConfig(), config)
@@ -76,7 +78,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-		chainObserver, err := NewSolanaChainObserver(config, solanaTxsReceiverMock, indexerDB, logger)
+		chainObserver, err := NewSolanaChainObserver(config, solanaTxsReceiverMock, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -112,7 +114,7 @@ func TestSolanaChainObserver(t *testing.T) {
 		solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 		solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-		chainObserver, err := NewSolanaChainObserver(configShortInterval, solanaTxsReceiverMock, indexerDB, logger)
+		chainObserver, err := NewSolanaChainObserver(configShortInterval, solanaTxsReceiverMock, indexerDB, logger, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -185,7 +187,7 @@ func TestSolanaChainObserver_Dispose(t *testing.T) {
 	solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 	solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-	chainObserver, err := NewSolanaChainObserver(testConfig, solanaTxsReceiverMock, indexerDB, logger)
+	chainObserver, err := NewSolanaChainObserver(testConfig, solanaTxsReceiverMock, indexerDB, logger, logger)
 	require.NoError(t, err)
 	require.NotNil(t, chainObserver)
 
@@ -208,11 +210,25 @@ func Test_LoadTrackerConfigSolana(t *testing.T) {
 	solanaTxsReceiverMock := &core.SolanaTxsReceiverMock{}
 	solanaTxsReceiverMock.On("NewUnprocessedEvent").Return(nil)
 
-	cfg, err := loadTrackerConfigs(config, solanaTxsReceiverMock, logger)
+	cfg, err := loadTrackerConfigs(config, solanaTxsReceiverMock, logger, logger)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	require.Equal(t, config.TxProviderEndpoint, cfg.RPCEndpoint)
 	require.Equal(t, config.RetryTimeoutMiliseconds, cfg.RetryTimeout)
 	require.NotEmpty(t, cfg.TrackedPrograms)
 	require.Contains(t, cfg.TrackedPrograms, config.TrackedProgram)
+
+	t.Run("only the tracker output goes to the indexer logger", func(t *testing.T) {
+		indexerLogger := hclog.New(&hclog.LoggerOptions{Name: "solana_indexer", Output: io.Discard})
+		mainLogger := hclog.New(&hclog.LoggerOptions{Name: "validatorcomponents", Output: io.Discard})
+
+		cfg, err := loadTrackerConfigs(config, solanaTxsReceiverMock, indexerLogger, mainLogger)
+		require.NoError(t, err)
+
+		require.True(t, strings.Contains(cfg.Logger.Name(), "solana_indexer"))
+
+		handler, ok := cfg.EventSubscriber.(*confirmedEventHandler)
+		require.True(t, ok)
+		require.Equal(t, "validatorcomponents", handler.Logger.Name())
+	})
 }
