@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	defaultNumRetries      = 10
-	defaultRetriesWaitTime = time.Second * 15
+	defaultNumRetries      = 20
+	defaultRetriesWaitTime = 1 * time.Minute
 )
 
 type IEthContractUtils interface {

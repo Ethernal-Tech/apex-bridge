@@ -503,7 +503,7 @@ func (ip *deployEVMParams) Execute(
 		}
 
 		select {
-		case <-time.After(15 * time.Second):
+		case <-time.After(1 * time.Minute):
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
@@ -522,7 +522,7 @@ func (ip *deployEVMParams) Execute(
 	}
 
 	select {
-	case <-time.After(15 * time.Second):
+	case <-time.After(1 * time.Minute):
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
@@ -538,7 +538,7 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	select {
-	case <-time.After(15 * time.Second):
+	case <-time.After(1 * time.Minute):
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
