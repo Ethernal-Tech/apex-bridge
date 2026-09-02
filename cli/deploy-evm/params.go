@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -501,6 +502,13 @@ func (ip *deployEVMParams) Execute(
 			dependencies[i] = addresses[x]
 		}
 
+		select {
+		case <-time.After(15 * time.Second):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		txInfo, err := ethContractUtils.ExecuteMethod(
 			ctx, artifacts[contractName], addresses[contractName], "setDependencies", dependencies...)
 		if err != nil {
@@ -513,6 +521,13 @@ func (ip *deployEVMParams) Execute(
 		additionalTxHashes = append(additionalTxHashes, txInfo.Hash().String())
 	}
 
+	select {
+	case <-time.After(15 * time.Second):
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	setValidatorsChainDataTx, err := ethContractUtils.ExecuteMethod(
 		ctx, artifacts[Validators], addresses[Validators], "setValidatorsChainData", validatorsData)
 	if err != nil {
@@ -521,6 +536,13 @@ func (ip *deployEVMParams) Execute(
 
 	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
+
+	select {
+	case <-time.After(15 * time.Second):
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 
 	setTreasuryAddress, err := ethContractUtils.ExecuteMethod(
 		ctx, artifacts[Gateway], addresses[Gateway], "setTreasuryAddress", ip.treasuryAddress)
