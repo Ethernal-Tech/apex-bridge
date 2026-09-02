@@ -64,13 +64,6 @@ func (ecu *ethContractUtils) DeployWithProxy(
 	proxyArtifact *Artifact,
 	initParams ...interface{},
 ) (proxyTx ethtxhelper.TxDeployInfo, tx ethtxhelper.TxDeployInfo, err error) {
-	select {
-	case <-time.After(ecu.retriesWaitTime):
-	case <-ctx.Done():
-		return proxyTx, tx, ctx.Err()
-	default:
-	}
-
 	tx, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (ethtxhelper.TxDeployInfo, error) {
 		return ecu.txHelper.Deploy(
 			ctx, ecu.wallet, bind.TransactOpts{}, *artifact.Abi, artifact.Bytecode)
@@ -82,13 +75,6 @@ func (ecu *ethContractUtils) DeployWithProxy(
 	initializationData, err := artifact.Abi.Pack("initialize", initParams...)
 	if err != nil {
 		return proxyTx, tx, err
-	}
-
-	select {
-	case <-time.After(ecu.retriesWaitTime):
-	case <-ctx.Done():
-		return proxyTx, tx, ctx.Err()
-	default:
 	}
 
 	proxyTx, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (ethtxhelper.TxDeployInfo, error) {
