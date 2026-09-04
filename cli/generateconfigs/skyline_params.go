@@ -18,6 +18,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	relayerTelemetryFlag = "relayer-telemetry"
+
+	relayerTelemetryFlagDesc = "prometheus_ip:port,datadog_ip:port for the relayer process"
+)
+
 var defaultMaxTokenAmountAllowedToBridge = common.DfmToWei(new(big.Int).SetUint64(1_000_000_000_000))
 
 type skylineGenerateConfigsParams struct {
@@ -37,12 +43,12 @@ type skylineGenerateConfigsParams struct {
 	outputValidatorComponentsFileName string
 	outputRelayerFileName             string
 
-	telemetry string
+	telemetry        string
+	relayerTelemetry string
 
 	emptyBlocksThreshold uint
 }
 
-//nolint:dupl
 func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
@@ -60,15 +66,43 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one %s", apiKeysFlag)
 	}
 
-	if p.telemetry != "" {
-		parts := strings.Split(p.telemetry, ",")
-		if len(parts) < 1 || len(parts) > 2 || !common.IsValidNetworkAddress(strings.TrimSpace(parts[0])) ||
-			(len(parts) == 2 && !common.IsValidNetworkAddress(strings.TrimSpace(parts[1]))) {
-			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
-		}
+	if err := validateTelemetryFlag(telemetryFlag, p.telemetry); err != nil {
+		return err
+	}
+
+	return validateTelemetryFlag(relayerTelemetryFlag, p.relayerTelemetry)
+}
+
+// validateTelemetryFlag checks a "prometheus_addr[,datadog_addr]" flag value. Empty means disabled.
+func validateTelemetryFlag(flagName string, value string) error {
+	if value == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	if len(parts) < 1 || len(parts) > 2 || !common.IsValidNetworkAddress(strings.TrimSpace(parts[0])) ||
+		(len(parts) == 2 && !common.IsValidNetworkAddress(strings.TrimSpace(parts[1]))) {
+		return fmt.Errorf("invalid %s: %s", flagName, value)
 	}
 
 	return nil
+}
+
+func newTelemetryConfig(value string) telemetry.TelemetryConfig {
+	config := telemetry.TelemetryConfig{
+		PullTime: time.Second * 10,
+	}
+
+	if value != "" {
+		parts := strings.Split(value, ",")
+
+		config.PrometheusAddr = strings.TrimSpace(parts[0])
+		if len(parts) == 2 {
+			config.DataDogAddr = strings.TrimSpace(parts[1])
+		}
+	}
+
+	return config
 }
 
 func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
@@ -149,6 +183,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		telemetryFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.relayerTelemetry,
+		relayerTelemetryFlag,
+		"",
+		relayerTelemetryFlagDesc,
+	)
 
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
@@ -163,18 +203,7 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 func (p *skylineGenerateConfigsParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
-	telemetryConfig := telemetry.TelemetryConfig{
-		PullTime: time.Second * 10,
-	}
-
-	if p.telemetry != "" {
-		parts := strings.Split(p.telemetry, ",")
-
-		telemetryConfig.PrometheusAddr = strings.TrimSpace(parts[0])
-		if len(parts) == 2 {
-			telemetryConfig.DataDogAddr = strings.TrimSpace(parts[1])
-		}
-	}
+	telemetryConfig := newTelemetryConfig(p.telemetry)
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
@@ -257,6 +286,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 		},
 		Chains:        map[string]rCore.ChainConfig{},
 		PullTimeMilis: 1000,
+		Telemetry:     newTelemetryConfig(p.relayerTelemetry),
 		Logger: logger.LoggerConfig{
 			LogFilePath:         filepath.Join(p.logsPath, "relayer.log"),
 			LogLevel:            hclog.Debug,

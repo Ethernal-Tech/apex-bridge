@@ -27,6 +27,7 @@ const (
 	evmNumBlockConfirmationsFlag       = "evm-num-block-confirmations"
 	evmPollIntervalFlag                = "evm-poll-interval"
 	evmSyncBatchSizeFlag               = "evm-sync-batch-size"
+	evmRelayerTelemetryFlag            = "evm-relayer-telemetry"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
@@ -38,6 +39,7 @@ const (
 	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer"
 	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
 	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
+	evmRelayerTelemetryFlagDesc            = "report the relayer account balance for this chain to the relayer telemetry" //nolint:lll
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
@@ -68,6 +70,7 @@ type evmChainGenerateConfigsParams struct {
 	evmPollIntervalMiliseconds     uint64
 
 	evmRelayerGasFeeMultiplier uint64
+	evmRelayerTelemetry        bool
 	emptyBlocksThreshold       uint
 
 	outputDir                         string
@@ -169,6 +172,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmRelayerGasFeeMultiplierFlag,
 		defaultEvmRelayerGasFeeMultiplier,
 		evmRelayerGasFeeMultiplierFlagDesc,
+	)
+
+	cmd.Flags().BoolVar(
+		&p.evmRelayerTelemetry,
+		evmRelayerTelemetryFlag,
+		false,
+		evmRelayerTelemetryFlagDesc,
 	)
 
 	cmd.Flags().Uint64Var(
@@ -318,6 +328,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		ChainType:     common.ChainTypeEVMStr,
 		DbsPath:       filepath.Join(p.dbsPath, "relayer"),
 		ChainSpecific: chainSpecificJSONRaw,
+		Telemetry:     p.evmRelayerTelemetry,
 	}
 
 	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {

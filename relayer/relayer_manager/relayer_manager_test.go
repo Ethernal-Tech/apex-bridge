@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -153,13 +154,22 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
-	relayers, chainsConfigs, err := getRelayersAndConfigurations(
+	relayers, operations, chainsConfigs, err := getRelayersAndConfigurations(
 		&eth.BridgeSmartContractMock{}, allRegisteredChains, config, hclog.NewNullLogger())
 	require.NoError(t, err, err)
 	require.Len(t, relayers, 2)
+	require.Len(t, operations, 2)
 	require.Len(t, chainsConfigs, 2)
 	require.True(t, chainsConfigs[common.ChainIDStrPrime].ChainID != "")
 	require.True(t, chainsConfigs[common.ChainIDStrNexus].ChainID != "")
+
+	// only the evm chain operations can report the relayer balance
+	_, isReporter := operations[common.ChainIDStrPrime].(core.BalanceReporter)
+	require.False(t, isReporter)
+
+	nexusReporter, isReporter := operations[common.ChainIDStrNexus].(core.BalanceReporter)
+	require.True(t, isReporter)
+	require.True(t, ethcommon.IsHexAddress(nexusReporter.GetRelayerAddress()))
 }
 
 func setupTestSecretsManager(t *testing.T) (string, secrets.SecretsManager, func()) {

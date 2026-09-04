@@ -13,14 +13,20 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/bn256"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.ChainOperations = (*CardanoChainOperations)(nil)
+var (
+	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+	_ core.BalanceReporter = (*EVMChainOperations)(nil)
+)
 
 type EVMChainOperations struct {
 	config           *cardanotx.RelayerEVMChainConfig
 	evmSmartContract eth.IEVMGatewaySmartContract
+	txHelper         *eth.EthHelperWrapper
+	walletAddr       ethcommon.Address
 	chainID          string
 	logger           hclog.Logger
 }
@@ -79,6 +85,8 @@ func NewEVMChainOperations(
 		config:           config,
 		chainID:          chainID,
 		evmSmartContract: evmSmartContract,
+		txHelper:         txHelper,
+		walletAddr:       wallet.GetAddress(),
 		logger:           logger,
 	}, nil
 }
@@ -103,4 +111,25 @@ func (cco *EVMChainOperations) SendTx(
 		"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
 
 	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
+}
+
+// GetRelayerAddress implements core.BalanceReporter.
+func (cco *EVMChainOperations) GetRelayerAddress() string {
+	return cco.walletAddr.String()
+}
+
+// GetRelayerBalance implements core.BalanceReporter.
+// It returns the balance in wei.
+func (cco *EVMChainOperations) GetRelayerBalance(ctx context.Context) (*big.Int, error) {
+	ethTxHelper, err := cco.txHelper.GetEthHelper()
+	if err != nil {
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	balance, err := ethTxHelper.GetClient().BalanceAt(ctx, cco.walletAddr, nil)
+	if err != nil {
+		return nil, cco.txHelper.ProcessError(err)
+	}
+
+	return balance, nil
 }
