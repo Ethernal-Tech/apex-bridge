@@ -12,7 +12,7 @@ import (
 )
 
 // TelemetryWorker periodically reports the balance of the accounts the relayer
-// submits batches with. A chain is reported only if it is enabled in its configuration
+// submits batches with, for every chain whose operations can report it
 type TelemetryWorker struct {
 	reporters      map[string]core.BalanceReporter
 	waitTime       time.Duration
@@ -22,20 +22,15 @@ type TelemetryWorker struct {
 
 func NewTelemetryWorker(
 	operations map[string]core.ChainOperations,
-	chains map[string]core.ChainConfig,
 	waitTime time.Duration,
 	logger hclog.Logger,
 ) *TelemetryWorker {
 	reporters := make(map[string]core.BalanceReporter, len(operations))
 
 	for chainID, ops := range operations {
-		if !chains[chainID].Telemetry {
-			continue
-		}
-
 		reporter, ok := ops.(core.BalanceReporter)
 		if !ok {
-			logger.Warn("Relayer balance telemetry enabled for a chain that can not report it", "chain", chainID)
+			logger.Debug("Chain can not report the relayer balance", "chain", chainID)
 
 			continue
 		}
@@ -72,8 +67,6 @@ func (tw *TelemetryWorker) execute(ctx context.Context) {
 
 			continue
 		}
-
-		tw.logger.Debug("TELEMETRY: Relayer balance retrieved", "chain", chainID, "balance", balance)
 
 		if cache := tw.latestBalances[chainID]; cache == nil || cache.Cmp(balance) != 0 {
 			tw.latestBalances[chainID] = balance

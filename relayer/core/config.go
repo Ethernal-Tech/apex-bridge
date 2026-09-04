@@ -26,7 +26,6 @@ type ChainConfig struct {
 	ChainType         string          `json:"type"`
 	DbsPath           string          `json:"dbsPath"`
 	ChainSpecific     json.RawMessage `json:"config"`
-	Telemetry         bool            `json:"telemetry,omitempty"`
 	RelayerDataDir    string          `json:"relayerDataDir,omitempty"`
 	RelayerConfigPath string          `json:"relayerConfigPath,omitempty"`
 }

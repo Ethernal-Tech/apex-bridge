@@ -238,7 +238,6 @@ $ apex-bridge generate-configs evm-chain \
         --evm-min-fee-for-bridging <minimal bridging fee> \
         --min-operation-fee <minimal operation fee> \
         --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
-        --evm-relayer-telemetry \
         --chain-id <evm chain id> \
         --allowed-directions <allowed bridging directions> \
         --allowed-directions <allowed bridging directions> \
@@ -250,7 +249,6 @@ $ apex-bridge generate-configs evm-chain \
         --relayer-data-dir <path to relayer secret directory when using local secrets manager> \
         --output-dir <path to config jsons output directory> 
 ```
-the --evm-relayer-telemetry flag opts this chain into the relayer telemetry (see --relayer-telemetry), so the relayer account balance is reported only for the chains it is set for
 
 Add evm chain config minimal example
 ``` shell

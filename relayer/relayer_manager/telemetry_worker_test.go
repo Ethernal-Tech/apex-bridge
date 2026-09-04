@@ -39,43 +39,27 @@ func (m *balanceReporterMock) GetRelayerBalance(context.Context) (*big.Int, erro
 }
 
 func TestNewTelemetryWorker(t *testing.T) {
-	enabled := map[string]core.ChainConfig{
-		"prime":    {Telemetry: true},
-		"nexus":    {Telemetry: true},
-		"ethereum": {Telemetry: true},
-	}
-
 	t.Run("skips non reporters", func(t *testing.T) {
 		reporter := &balanceReporterMock{addr: "0x1", balance: big.NewInt(1)}
 
 		worker := NewTelemetryWorker(map[string]core.ChainOperations{
 			"prime": &chainOperationsMock{},
 			"nexus": reporter,
-		}, enabled, 0, hclog.NewNullLogger())
+		}, 0, hclog.NewNullLogger())
 
 		require.Len(t, worker.reporters, 1)
 		require.Contains(t, worker.reporters, "nexus")
 	})
 
-	t.Run("skips chains not enabled in the configuration", func(t *testing.T) {
+	t.Run("reports every chain that can report the balance", func(t *testing.T) {
 		worker := NewTelemetryWorker(map[string]core.ChainOperations{
 			"nexus":    &balanceReporterMock{addr: "0x1", balance: big.NewInt(1)},
 			"ethereum": &balanceReporterMock{addr: "0x2", balance: big.NewInt(2)},
-		}, map[string]core.ChainConfig{
-			"nexus":    {Telemetry: false},
-			"ethereum": {Telemetry: true},
 		}, 0, hclog.NewNullLogger())
 
-		require.Len(t, worker.reporters, 1)
+		require.Len(t, worker.reporters, 2)
+		require.Contains(t, worker.reporters, "nexus")
 		require.Contains(t, worker.reporters, "ethereum")
-	})
-
-	t.Run("skips chains without a configuration", func(t *testing.T) {
-		worker := NewTelemetryWorker(map[string]core.ChainOperations{
-			"nexus": &balanceReporterMock{addr: "0x1", balance: big.NewInt(1)},
-		}, nil, 0, hclog.NewNullLogger())
-
-		require.Empty(t, worker.reporters)
 	})
 }
 
@@ -85,8 +69,7 @@ func TestTelemetryWorkerExecute(t *testing.T) {
 	t.Run("caches until the balance changes", func(t *testing.T) {
 		reporter := &balanceReporterMock{addr: "0x1", balance: oneEther}
 		worker := NewTelemetryWorker(
-			map[string]core.ChainOperations{"nexus": reporter},
-			map[string]core.ChainConfig{"nexus": {Telemetry: true}}, 0, hclog.NewNullLogger())
+			map[string]core.ChainOperations{"nexus": reporter}, 0, hclog.NewNullLogger())
 
 		worker.execute(context.Background())
 		require.Equal(t, oneEther, worker.latestBalances["nexus"])
@@ -104,8 +87,7 @@ func TestTelemetryWorkerExecute(t *testing.T) {
 	t.Run("keeps the cached value on error", func(t *testing.T) {
 		reporter := &balanceReporterMock{addr: "0x1", balance: oneEther}
 		worker := NewTelemetryWorker(
-			map[string]core.ChainOperations{"nexus": reporter},
-			map[string]core.ChainConfig{"nexus": {Telemetry: true}}, 0, hclog.NewNullLogger())
+			map[string]core.ChainOperations{"nexus": reporter}, 0, hclog.NewNullLogger())
 
 		worker.execute(context.Background())
 

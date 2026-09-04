@@ -83,7 +83,7 @@ func NewRelayerManager(
 		cardanoRelayers: relayers,
 		telemetry:       telemetry.NewTelemetry(config.Telemetry, logger.Named("telemetry")),
 		telemetryWorker: NewTelemetryWorker(
-			operations, config.Chains, config.Telemetry.PullTime, logger.Named("telemetry_worker")),
+			operations, config.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger: logger,
 	}, nil
 }
