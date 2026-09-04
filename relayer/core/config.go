@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
@@ -30,12 +31,13 @@ type ChainConfig struct {
 }
 
 type RelayerManagerConfiguration struct {
-	RunMode          common.VCRunMode         `json:"runMode"`
-	Bridge           BridgeConfig             `json:"bridge"`
-	Chains           map[string]ChainConfig   `json:"chains"`
-	ChainIDConverter *common.ChainIDConverter `json:"-"`
-	PullTimeMilis    uint64                   `json:"pullTime"`
-	Logger           logger.LoggerConfig      `json:"logger"`
+	RunMode          common.VCRunMode          `json:"runMode"`
+	Bridge           BridgeConfig              `json:"bridge"`
+	Chains           map[string]ChainConfig    `json:"chains"`
+	ChainIDConverter *common.ChainIDConverter  `json:"-"`
+	PullTimeMilis    uint64                    `json:"pullTime"`
+	Telemetry        telemetry.TelemetryConfig `json:"telemetry"`
+	Logger           logger.LoggerConfig       `json:"logger"`
 }
 
 func (rmConfig *RelayerManagerConfiguration) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {

@@ -11,6 +11,7 @@ const (
 	batcherMetricsPrefix   = "batcher"
 	indexersMetricsPrefix  = "indexers"
 	hotWalletMetricsPrefix = "hotwallet"
+	relayerMetricsPrefix   = "relayer"
 )
 
 func UpdateOracleTxsReceivedCounter(chain string, cnt int) {
@@ -51,4 +52,9 @@ func UpdateHotWalletState(chain string, typeWallet string, val uint64) {
 
 	metrics.SetGauge([]string{batcherMetricsPrefix, stateHigh, chain}, float32(val>>32))
 	metrics.SetGauge([]string{batcherMetricsPrefix, stateLow, chain}, float32(uint32(val))) //nolint:gosec
+}
+
+func UpdateRelayerBalance(chain string, val uint64) {
+	metrics.SetGauge([]string{relayerMetricsPrefix, "balance_high", chain}, float32(val>>32))
+	metrics.SetGauge([]string{relayerMetricsPrefix, "balance_low", chain}, float32(uint32(val))) //nolint:gosec
 }

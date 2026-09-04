@@ -15,13 +15,19 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 )
+
+const telemetryCloseTimeout = 5 * time.Second
 
 type RelayerManagerImpl struct {
 	config          *core.RelayerManagerConfiguration
 	cardanoRelayers []core.Relayer
+	telemetry       *telemetry.Telemetry
+	telemetryWorker *TelemetryWorker
 	cancelCtx       context.CancelFunc
+	logger          hclog.Logger
 }
 
 var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
@@ -55,7 +61,9 @@ func NewRelayerManager(
 		return nil, fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
 
-	relayers, config.Chains, err = getRelayersAndConfigurations(
+	var operations map[string]core.ChainOperations
+
+	relayers, operations, config.Chains, err = getRelayersAndConfigurations(
 		bridgeSmartContract, allRegisteredChains, config, logger)
 	if err != nil {
 		return nil, err
@@ -73,6 +81,10 @@ func NewRelayerManager(
 	return &RelayerManagerImpl{
 		config:          config,
 		cardanoRelayers: relayers,
+		telemetry:       telemetry.NewTelemetry(config.Telemetry, logger.Named("telemetry")),
+		telemetryWorker: NewTelemetryWorker(
+			operations, config.Telemetry.PullTime, logger.Named("telemetry_worker")),
+		logger: logger,
 	}, nil
 }
 
@@ -84,11 +96,28 @@ func (rm *RelayerManagerImpl) Start() error {
 		go r.Start(ctx)
 	}
 
+	if rm.telemetry.IsEnabled() {
+		if err := rm.telemetry.Start(); err != nil {
+			return fmt.Errorf("failed to start telemetry. err: %w", err)
+		}
+
+		go rm.telemetryWorker.Start(ctx)
+	}
+
 	return nil
 }
 
 func (rm *RelayerManagerImpl) Stop() error {
 	rm.cancelCtx()
+
+	if rm.telemetry.IsEnabled() {
+		ctx, cancelCtx := context.WithTimeout(context.Background(), telemetryCloseTimeout)
+		defer cancelCtx()
+
+		if err := rm.telemetry.Close(ctx); err != nil {
+			rm.logger.Error("failed to close telemetry", "err", err)
+		}
+	}
 
 	return nil
 }
@@ -115,10 +144,11 @@ func getRelayersAndConfigurations(
 	allRegisteredChains []eth.Chain,
 	config *core.RelayerManagerConfiguration,
 	logger hclog.Logger,
-) ([]core.Relayer, map[string]core.ChainConfig, error) {
+) ([]core.Relayer, map[string]core.ChainOperations, map[string]core.ChainConfig, error) {
 	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
 	relayers := make([]core.Relayer, 0, len(allRegisteredChains))
+	allOperations := make(map[string]core.ChainOperations, len(allRegisteredChains))
 	newChainsConfigs := make(map[string]core.ChainConfig, len(allRegisteredChains))
 
 	for _, chainData := range allRegisteredChains {
@@ -136,13 +166,15 @@ func getRelayersAndConfigurations(
 
 		operations, err := relayer.GetChainSpecificOperations(chainConfig, chainData, config.RunMode, logger)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
+
+		allOperations[chainID] = operations
 
 		db, err := databaseaccess.NewDatabase(
 			filepath.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		relayers = append(relayers, relayer.NewRelayer(
@@ -158,5 +190,5 @@ func getRelayersAndConfigurations(
 		))
 	}
 
-	return relayers, newChainsConfigs, nil
+	return relayers, allOperations, newChainsConfigs, nil
 }
