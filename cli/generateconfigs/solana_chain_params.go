@@ -12,6 +12,7 @@ import (
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	solanacommon "github.com/Ethernal-Tech/solana-infrastructure/common"
 	wallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +27,7 @@ const (
 	solanaConfirmationTimeoutFlag     = "sol-confirmation-timeout"
 	solanaTrackerStartBlockFlag       = "sol-tracker-start-block"
 	solanaTrackerDisableRateLimitFlag = "disable-rate-limiting"
+	solanaRPCMethodLimitsConfigFlag   = "sol-rpc-method-limits-config"
 
 	solanaChainNodeURLFlagDesc            = "solana chain node URL"
 	solanaChainTrackedProgramFlagDesc     = "(mandatory) solana program address to track"
@@ -36,6 +38,7 @@ const (
 	solanaConfirmationTimeoutFlagDesc     = "confirmation timeout for solana chain txs in milliseconds"
 	solanaTrackerStartBlockFlagDesc       = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
 	solanaTrackerDisableRateLimitFlagDesc = "disable rate limiting for solana chain tracker"
+	solanaRPCMethodLimitsConfigFlagDesc   = "path to solana rpc method limits config json file"
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -69,6 +72,8 @@ type solanaChainGenerateConfigsParams struct {
 	solanaTrackerStartBlockNum uint64
 
 	solanaTrackerDisableRateLimit bool
+	solanaRPCMethodLimitsConfig   string
+	solanaRPCMethodLimits         *solanacommon.RPCMethodLimitsConfig
 
 	emptyBlocksThreshold      uint
 	solanaTTLNumberInc        uint64
@@ -115,6 +120,15 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 
 	p.solanaTrackerStartSlot = startSlot
 	p.solanaTrackerStartBlockNum = startBlock
+
+	if p.solanaRPCMethodLimitsConfig != "" {
+		limits, err := common.LoadJSON[solanacommon.RPCMethodLimitsConfig](p.solanaRPCMethodLimitsConfig)
+		if err != nil {
+			return fmt.Errorf("failed to load %s: %w", solanaRPCMethodLimitsConfigFlag, err)
+		}
+
+		p.solanaRPCMethodLimits = limits
+	}
 
 	return nil
 }
@@ -253,6 +267,13 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		solanaTrackerDisableRateLimitFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&p.solanaRPCMethodLimitsConfig,
+		solanaRPCMethodLimitsConfigFlag,
+		"",
+		solanaRPCMethodLimitsConfigFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
 
@@ -295,6 +316,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		MinOperationFee:            p.solanaMinOperationFee,
 		TreasuryAddress:            p.treasuryAddress,
 		DisableRateLimiting:        p.solanaTrackerDisableRateLimit,
+		RPCMethodLimitsConfig:      p.solanaRPCMethodLimits,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
