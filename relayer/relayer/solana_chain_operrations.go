@@ -163,6 +163,7 @@ func (sco *SolanaChainOperations) SendTx(
 	txSignature, err := sco.txSender.SendTx(ctx, tx)
 	if err != nil {
 		if isExpiredBlockhashErr(err) {
+			// unrecoverable, no point in retrying
 			sco.logger.Warn("blockhash expired, treating tx as already submitted", "err", err)
 
 			return nil
