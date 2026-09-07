@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+	_ core.ChainOperations = (*EVMChainOperations)(nil)
 	_ core.BalanceReporter = (*EVMChainOperations)(nil)
 )
 
