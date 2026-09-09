@@ -12,7 +12,6 @@ import (
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	solanacommon "github.com/Ethernal-Tech/solana-infrastructure/common"
 	wallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +81,6 @@ type solanaChainGenerateConfigsParams struct {
 
 	solanaTrackerDisableRateLimit bool
 	solanaRPCMethodLimitsConfig   string
-	solanaRPCMethodLimits         *solanacommon.RPCMethodLimitsConfig
 	solanaAvgSlotTime             time.Duration
 	chainHeadTargetBlockCount     uint64
 	chainHeadSlotOffset           uint64
@@ -134,12 +132,7 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 	p.solanaTrackerStartBlockNum = startBlock
 
 	if p.solanaRPCMethodLimitsConfig != "" {
-		limits, err := common.LoadJSON[solanacommon.RPCMethodLimitsConfig](p.solanaRPCMethodLimitsConfig)
-		if err != nil {
-			return fmt.Errorf("failed to load %s: %w", solanaRPCMethodLimitsConfigFlag, err)
-		}
-
-		p.solanaRPCMethodLimits = limits
+		p.solanaRPCMethodLimitsConfig = filepath.Clean(p.solanaRPCMethodLimitsConfig)
 	}
 
 	return nil
@@ -351,7 +344,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		MinOperationFee:            p.solanaMinOperationFee,
 		TreasuryAddress:            p.treasuryAddress,
 		DisableRateLimiting:        p.solanaTrackerDisableRateLimit,
-		RPCMethodLimitsConfig:      p.solanaRPCMethodLimits,
+		RPCMethodLimitsConfigPath:  p.solanaRPCMethodLimitsConfig,
 		AvgSlotTime:                p.solanaAvgSlotTime,
 		ChainHeadTargetBlockCount:  p.chainHeadTargetBlockCount,
 		ChainHeadSlotOffset:        p.chainHeadSlotOffset,

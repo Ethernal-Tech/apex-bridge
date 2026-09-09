@@ -1,10 +1,13 @@
 package chain
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
+	solanacommon "github.com/Ethernal-Tech/solana-infrastructure/common"
 	skyline "github.com/Ethernal-Tech/solana-infrastructure/sendtx/skyline_program"
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker"
 	store "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
@@ -146,6 +149,11 @@ func loadTrackerConfigs(
 		config.TrackedProgram: specs,
 	}
 
+	rpcMethodLimits, err := loadRPCMethodLimitsConfig(config.RPCMethodLimitsConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return &tracker.EventTrackerConfig{
 		RPCEndpoint:            config.TxProviderEndpoint,
 		TrackedPrograms:        TrackedPrograms,
@@ -159,11 +167,25 @@ func loadTrackerConfigs(
 		StartFromSlot:             config.TrackerStartSlot,
 		Logger:                    indexerLogger.Named(time.Now().UTC().String()),
 		DisableRateLimiting:       config.DisableRateLimiting,
-		RPCMethodLimitsConfig:     config.RPCMethodLimitsConfig,
+		RPCMethodLimitsConfig:     rpcMethodLimits,
 		AvgSlotTime:               config.AvgSlotTime,
 		ChainHeadTargetBlockCount: config.ChainHeadTargetBlockCount,
 		ChainHeadSlotOffset:       config.ChainHeadSlotOffset,
 	}, nil
+}
+
+func loadRPCMethodLimitsConfig(path string) (*solanacommon.RPCMethodLimitsConfig, error) {
+	// path not set, tracker will use its internal default limits
+	if path == "" {
+		return nil, nil
+	}
+
+	limits, err := common.LoadJSON[solanacommon.RPCMethodLimitsConfig](path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load rpc method limits config %s: %w", path, err)
+	}
+
+	return limits, nil
 }
 
 type confirmedEventHandler struct {

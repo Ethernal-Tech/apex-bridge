@@ -11,7 +11,6 @@ import (
 	solana "github.com/Ethernal-Tech/apex-bridge/solana"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	solanacommon "github.com/Ethernal-Tech/solana-infrastructure/common"
 )
 
 type BridgingAddresses struct {
@@ -78,22 +77,22 @@ type CardanoChainConfig struct {
 
 type SolanaChainConfig struct {
 	solana.SolanaChainConfig
-	ChainID                    string                              `json:"-"`
-	TrackedProgram             string                              `json:"trackedProgram"`
-	BlockFetchDelayMiliseconds time.Duration                       `json:"blockFetchDelayMiliseconds"`
-	RetryTimeoutMiliseconds    time.Duration                       `json:"retryTimeoutMs"`
-	RestartTrackerPullCheck    time.Duration                       `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount      uint64                              `json:"feeAddressBridgingAmount"`
-	MinColCoinsAllowedToBridge uint64                              `json:"minColCoinsAllowedToBridge"`
-	MinOperationFee            uint64                              `json:"minOperationFee"`
-	TreasuryAddress            string                              `json:"treasuryAddress"`
-	TrackerStartSlot           uint64                              `json:"trackerStartSlot"`
-	TrackerStartBlockNumber    uint64                              `json:"trackerStartBlockNumber"`
-	DisableRateLimiting        bool                                `json:"disableRateLimit"`
-	RPCMethodLimitsConfig      *solanacommon.RPCMethodLimitsConfig `json:"rpcMethodLimits,omitempty"`
-	AvgSlotTime                time.Duration                       `json:"avgSlotTime"`
-	ChainHeadTargetBlockCount  uint64                              `json:"chainHeadTargetBlockCount"`
-	ChainHeadSlotOffset        uint64                              `json:"chainHeadSlotOffset"`
+	ChainID                    string        `json:"-"`
+	TrackedProgram             string        `json:"trackedProgram"`
+	BlockFetchDelayMiliseconds time.Duration `json:"blockFetchDelayMiliseconds"`
+	RetryTimeoutMiliseconds    time.Duration `json:"retryTimeoutMs"`
+	RestartTrackerPullCheck    time.Duration `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount      uint64        `json:"feeAddressBridgingAmount"`
+	MinColCoinsAllowedToBridge uint64        `json:"minColCoinsAllowedToBridge"`
+	MinOperationFee            uint64        `json:"minOperationFee"`
+	TreasuryAddress            string        `json:"treasuryAddress"`
+	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
+	TrackerStartBlockNumber    uint64        `json:"trackerStartBlockNumber"`
+	DisableRateLimiting        bool          `json:"disableRateLimit"`
+	RPCMethodLimitsConfigPath  string        `json:"rpcMethodLimitsConfig,omitempty"`
+	AvgSlotTime                time.Duration `json:"avgSlotTime"`
+	ChainHeadTargetBlockCount  uint64        `json:"chainHeadTargetBlockCount"`
+	ChainHeadSlotOffset        uint64        `json:"chainHeadSlotOffset"`
 }
 
 type SubmitConfig struct {
