@@ -17,15 +17,19 @@ import (
 )
 
 const (
-	solanaChainNodeURLFlag            = "sol-node-url"
-	solanaChainTrackedProgramFlag     = "sol-tracked-program"
-	solanaBlockFetchDelayFlag         = "sol-block-fetch-delay"
-	solanaMinFeeForBridgingFlag       = "sol-min-fee-for-bridging"
-	solanaMinOperationFeeFlag         = "sol-min-operation-fee"
-	solanaTTLNumberIncFlag            = "sol-ttl-number-inc"
-	solanaConfirmationTimeoutFlag     = "sol-confirmation-timeout"
-	solanaTrackerStartBlockFlag       = "sol-tracker-start-block"
-	solanaTrackerDisableRateLimitFlag = "disable-rate-limiting"
+	solanaChainNodeURLFlag              = "sol-node-url"
+	solanaChainTrackedProgramFlag       = "sol-tracked-program"
+	solanaBlockFetchDelayFlag           = "sol-block-fetch-delay"
+	solanaMinFeeForBridgingFlag         = "sol-min-fee-for-bridging"
+	solanaMinOperationFeeFlag           = "sol-min-operation-fee"
+	solanaTTLNumberIncFlag              = "sol-ttl-number-inc"
+	solanaConfirmationTimeoutFlag       = "sol-confirmation-timeout"
+	solanaTrackerStartBlockFlag         = "sol-tracker-start-block"
+	solanaTrackerDisableRateLimitFlag   = "disable-rate-limiting"
+	solanaRPCMethodLimitsConfigFlag     = "sol-rpc-method-limits-config"
+	solanaAvgSlotTimeFlag               = "sol-default-slot-time"
+	solanaChainHeadTargetBlockCountFlag = "sol-chain-head-target-block-count"
+	solanaChainHeadSlotOffsetFlag       = "sol-chain-head-slot-offset"
 
 	solanaChainNodeURLFlagDesc            = "solana chain node URL"
 	solanaChainTrackedProgramFlagDesc     = "(mandatory) solana program address to track"
@@ -36,6 +40,10 @@ const (
 	solanaConfirmationTimeoutFlagDesc     = "confirmation timeout for solana chain txs in milliseconds"
 	solanaTrackerStartBlockFlagDesc       = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
 	solanaTrackerDisableRateLimitFlagDesc = "disable rate limiting for solana chain tracker"
+	solanaRPCMethodLimitsConfigFlagDesc   = "path to solana rpc method limits config json file"
+	solanaDefaultSlotTimeFlagDesc         = "network average slot time for solana chain in milliseconds"
+	chainHeadTargetBlockCountFlagDesc     = "desired number of slots-with-blocks per refresh when near the chain head"
+	chainHeadSlotOffsetFlagDesc           = "width of the slot window GetBlocks is asked for."
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
@@ -50,6 +58,9 @@ const (
 
 	defaultSlotRoundingThresholdSolana = 10
 	defaultNoBatchPeriodPercentSolana  = 0
+	defaultSolanaAvgSlotTime           = 166 * time.Millisecond
+	defaultChainHeadTargetBlockCount   = 30
+	defaultChainHeadSlotOffset         = 80
 )
 
 type solanaChainGenerateConfigsParams struct {
@@ -69,6 +80,10 @@ type solanaChainGenerateConfigsParams struct {
 	solanaTrackerStartBlockNum uint64
 
 	solanaTrackerDisableRateLimit bool
+	solanaRPCMethodLimitsConfig   string
+	solanaAvgSlotTime             time.Duration
+	chainHeadTargetBlockCount     uint64
+	chainHeadSlotOffset           uint64
 
 	emptyBlocksThreshold      uint
 	solanaTTLNumberInc        uint64
@@ -115,6 +130,10 @@ func (p *solanaChainGenerateConfigsParams) validateFlags() error {
 
 	p.solanaTrackerStartSlot = startSlot
 	p.solanaTrackerStartBlockNum = startBlock
+
+	if p.solanaRPCMethodLimitsConfig != "" {
+		p.solanaRPCMethodLimitsConfig = filepath.Clean(p.solanaRPCMethodLimitsConfig)
+	}
 
 	return nil
 }
@@ -240,17 +259,47 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		relayerDataDirFlagDesc,
 	)
+
 	cmd.Flags().StringVar(
 		&p.relayerConfigPath,
 		relayerConfigPathFlag,
 		"",
 		relayerConfigPathFlagDesc,
 	)
+
 	cmd.Flags().BoolVar(
 		&p.solanaTrackerDisableRateLimit,
 		solanaTrackerDisableRateLimitFlag,
 		false,
 		solanaTrackerDisableRateLimitFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.solanaRPCMethodLimitsConfig,
+		solanaRPCMethodLimitsConfigFlag,
+		"",
+		solanaRPCMethodLimitsConfigFlagDesc,
+	)
+
+	cmd.Flags().DurationVar(
+		&p.solanaAvgSlotTime,
+		solanaAvgSlotTimeFlag,
+		defaultSolanaAvgSlotTime,
+		solanaDefaultSlotTimeFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.chainHeadTargetBlockCount,
+		solanaChainHeadTargetBlockCountFlag,
+		defaultChainHeadTargetBlockCount,
+		chainHeadTargetBlockCountFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.chainHeadSlotOffset,
+		solanaChainHeadSlotOffsetFlag,
+		defaultChainHeadSlotOffset,
+		chainHeadSlotOffsetFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
@@ -295,6 +344,10 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		MinOperationFee:            p.solanaMinOperationFee,
 		TreasuryAddress:            p.treasuryAddress,
 		DisableRateLimiting:        p.solanaTrackerDisableRateLimit,
+		RPCMethodLimitsConfigPath:  p.solanaRPCMethodLimitsConfig,
+		AvgSlotTime:                p.solanaAvgSlotTime,
+		ChainHeadTargetBlockCount:  p.chainHeadTargetBlockCount,
+		ChainHeadSlotOffset:        p.chainHeadSlotOffset,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {

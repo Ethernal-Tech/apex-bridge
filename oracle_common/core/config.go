@@ -89,6 +89,10 @@ type SolanaChainConfig struct {
 	TrackerStartSlot           uint64        `json:"trackerStartSlot"`
 	TrackerStartBlockNumber    uint64        `json:"trackerStartBlockNumber"`
 	DisableRateLimiting        bool          `json:"disableRateLimit"`
+	RPCMethodLimitsConfigPath  string        `json:"rpcMethodLimitsConfig,omitempty"`
+	AvgSlotTime                time.Duration `json:"avgSlotTime"`
+	ChainHeadTargetBlockCount  uint64        `json:"chainHeadTargetBlockCount"`
+	ChainHeadSlotOffset        uint64        `json:"chainHeadSlotOffset"`
 }
 
 type SubmitConfig struct {
