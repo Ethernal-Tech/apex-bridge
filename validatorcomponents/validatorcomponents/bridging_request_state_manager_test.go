@@ -680,3 +680,48 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		db.AssertExpectations(t)
 	})
 }
+
+func TestBridgingRequestStateManagerGetPage(t *testing.T) {
+	t.Run("returns the states along with the cursor and the instance id", func(t *testing.T) {
+		expected := []*common.BridgingRequestState{{SourceChainID: common.ChainIDStrPrime}}
+
+		db := &databaseaccess.BridgingRequestStateDBMock{}
+		db.On("GetSyncInstanceID").Return("instance", nil)
+		db.On("GetBridgingRequestStatesPage", uint64(7), 2).Return(expected, uint64(8), nil)
+
+		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
+
+		states, nextFrom, instanceID, err := sm.GetPage(7, 2)
+		require.NoError(t, err)
+		require.Equal(t, expected, states)
+		require.Equal(t, uint64(8), nextFrom)
+		require.Equal(t, "instance", instanceID)
+
+		db.AssertExpectations(t)
+	})
+
+	t.Run("fails when the instance id cannot be read", func(t *testing.T) {
+		db := &databaseaccess.BridgingRequestStateDBMock{}
+		db.On("GetSyncInstanceID").Return("", fmt.Errorf("test err"))
+
+		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
+
+		_, _, _, err := sm.GetPage(0, 2)
+		require.ErrorContains(t, err, "failed to get sync instance id")
+
+		db.AssertExpectations(t)
+	})
+
+	t.Run("fails when the page cannot be read", func(t *testing.T) {
+		db := &databaseaccess.BridgingRequestStateDBMock{}
+		db.On("GetSyncInstanceID").Return("instance", nil)
+		db.On("GetBridgingRequestStatesPage", uint64(0), 2).Return(nil, uint64(0), fmt.Errorf("test err"))
+
+		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
+
+		_, _, _, err := sm.GetPage(0, 2)
+		require.ErrorContains(t, err, "failed to get BridgingRequestStates page")
+
+		db.AssertExpectations(t)
+	})
+}
