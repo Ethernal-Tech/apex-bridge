@@ -9,6 +9,10 @@ type BridgingRequestStateDB interface {
 	AddBridgingRequestState(state *common.BridgingRequestState) error
 	UpdateBridgingRequestState(state *common.BridgingRequestState) error
 	GetBridgingRequestState(sourceChainID string, sourceTxHash []byte) (*common.BridgingRequestState, error)
+	GetBridgingRequestStatesPage(
+		fromSyncIndex uint64, limit int,
+	) (states []*common.BridgingRequestState, nextSyncIndex uint64, err error)
+	GetSyncInstanceID() (string, error)
 }
 
 type Database interface {
@@ -23,6 +27,9 @@ type BridgingRequestStateManager interface {
 
 	Get(sourceChainID string, sourceTxHash []byte) (*common.BridgingRequestState, error)
 	GetMultiple(sourceChainID string, sourceTxHashes [][]byte) ([]*common.BridgingRequestState, error)
+	GetPage(
+		fromSyncIndex uint64, limit int,
+	) (states []*common.BridgingRequestState, nextSyncIndex uint64, instanceID string, err error)
 }
 
 type RelayerImitator interface {
