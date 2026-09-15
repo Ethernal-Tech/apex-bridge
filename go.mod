@@ -4,6 +4,12 @@ go 1.24.1
 
 toolchain go1.24.2
 
+// Points to a forked version of the gouroboros library, which raises the CBOR
+// nesting limit that otherwise halts block-fetch on some blocks. The same
+// directive exists in cardano-infrastructure, but replace directives are only
+// honored in the main module, so it has to be repeated here.
+replace github.com/blinklabs-io/gouroboros => github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f
+
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260806125200-a31862150760
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260915080204-4accd053dac8
