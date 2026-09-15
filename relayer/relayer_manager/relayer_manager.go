@@ -156,7 +156,7 @@ func getRelayersAndConfigurations(
 
 		chainConfig, exists := config.Chains[chainID]
 		if !exists {
-			logger.Warn("No configuration for registered chain: %s. Chain type = %d", chainID, chainData.ChainType)
+			logger.Warn("No configuration for registered chain", "chainID", chainID, "chainType", chainData.ChainType)
 
 			continue
 		}

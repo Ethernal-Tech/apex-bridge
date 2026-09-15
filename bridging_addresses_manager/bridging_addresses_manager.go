@@ -67,6 +67,13 @@ func NewBridgingAdressesManager(
 			continue
 		}
 
+		chainConfig := cardanoChains[chainIDStr]
+		if chainConfig == nil {
+			logger.Warn("No configuration for registered chain", "chainID", chainIDStr, "chainType", registeredChain.ChainType)
+
+			continue
+		}
+
 		validatorsData, err := getValidatorsChainData(ctx, bridgeSmartContract, chainIDStr, logger)
 		if err != nil {
 			return nil, fmt.Errorf("error while RetryForever of GetValidatorsChainData for %s. err: %w", chainIDStr, err)
@@ -81,8 +88,6 @@ func NewBridgingAdressesManager(
 		if err != nil {
 			return nil, fmt.Errorf("error while RetryForever of GetBridgingAddressesCount for %s. err: %w", chainIDStr, err)
 		}
-
-		chainConfig := cardanoChains[chainIDStr]
 
 		for i := range uint64(numberOfAddresses) {
 			if err := manager.buildBridgingAddress(registeredChainID, &keyHashes, chainConfig, i); err != nil {

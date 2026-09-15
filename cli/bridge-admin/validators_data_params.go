@@ -123,7 +123,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 		case common.ChainTypeCardano:
 			chainConfig, exists := config.CardanoChains[chainID]
 			if !exists {
-				return nil, err
+				return nil, fmt.Errorf("no configuration for registered chain: %s. Chain type = %d", chainID, regChain.ChainType)
 			}
 
 			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))

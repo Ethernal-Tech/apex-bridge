@@ -459,7 +459,9 @@ func fixChainsInConfig(
 		case common.ChainTypeCardano:
 			chainConfig, exists := config.CardanoChains[chainID]
 			if !exists {
-				return fmt.Errorf("no configuration for chain: %s", chainID)
+				logger.Warn("No configuration for registered chain", "chainID", chainID, "chainType", regChain.ChainType)
+
+				continue
 			}
 
 			chainConfig.ChainID = chainID
@@ -467,7 +469,9 @@ func fixChainsInConfig(
 		case common.ChainTypeEVM:
 			ethChainConfig, exists := config.EthChains[chainID]
 			if !exists {
-				return fmt.Errorf("no configuration for evm chain: %s", chainID)
+				logger.Warn("No configuration for registered chain", "chainID", chainID, "chainType", regChain.ChainType)
+
+				continue
 			}
 
 			if !ethcommon.IsHexAddress(regChain.AddressMultisig) {
@@ -483,7 +487,9 @@ func fixChainsInConfig(
 		case common.ChainTypeSolana:
 			solanaChainConfig, exists := config.SolanaChains[chainID]
 			if !exists {
-				return fmt.Errorf("no configuration for solana chain: %s", chainID)
+				logger.Warn("No configuration for registered chain", "chainID", chainID, "chainType", regChain.ChainType)
+
+				continue
 			}
 
 			solanaChainConfig.ChainID = chainID
