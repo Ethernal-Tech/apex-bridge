@@ -44,6 +44,8 @@ github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260915080204-4accd053da
 github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260915080204-4accd053dac8/go.mod h1:2ZdT1lnwfrxUHpGeeC+870q/JfobUNvsI2zrBfNqeNw=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94 h1:xUvsP9JPf8BKZ0ZJt0kC0UlernoKTkAzm4JVo4Mig/M=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94/go.mod h1:B8gumPuc8eynSJmAcMd2CEjhlOSE8CynwFx9G3AlaQ8=
+github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f h1:+jmWJUaCoz/QjsE+TH1suO0RPLs7f/dXxTe0JM8p0O8=
+github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f/go.mod h1:wjiNCbZ2uQy9DGfLCgEgqagHxNBAv5UYsOdRBgoi3SU=
 github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260909082252-b0b57125ba5d h1:rtM+cUKD4C7gWDHOVTc2+W3tLobgW7f5IIvGl17kbZM=
 github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260909082252-b0b57125ba5d/go.mod h1:ADu4749NWR5ENe24Ft4A+whGfIgnp8JF5ncDPrZPAJw=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
@@ -77,8 +79,6 @@ github.com/bits-and-blooms/bitset v1.13.0 h1:bAQ9OPNFYbGHV6Nez0tmNI0RiEu7/hxlYJR
 github.com/bits-and-blooms/bitset v1.13.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blendle/zapdriver v1.3.1 h1:C3dydBOWYRiOk+B8X9IVZ5IOe+7cl+tGOexN4QqHfpE=
 github.com/blendle/zapdriver v1.3.1/go.mod h1:mdXfREi6u5MArG4j9fewC+FGnXaBR+T4Ox4J2u4eHCc=
-github.com/blinklabs-io/gouroboros v0.103.1 h1:D/3Hlr09kw/cYM8gt6t7jVlTfDCXjb25nHL5V2l/3kc=
-github.com/blinklabs-io/gouroboros v0.103.1/go.mod h1:wjiNCbZ2uQy9DGfLCgEgqagHxNBAv5UYsOdRBgoi3SU=
 github.com/blinklabs-io/ouroboros-mock v0.3.5 h1:/KWbSoH8Pjrd9uxOH7mVbI7XFsDCNW/O9FtLlvJDUpQ=
 github.com/blinklabs-io/ouroboros-mock v0.3.5/go.mod h1:JtUQ3Luo22hCnGBxuxNp6JaUx63VxidxWwmcaVMremw=
 github.com/btcsuite/btcd v0.24.2 h1:aLmxPguqxza+4ag8R1I2nnJjSu2iFn/kqtHTIImswcY=
