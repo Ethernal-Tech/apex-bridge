@@ -10,8 +10,10 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/gagliardetto/solana-go"
 	"github.com/spf13/cobra"
 )
 
@@ -123,7 +125,9 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 		case common.ChainTypeCardano:
 			chainConfig, exists := config.CardanoChains[chainID]
 			if !exists {
-				return nil, fmt.Errorf("no configuration for registered chain: %s. Chain type = %d", chainID, regChain.ChainType)
+				_, _ = outputter.Write([]byte(fmt.Sprintf("No configuration for registered chain %s, skipping...\n", chainID)))
+
+				continue
 			}
 
 			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
@@ -188,7 +192,22 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from registered chains): \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", regChain.AddressMultisig)))
 			outputter.WriteOutput()
+		case common.ChainTypeSolana:
+			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
+			if err != nil {
+				return nil, err
+			}
 
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Validators data on %s chain: \n", chainID)))
+
+			err = printChainValidatorsDataInfo(chainID, validatorsData, chainIDConverter, outputter)
+			if err != nil {
+				return nil, err
+			}
+
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from registered chains): \n", chainID)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", regChain.AddressMultisig)))
+			outputter.WriteOutput()
 		default:
 		}
 	}
@@ -203,14 +222,29 @@ func printChainValidatorsDataInfo(
 	for _, x := range data {
 		var formattedData string
 
-		if chainIDConverter.IsEVMChainID(chainID) {
+		switch {
+		case chainIDConverter.IsEVMChainID(chainID):
 			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
 			if err != nil {
 				return err
 			}
 
 			formattedData = fmt.Sprintf("BLSKey=%s", hex.EncodeToString(pub.Marshal()))
-		} else {
+		case chainIDConverter.IsSolanaChainID(chainID):
+			if x.Key[0] == nil {
+				return fmt.Errorf("missing solana validator public key for chain %s", chainID)
+			}
+
+			rawPubKey := make([]byte, solana.PublicKeyLength)
+			x.Key[0].FillBytes(rawPubKey)
+
+			pubKey, err := solanawallet.PublicKeyFromBytes(rawPubKey)
+			if err != nil {
+				return fmt.Errorf("failed to convert solana validator public key for chain %s: %w", chainID, err)
+			}
+
+			formattedData = fmt.Sprintf("PubKey=%s", pubKey.String())
+		default:
 			formattedData = fmt.Sprintf(
 				"MultisigKey=%s, FeeKey=%s",
 				hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())),
