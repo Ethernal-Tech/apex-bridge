@@ -1,8 +1,12 @@
 package processor
 
 import (
+	"math/big"
+	"strings"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/tx_processors/success"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/hashicorp/go-hclog"
@@ -67,11 +71,20 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 		if txProcessorType == common.BridgingTxTypeBridgingRequest ||
 			txProcessorType == common.TxTypeRefundRequest {
+			isRefund := txProcessorType == common.TxTypeRefundRequest
+
+			dstChainID, details := "", (*common.BridgingRequestStateDetails)(nil)
+			if !isRefund {
+				dstChainID, details = r.getBridgingRequestStateDetails(originChainID, tx.Metadata)
+			}
+
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: tx.Hash[:],
-					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
+					SourceTxHash:       tx.Hash[:],
+					IsRefund:           isRefund,
+					DestinationChainID: dstChainID,
+					Details:            details,
 				},
 			)
 		}
@@ -101,4 +114,48 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 	}
 
 	return nil
+}
+
+// getBridgingRequestStateDetails reads what was requested to be bridged out of the tx metadata.
+// It is reporting data only, so any failure yields empty details instead of an error.
+func (r *CardanoTxsReceiverImpl) getBridgingRequestStateDetails(
+	originChainID string, txMetadata []byte,
+) (string, *common.BridgingRequestStateDetails) {
+	chainConfig := r.appConfig.CardanoChains[originChainID]
+	if chainConfig == nil {
+		r.logger.Warn("no chain config for bridging request state details", "chainID", originChainID)
+
+		return "", nil
+	}
+
+	metadata, err := successtxprocessors.UnmarshalBridgingRequestMetadata(chainConfig, txMetadata)
+	if err != nil {
+		r.logger.Warn("failed to unmarshal metadata for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return "", nil
+	}
+
+	currencyID, err := chainConfig.GetCurrencyID()
+	if err != nil {
+		r.logger.Warn("failed to get currency id for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return metadata.DestinationChainID, nil
+	}
+
+	receivers := make([]common.BridgingRequestStateReceiver, len(metadata.Transactions))
+	for i, receiver := range metadata.Transactions {
+		receivers[i] = common.BridgingRequestStateReceiver{
+			Address: strings.Join(receiver.Address, ""),
+			Amount:  common.DfmToWei(new(big.Int).SetUint64(receiver.Amount)),
+			TokenID: receiver.TokenID,
+		}
+	}
+
+	return metadata.DestinationChainID, common.NewBridgingRequestStateDetails(
+		strings.Join(metadata.SenderAddr, ""), receivers,
+		common.DfmToWei(new(big.Int).SetUint64(metadata.BridgingFee)),
+		common.DfmToWei(new(big.Int).SetUint64(metadata.OperationFee)),
+		currencyID)
 }

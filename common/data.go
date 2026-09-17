@@ -49,8 +49,10 @@ func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash []byte, isRef
 }
 
 type NewBridgingRequestStateModel struct {
-	SourceTxHash []byte
-	IsRefund     bool
+	SourceTxHash       []byte
+	IsRefund           bool
+	DestinationChainID string
+	Details            *BridgingRequestStateDetails
 }
 
 type ConfirmedTxType uint8

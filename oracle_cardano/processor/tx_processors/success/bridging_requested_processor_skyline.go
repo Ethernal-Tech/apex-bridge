@@ -63,7 +63,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	metadata, err := unmarshalBridgingRequestMetadata(chainConfig, tx.Metadata)
+	metadata, err := UnmarshalBridgingRequestMetadata(chainConfig, tx.Metadata)
 	if err != nil {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")
@@ -766,7 +766,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEthOrSol(
 	}, nil
 }
 
-func unmarshalBridgingRequestMetadata(
+func UnmarshalBridgingRequestMetadata(
 	chainConfig *cCore.CardanoChainConfig, txMetadata []byte,
 ) (*common.BridgingRequestMetadata, error) {
 	metadataBC, err := common.UnmarshalMetadata[common.BridgingRequestMetadataBC](

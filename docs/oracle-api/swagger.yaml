@@ -1,13 +1,84 @@
 basePath: /api
 definitions:
+  BridgingRequestStateDetailsResponse:
+    properties:
+      amount:
+        description: |-
+          Native currency sent to the receivers on the source chain, in wei. Fees are not included, add
+          bridgingFee and operationFee to get everything the sender paid in currency.
+        type: string
+      bridgingFee:
+        description: Bridging fee in wei
+        type: string
+      operationFee:
+        description: Operation fee in wei
+        type: string
+      receivers:
+        description: Requested outputs
+        items:
+          $ref: '#/definitions/BridgingRequestStateReceiverResponse'
+        type: array
+      senderAddr:
+        description: Sender address on the source chain
+        type: string
+      tokenAmount:
+        description: Token sent to the receivers on the source chain, in wei
+        type: string
+      tokenId:
+        description: Token ID, zero when nothing but currency is bridged
+        type: integer
+    type: object
+  BridgingRequestStatePageResponse:
+    properties:
+      hasMore:
+        description: Whether a full page was returned, meaning there may be more
+        type: boolean
+      instanceId:
+        description: |-
+          Identifies the oracle database. A different value than the one seen previously means the
+          database was recreated and any stored nextFrom is meaningless.
+        type: string
+      items:
+        description: Bridging request states, in the order they were observed
+        items:
+          $ref: '#/definitions/BridgingRequestStateResponse'
+        type: array
+      nextFrom:
+        description: Sync index to pass as "from" on the next call
+        type: integer
+    type: object
+  BridgingRequestStateReceiverResponse:
+    properties:
+      address:
+        description: Destination address
+        type: string
+      amount:
+        description: Amount in wei
+        type: string
+      tokenId:
+        description: Token ID
+        type: integer
+    type: object
   BridgingRequestStateResponse:
     properties:
+      createdAt:
+        description: Time the bridging request was first observed
+        type: string
       destinationChainId:
         description: Destination chain ID
         type: string
       destinationTxHash:
         description: Destination transaction hash
         type: string
+      details:
+        allOf:
+        - $ref: '#/definitions/BridgingRequestStateDetailsResponse'
+        description: |-
+          What was requested to be bridged. Null for refund requests and for requests observed before
+          the oracle started recording details.
+      isRefund:
+        description: Is in refund phase
+        type: boolean
       sourceChainId:
         description: Source chain ID
         type: string
@@ -59,7 +130,7 @@ definitions:
       tokens:
         description: List of tokens including their name, policy ID, and amount
         items:
-          $ref: '#/definitions/wallet.TokenAmount'
+          $ref: '#/definitions/github_com_Ethernal-Tech_cardano-infrastructure_wallet.TokenAmount'
         type: array
     type: object
   ErrorResponse:
@@ -92,6 +163,16 @@ definitions:
     type: object
   SettingsResponse:
     properties:
+      directionConfig:
+        additionalProperties:
+          $ref: '#/definitions/common.DirectionConfig'
+        description: For each chain, the direction config
+        type: object
+      ecosystemTokens:
+        description: All defined tokens across the whole ecosystem
+        items:
+          $ref: '#/definitions/common.EcosystemToken'
+        type: array
       maxAmountAllowedToBridge:
         description: Maximum amount of currency allowed to be bridged
         type: string
@@ -103,18 +184,34 @@ definitions:
         type: string
       minChainFeeForBridging:
         additionalProperties:
+          type: string
+        description: |-
+          For each chain, the minimum fee required to cover the submission of the currency transaction
+          on the destination chain
+        type: object
+      minChainFeeForBridgingTokens:
+        additionalProperties:
+          format: int64
           type: integer
-        description: For each chain, the minimum fee required to cover the submission
-          of the transaction on the destination chain
+        description: |-
+          For each chain, the minimum fee required to cover the submission of the native token transaction
+          on the destination chain
+        type: object
+      minColCoinsAllowedToBridge:
+        additionalProperties:
+          type: string
+        description: Minimum amount of colored tokens allowed to be bridged for each
+          chain
         type: object
       minOperationFee:
         additionalProperties:
-          type: integer
+          type: string
         description: For each chain, the minimum fee required to cover operational
           costs
         type: object
       minUtxoChainValue:
         additionalProperties:
+          format: int64
           type: integer
         description: For each chain, the minimum allowed UTXO value
         type: object
@@ -122,7 +219,49 @@ definitions:
         description: Minimum value allowed to be bridged
         type: integer
     type: object
-  wallet.TokenAmount:
+  common.DirectionConfig:
+    properties:
+      alwaysTrackCurrencyAndWrappedCurrency:
+        type: boolean
+      destChain:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/common.TokenPair'
+          type: array
+        type: object
+      tokens:
+        additionalProperties:
+          $ref: '#/definitions/common.Token'
+        type: object
+    type: object
+  common.EcosystemToken:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  common.Token:
+    properties:
+      chainSpecific:
+        type: string
+      isWrappedCurrency:
+        type: boolean
+      lockUnlock:
+        type: boolean
+    type: object
+  common.TokenPair:
+    properties:
+      dstTokenID:
+        type: integer
+      srcTokenID:
+        type: integer
+      trackDestination:
+        type: boolean
+      trackSource:
+        type: boolean
+    type: object
+  github_com_Ethernal-Tech_cardano-infrastructure_wallet.TokenAmount:
     properties:
       nam:
         description: Human-readable name of the token
@@ -220,6 +359,45 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get states of multiple bridging requests
+      tags:
+      - BridgingRequestState
+  /BridgingRequestState/GetPage:
+    get:
+      description: Returns bridging request states in the order the oracle observed
+        them, starting at the given sync index. Pass the returned nextFrom as "from"
+        to get the following page. A change in the returned instanceId means the oracle
+        database was recreated and any stored sync index should be discarded.
+      parameters:
+      - default: 0
+        description: Sync index to start from
+        in: query
+        name: from
+        type: integer
+      - default: 100
+        description: Maximum number of states to return
+        in: query
+        maximum: 1000
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK - Returns a page of bridging request states.
+          schema:
+            $ref: '#/definitions/BridgingRequestStatePageResponse'
+        "400":
+          description: Bad Request – from or limit is not a valid number, or the bridging
+            request states could not be retrieved.
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get a page of bridging request states
       tags:
       - BridgingRequestState
   /OracleState/Get:
