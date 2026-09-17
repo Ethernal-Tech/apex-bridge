@@ -48,7 +48,8 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 		switch {
 		case appConfig.ChainIDConverter.IsEVMChainID(chainID):
 			if _, ok := appConfig.EthChains[chainID]; !ok {
-				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
+				// skip if no configuration for registered chain
+				continue
 			}
 
 			data := appConfig.EthChains[chainID]
@@ -58,7 +59,8 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			appConfig.EthChains[chainID] = data
 		case appConfig.ChainIDConverter.IsCardanoChainID(chainID):
 			if _, ok := appConfig.CardanoChains[chainID]; !ok {
-				return fmt.Errorf("invalid cardano chain while setting up direction config. %s", chainID)
+				// skip if no configuration for registered chain
+				continue
 			}
 
 			data := appConfig.CardanoChains[chainID]
@@ -68,7 +70,8 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 			appConfig.CardanoChains[chainID] = data
 		case appConfig.ChainIDConverter.IsSolanaChainID(chainID):
 			if _, ok := appConfig.SolanaChains[chainID]; !ok {
-				return fmt.Errorf("invalid solana chain while setting up direction config. %s", chainID)
+				// skip if no configuration for registered chain
+				continue
 			}
 
 			data := appConfig.SolanaChains[chainID]
