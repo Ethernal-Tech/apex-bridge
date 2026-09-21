@@ -1,6 +1,7 @@
 package relayer
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -395,9 +396,92 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Return(expectedSig, nil).Once()
 		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
 			Return(nil).Once()
+		submiterMock.On("GetTransaction", mock.Anything, expectedSig).
+			Return(&rpc.GetTransactionResult{Meta: &rpc.TransactionMeta{Fee: 5000}}, nil).Once()
 
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
+
+		submiterMock.AssertExpectations(t)
+	})
+
+	// The batch has to go out as a v1 (SIMD-0385) transaction: that is what
+	// raises the size limit from 1232 to 4096 bytes and lets a batch carry more
+	// bridgings. Passing an address lookup table would silently drop it back to
+	// v0, so assert on what actually reaches the provider.
+	t.Run("batch is sent as a v1 transaction", func(t *testing.T) {
+		submiterMock := &solanaWallet.MockTxProvider{}
+		ops := newSendTxTestOps(t, submiterMock, privateKey)
+
+		var logs bytes.Buffer
+
+		ops.logger = hclog.New(&hclog.LoggerOptions{Output: &logs, Level: hclog.Debug})
+
+		rawTx := buildTestRawTx(t, privateKey.PublicKey())
+		validSigs := make([][]byte, 3)
+		bridgeMock := buildBridgeMockWithSignatures(t, ctx, common.ChainIDStrSolana, rawTx, validSigs)
+
+		batch := &eth.ConfirmedBatch{
+			ID:             2,
+			RawTransaction: rawTx,
+			Bitmap:         new(big.Int),
+			Signatures:     validSigs,
+		}
+
+		expectedSig := solana.Signature{4, 5, 6}
+		computeUnits := uint64(123_000)
+
+		var sentTx *solana.Transaction
+
+		submiterMock.On("SendTransaction", mock.Anything, mock.AnythingOfType("*solana.Transaction")).
+			Run(func(args mock.Arguments) {
+				sentTx = args.Get(1).(*solana.Transaction)
+			}).
+			Return(expectedSig, nil).Once()
+		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
+			Return(nil).Once()
+		submiterMock.On("GetTransaction", mock.Anything, expectedSig).
+			Return(&rpc.GetTransactionResult{Meta: &rpc.TransactionMeta{
+				Fee:                  7000,
+				ComputeUnitsConsumed: &computeUnits,
+			}}, nil).Once()
+
+		err := ops.SendTx(ctx, bridgeMock, batch)
+		require.NoError(t, err)
+
+		// The fee is only knowable after execution, so it is read back from the
+		// submitted transaction rather than derived from the v1 header.
+		require.Contains(t, logs.String(), "feeLamports=7000")
+		require.Contains(t, logs.String(), "computeUnitsConsumed=123000")
+		require.Contains(t, logs.String(), "version=v1")
+
+		require.NotNil(t, sentTx)
+		require.Equal(t, solana.MessageVersionV1, sentTx.Message.GetVersion())
+		require.Equal(t, "v1", messageVersionLabel(sentTx.Message.GetVersion()),
+			"solana-go's enum is offset by one, so the label is what gets logged")
+		require.Empty(t, sentTx.Message.AddressTableLookups)
+
+		// v1 executes ComputeBudget instructions as no-ops, so the limit has to
+		// be requested in the message header instead.
+		for _, ix := range sentTx.Message.Instructions {
+			programID, err := sentTx.Message.Program(ix.ProgramIDIndex)
+			require.NoError(t, err)
+			require.False(t, programID.Equals(solana.ComputeBudget))
+		}
+
+		require.NotNil(t, sentTx.Message.TransactionConfig.ComputeUnitLimit)
+		require.NotZero(t, *sentTx.Message.TransactionConfig.ComputeUnitLimit)
+
+		// Same for the loaded accounts data size: v1 reads an unset limit as 0
+		// bytes, which the first account load exceeds, so a batch without it is
+		// rejected with MaxLoadedAccountsDataSizeExceeded before it executes.
+		require.NotNil(t, sentTx.Message.TransactionConfig.LoadedAccountsDataSizeLimit)
+		require.NotZero(t, *sentTx.Message.TransactionConfig.LoadedAccountsDataSizeLimit)
+
+		raw, err := solanaWallet.MarshalTransaction(sentTx)
+		require.NoError(t, err)
+		require.Equal(t, byte(0x81), raw[0], "v1 transactions start with the 0x81 discriminator")
+		require.LessOrEqual(t, len(raw), solana.MaxTransactionSizeV1)
 
 		submiterMock.AssertExpectations(t)
 	})
