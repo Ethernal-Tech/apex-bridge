@@ -22,6 +22,7 @@ const (
 	solanaBlockFetchDelayFlag           = "sol-block-fetch-delay"
 	solanaMinFeeForBridgingFlag         = "sol-min-fee-for-bridging"
 	solanaMinOperationFeeFlag           = "sol-min-operation-fee"
+	solanaFeeAddrBridgingAmountFlag     = "sol-fee-addr-bridging-amount"
 	solanaTTLNumberIncFlag              = "sol-ttl-number-inc"
 	solanaConfirmationTimeoutFlag       = "sol-confirmation-timeout"
 	solanaTrackerStartBlockFlag         = "sol-tracker-start-block"
@@ -36,6 +37,7 @@ const (
 	solanaBlockFetchDelayFlagDesc         = "delay in milliseconds between block fetches for solana chain"
 	solanaMinFeeForBridgingFlagDesc       = "minimal bridging fee for solana chain"
 	solanaMinOperationFeeFlagDesc         = "minimal operation fee for solana chain"
+	solanaFeeAddrBridgingAmountFlagDesc   = "fee address bridging amount for solana chain"
 	solanaTTLNumberIncFlagDesc            = "TTL increment for solana chain"
 	solanaConfirmationTimeoutFlagDesc     = "confirmation timeout for solana chain txs in milliseconds"
 	solanaTrackerStartBlockFlagDesc       = "block to start solana chain tracker from in a form of slot:blockNumber (default 0)" //nolint:lll
@@ -47,7 +49,8 @@ const (
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
-	defaultSolanaMinFeeForBridging          = uint64(1_000_010)
+	defaultSolanaMinFeeForBridging          = uint64(6000000)
+	defaultSolanaFeeAddressBridgingAmount   = uint64(6000000)
 	defaultSolanaMinOperationFee            = uint64(0)
 	defaultSolanaMinColCoinsAllowedToBridge = uint64(1)
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
@@ -66,15 +69,16 @@ const (
 type solanaChainGenerateConfigsParams struct {
 	chainIDString string
 
-	solanaChainNodeURL      string
-	solanaTrackedProgram    string
-	solanaBlockFetchDelay   uint64
-	solanaMinFeeForBridging uint64
-	solanaMinOperationFee   uint64
-	solanaSlotBuffSize      uint8
-	solanaEventBuffSize     uint8
-	solanaErrorBuffSize     uint8
-	solanaTrackerStartBlock string
+	solanaChainNodeURL             string
+	solanaTrackedProgram           string
+	solanaBlockFetchDelay          uint64
+	solanaMinFeeForBridging        uint64
+	solanaMinOperationFee          uint64
+	solanaFeeAddressBridgingAmount uint64
+	solanaSlotBuffSize             uint8
+	solanaEventBuffSize            uint8
+	solanaErrorBuffSize            uint8
+	solanaTrackerStartBlock        string
 
 	solanaTrackerStartSlot     uint64
 	solanaTrackerStartBlockNum uint64
@@ -174,6 +178,12 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		solanaMinOperationFeeFlag,
 		defaultSolanaMinOperationFee,
 		solanaMinOperationFeeFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.solanaFeeAddressBridgingAmount,
+		solanaFeeAddrBridgingAmountFlag,
+		defaultSolanaFeeAddressBridgingAmount,
+		solanaFeeAddrBridgingAmountFlagDesc,
 	)
 
 	cmd.Flags().UintVar(
@@ -339,7 +349,7 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 		BlockFetchDelayMiliseconds: time.Duration(p.solanaBlockFetchDelay), //nolint:gosec
 		RetryTimeoutMiliseconds:    defaultSolanaRetryIntervalMiliseconds,
 		RestartTrackerPullCheck:    time.Second * 150,
-		FeeAddrBridgingAmount:      p.solanaMinFeeForBridging,
+		FeeAddrBridgingAmount:      p.solanaFeeAddressBridgingAmount,
 		MinColCoinsAllowedToBridge: defaultSolanaMinColCoinsAllowedToBridge,
 		MinOperationFee:            p.solanaMinOperationFee,
 		TreasuryAddress:            p.treasuryAddress,
