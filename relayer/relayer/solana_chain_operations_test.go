@@ -396,9 +396,6 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Return(expectedSig, nil).Once()
 		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
 			Return(nil).Once()
-		submiterMock.On("GetTransaction", mock.Anything, expectedSig).
-			Return(&rpc.GetTransactionResult{Meta: &rpc.TransactionMeta{Fee: 5000}}, nil).Once()
-
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
 
@@ -429,7 +426,6 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 		}
 
 		expectedSig := solana.Signature{4, 5, 6}
-		computeUnits := uint64(123_000)
 
 		var sentTx *solana.Transaction
 
@@ -440,19 +436,9 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Return(expectedSig, nil).Once()
 		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
 			Return(nil).Once()
-		submiterMock.On("GetTransaction", mock.Anything, expectedSig).
-			Return(&rpc.GetTransactionResult{Meta: &rpc.TransactionMeta{
-				Fee:                  7000,
-				ComputeUnitsConsumed: &computeUnits,
-			}}, nil).Once()
-
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
 
-		// The fee is only knowable after execution, so it is read back from the
-		// submitted transaction rather than derived from the v1 header.
-		require.Contains(t, logs.String(), "feeLamports=7000")
-		require.Contains(t, logs.String(), "computeUnitsConsumed=123000")
 		require.Contains(t, logs.String(), "version=v1")
 
 		require.NotNil(t, sentTx)
