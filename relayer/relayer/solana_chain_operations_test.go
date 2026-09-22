@@ -396,6 +396,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Return(expectedSig, nil).Once()
 		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
 			Return(nil).Once()
+
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
 
@@ -436,6 +437,7 @@ func TestSolanaChainOperations_SendTx(t *testing.T) {
 			Return(expectedSig, nil).Once()
 		submiterMock.On("WaitForSignature", mock.Anything, expectedSig, rpc.CommitmentFinalized, mock.Anything).
 			Return(nil).Once()
+
 		err := ops.SendTx(ctx, bridgeMock, batch)
 		require.NoError(t, err)
 
