@@ -11,7 +11,7 @@ toolchain go1.24.2
 replace github.com/blinklabs-io/gouroboros => github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f
 
 require (
-	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260921112010-07796eaf745b
+	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260924082647-299546aa8a7f
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260915080204-4accd053dac8
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260909082252-b0b57125ba5d
