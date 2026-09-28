@@ -37,8 +37,8 @@ const (
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
-	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer; used only with numBlockConfirmations strategy"
-	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: numBlockConfirmations or finalized"
+	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer; used only with numBlockConfirmations strategy" //nolint:lll
+	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: numBlockConfirmations or finalized"     //nolint:lll
 	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
 	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
 
