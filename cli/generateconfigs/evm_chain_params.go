@@ -13,6 +13,7 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,7 @@ const (
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
 	evmChainFeeAddrBridgingFlag        = "evm-fee-addr-bridging"
 	evmNumBlockConfirmationsFlag       = "evm-num-block-confirmations"
+	evmConfirmationStrategyFlag        = "evm-confirmation-strategy"
 	evmPollIntervalFlag                = "evm-poll-interval"
 	evmSyncBatchSizeFlag               = "evm-sync-batch-size"
 
@@ -35,7 +37,8 @@ const (
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
-	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer"
+	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer; used only with numBlockConfirmations strategy"
+	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: numBlockConfirmations or finalized"
 	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
 	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
 
@@ -64,6 +67,7 @@ type evmChainGenerateConfigsParams struct {
 	evmChainFeeAddrBridgingStr     string
 	evmChainFeeAddrBridging        *big.Int
 	evmNumBlockConfirmations       uint64
+	evmConfirmationStrategy        string
 	evmSyncBatchSize               uint64
 	evmPollIntervalMiliseconds     uint64
 
@@ -116,6 +120,11 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 	p.evmChainMinFeeForBridging = evmChainMinFeeForBridging
 	p.minOperationFee = minOperationFee
 	p.evmChainFeeAddrBridging = evmChainFeeAddrBridging
+
+	if p.evmConfirmationStrategy != string(eventTracker.ConfirmationStrategyNumBlockConfirmations) &&
+		p.evmConfirmationStrategy != string(eventTracker.ConfirmationStrategyFinalized) {
+		return fmt.Errorf("invalid %s: %s", evmConfirmationStrategyFlag, p.evmConfirmationStrategy)
+	}
 
 	return nil
 }
@@ -204,6 +213,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultEvmBlockConfirmationCount,
 		evmNumBlockConfirmationsFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.evmConfirmationStrategy,
+		evmConfirmationStrategyFlag,
+		string(eventTracker.ConfirmationStrategyNumBlockConfirmations),
+		evmConfirmationStrategyFlagDesc,
+	)
 
 	// Output params
 	cmd.Flags().StringVar(
@@ -268,6 +283,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
 		NodeURL:                    p.evmChainNodeURL,
 		SyncBatchSize:              p.evmSyncBatchSize,
+		ConfirmationStrategy:       p.evmConfirmationStrategy,
 		NumBlockConfirmations:      p.evmNumBlockConfirmations,
 		StartBlockNumber:           p.evmChainStartingBlock,
 		PoolIntervalMiliseconds:    p.evmPollIntervalMiliseconds,
