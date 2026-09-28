@@ -256,11 +256,10 @@ func Test_LoadTrackerConfig(t *testing.T) {
 	}
 
 	expectedEventTrackerConfig := &eventTracker.EventTrackerConfig{
-		RPCEndpoint:            "",
-		PollInterval:           0,
-		SyncBatchSize:          0,
-		NumBlockConfirmations:  0,
-		NumOfBlocksToReconcile: uint64(0),
+		RPCEndpoint:           "",
+		PollInterval:          0,
+		SyncBatchSize:         0,
+		NumBlockConfirmations: 0,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:     "",
 			TxsReceiver: txsReceiverMock,

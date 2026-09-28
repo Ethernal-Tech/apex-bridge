@@ -6,6 +6,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
@@ -389,6 +390,8 @@ type EventStoreMock struct {
 	mock.Mock
 }
 
+var _ eventTrackerStore.EventTrackerStore = (*EventStoreMock)(nil)
+
 func (m *EventStoreMock) GetLastProcessedBlock() (uint64, error) {
 	args := m.Called()
 
@@ -425,6 +428,12 @@ func (m *EventStoreMock) InsertLastProcessedBlock(blockNumber uint64) error {
 
 func (m *EventStoreMock) InsertLogs(logs []*ethgo.Log) error {
 	args := m.Called(logs)
+
+	return args.Error(0)
+}
+
+func (m *EventStoreMock) InsertLogsAndLastProcessedBlock(logs []*ethgo.Log, blockNumber uint64) error {
+	args := m.Called(logs, blockNumber)
 
 	return args.Error(0)
 }
