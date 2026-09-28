@@ -373,7 +373,7 @@ func TestUnmarshalMetadataAdversarialAuxiliaryData(t *testing.T) {
 		// script the node accepts can nest far past a decoder default of 32. The nesting
 		// counter is per message, so an over-deep script next to the metadata would make
 		// the whole envelope undecodable and drop an otherwise valid bridging request.
-		script := cbor.RawMessage(mustMarshal(t, []interface{}{0, []byte("keyhash")}))
+		script := mustMarshal(t, []interface{}{0, []byte("keyhash")})
 		for range 500 {
 			script = mustMarshal(t, []interface{}{1, []cbor.RawMessage{script}})
 		}
