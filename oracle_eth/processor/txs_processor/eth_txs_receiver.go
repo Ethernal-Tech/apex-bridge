@@ -86,11 +86,20 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 
 		if txProcessorType == common.BridgingTxTypeBridgingRequest ||
 			txProcessorType == common.TxTypeRefundRequest {
+			isRefund := txProcessorType == common.TxTypeRefundRequest
+
+			dstChainID, details := "", (*common.BridgingRequestStateDetails)(nil)
+			if !isRefund {
+				dstChainID, details = r.getBridgingRequestStateDetails(originChainID, tx.Metadata)
+			}
+
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: tx.Hash[:],
-					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
+					SourceTxHash:       tx.Hash[:],
+					IsRefund:           isRefund,
+					DestinationChainID: dstChainID,
+					Details:            details,
 				},
 			)
 		}
@@ -120,6 +129,48 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 	}
 
 	return nil
+}
+
+// getBridgingRequestStateDetails reads what was requested to be bridged out of the tx metadata.
+// It is reporting data only, so any failure yields empty details instead of an error.
+func (r *EthTxsReceiverImpl) getBridgingRequestStateDetails(
+	originChainID string, txMetadata []byte,
+) (string, *common.BridgingRequestStateDetails) {
+	chainConfig := r.appConfig.EthChains[originChainID]
+	if chainConfig == nil {
+		r.logger.Warn("no chain config for bridging request state details", "chainID", originChainID)
+
+		return "", nil
+	}
+
+	metadata, err := core.UnmarshalEthMetadata[core.BridgingRequestEthMetadata](txMetadata)
+	if err != nil {
+		r.logger.Warn("failed to unmarshal metadata for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return "", nil
+	}
+
+	currencyID, err := chainConfig.GetCurrencyID()
+	if err != nil {
+		r.logger.Warn("failed to get currency id for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return metadata.DestinationChainID, nil
+	}
+
+	receivers := make([]common.BridgingRequestStateReceiver, len(metadata.Transactions))
+	for i, receiver := range metadata.Transactions {
+		receivers[i] = common.BridgingRequestStateReceiver{
+			Address: receiver.Address,
+			Amount:  receiver.Amount,
+			TokenID: receiver.TokenID,
+		}
+	}
+
+	return metadata.DestinationChainID, common.NewBridgingRequestStateDetails(
+		metadata.SenderAddr, receivers, metadata.BridgingFee, metadata.OperationFee,
+		currencyID)
 }
 
 func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*core.EthTx, error) {

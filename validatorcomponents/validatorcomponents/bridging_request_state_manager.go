@@ -31,6 +31,8 @@ func NewBridgingRequestStateManager(
 // New implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *common.NewBridgingRequestStateModel) error {
 	state := common.NewBridgingRequestState(sourceChainID, model.SourceTxHash, model.IsRefund)
+	state.DestinationChainID = model.DestinationChainID
+	state.Details = model.Details
 
 	err := m.db.AddBridgingRequestState(state)
 	if err != nil {
@@ -213,6 +215,26 @@ func (m *BridgingRequestStateManagerImpl) GetMultiple(
 	}
 
 	return result, nil
+}
+
+// GetPage implements core.BridgingRequestStateManager.
+func (m *BridgingRequestStateManagerImpl) GetPage(
+	fromSyncIndex uint64, limit int,
+) (
+	[]*common.BridgingRequestState, uint64, string, error,
+) {
+	instanceID, err := m.db.GetSyncInstanceID()
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("failed to get sync instance id, err: %w", err)
+	}
+
+	states, nextSyncIndex, err := m.db.GetBridgingRequestStatesPage(fromSyncIndex, limit)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("failed to get BridgingRequestStates page (%d, %d), err: %w",
+			fromSyncIndex, limit, err)
+	}
+
+	return states, nextSyncIndex, instanceID, nil
 }
 
 func (m *BridgingRequestStateManagerImpl) updateStates(
