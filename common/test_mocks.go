@@ -3,12 +3,12 @@ package common
 import (
 	"fmt"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/stretchr/testify/mock"
 )
 
-func SimulateRealMetadata[
-	T BaseMetadata | BridgingRequestMetadata | RefundBridgingRequestMetadata | BatchExecutedMetadata,
-](
+func SimulateRealMetadata[T metadataTypes](
 	encodingType MetadataEncodingType, metadata T,
 ) (
 	[]byte, error,
@@ -18,7 +18,16 @@ func SimulateRealMetadata[
 		return nil, err
 	}
 
-	result, err := marshalFunc(map[int]map[int]T{1: {MetadataMapKey: metadata}})
+	payload := any(map[int]map[int]T{1: {MetadataMapKey: metadata}})
+	if encodingType == MetadataEncodingTypeCbor {
+		// real cardano auxiliary_data, as cardano-cli emits it
+		payload = cbor.Tag{
+			Number:  alonzoAuxiliaryDataTag,
+			Content: map[int]map[int]T{0: {MetadataMapKey: metadata}},
+		}
+	}
+
+	result, err := marshalFunc(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %w", metadata, err)
 	}
