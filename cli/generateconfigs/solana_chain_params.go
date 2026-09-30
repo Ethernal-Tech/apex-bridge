@@ -49,8 +49,8 @@ const (
 
 	defaultSolanaRetryIntervalMiliseconds   = 400 * time.Millisecond
 	defaultSolanaBlockFetchDelay            = uint64(250)
-	defaultSolanaMinFeeForBridging          = uint64(6000000)
-	defaultSolanaFeeAddressBridgingAmount   = uint64(3000000)
+	defaultSolanaMinFeeForBridging          = uint64(7000000)
+	defaultSolanaFeeAddressBridgingAmount   = uint64(3500000)
 	defaultSolanaMinOperationFee            = uint64(0)
 	defaultSolanaMinColCoinsAllowedToBridge = uint64(1)
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
