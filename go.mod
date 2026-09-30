@@ -2,9 +2,15 @@ module github.com/Ethernal-Tech/apex-bridge
 
 go 1.23.1
 
+// Points to a forked version of the gouroboros library, which raises the CBOR
+// nesting limit that otherwise halts block-fetch on some blocks. The same
+// directive exists in cardano-infrastructure, but replace directives are only
+// honored in the main module, so it has to be repeated here.
+replace github.com/blinklabs-io/gouroboros => github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f
+
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260313094358-2826265244a1
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20260930094234-45418ccb64f8
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
