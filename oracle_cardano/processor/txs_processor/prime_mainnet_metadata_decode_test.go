@@ -119,7 +119,6 @@ func auxDataEnvelope(t *testing.T, auxData []byte) string {
 }
 
 func TestPrimeMainnetTxMetadataDecode(t *testing.T) {
-	//nolint:dupl
 	t.Run("shelley envelope", func(t *testing.T) {
 		tx := txFromAuxData(t, shelleyEnvelopeAuxDataHex)
 
@@ -140,7 +139,6 @@ func TestPrimeMainnetTxMetadataDecode(t *testing.T) {
 		require.EqualValues(t, 312974944, metadata.Transactions[0].Amount)
 	})
 
-	//nolint:dupl
 	t.Run("alonzo envelope", func(t *testing.T) {
 		tx := txFromAuxData(t, alonzoEnvelopeAuxDataHex)
 
