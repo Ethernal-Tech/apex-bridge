@@ -88,6 +88,55 @@ func UpdateTxReceivedTelemetry[T core.IIsInvalid](originChainID string, processe
 	}
 }
 
+func UpdateClaimsSubmitTelemetry(startChainID string, bridgeClaims *core.BridgeClaims, submitFailed bool) {
+	if submitFailed {
+		telemetry.UpdateOracleClaimsSubmitFailedCounter(startChainID, bridgeClaims.Count())
+
+		return
+	}
+
+	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count())
+	updateRefundTelemetry(bridgeClaims)
+}
+
+func updateRefundTelemetry(bridgeClaims *core.BridgeClaims) {
+	if bridgeClaims == nil || len(bridgeClaims.RefundRequestClaims) == 0 {
+		return
+	}
+
+	type counts struct {
+		requests int
+		retries  int
+	}
+
+	byChain := make(map[string]counts)
+
+	for _, claim := range bridgeClaims.RefundRequestClaims {
+		chainID := ""
+		if bridgeClaims.ChainIDConverter != nil {
+			chainID = bridgeClaims.ChainIDConverter.ToChainIDStr(claim.OriginChainId)
+		}
+
+		if chainID == "" {
+			continue
+		}
+
+		c := byChain[chainID]
+		c.requests++
+
+		if claim.RetryCounter > 0 {
+			c.retries++
+		}
+
+		byChain[chainID] = c
+	}
+
+	for chainID, c := range byChain {
+		telemetry.UpdateOracleRefundRequestCounter(chainID, c.requests)
+		telemetry.UpdateOracleRefundRetryCounter(chainID, c.retries)
+	}
+}
+
 func GetTokenPair(
 	destinationChains map[string]common.TokenPairs,
 	srcChainID, destChainID string,

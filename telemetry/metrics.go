@@ -22,8 +22,28 @@ func UpdateOracleClaimsSubmitCounter(cnt int) {
 	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_submit_counter"}, float32(cnt))
 }
 
+func UpdateOracleClaimsSubmitFailedCounter(chain string, cnt int) {
+	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_submit_failed_counter", chain}, float32(cnt))
+}
+
 func UpdateOracleClaimsInvalidCounter(chain string, cnt int) {
 	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_invalid_counter", chain}, float32(cnt))
+}
+
+func UpdateOracleRefundRequestCounter(chain string, cnt int) {
+	if cnt <= 0 {
+		return
+	}
+
+	metrics.IncrCounter([]string{oracleMetricsPrefix, "refund_request_counter", chain}, float32(cnt))
+}
+
+func UpdateOracleRefundRetryCounter(chain string, cnt int) {
+	if cnt <= 0 {
+		return
+	}
+
+	metrics.IncrCounter([]string{oracleMetricsPrefix, "refund_retry_counter", chain}, float32(cnt))
 }
 
 func UpdateOracleClaimsInvalidMetaDataCounter(chain string, cnt int) {
@@ -57,4 +77,8 @@ func UpdateHotWalletState(chain string, typeWallet string, val uint64) {
 func UpdateRelayerBalance(chain string, val uint64) {
 	metrics.SetGauge([]string{relayerMetricsPrefix, "balance_high", chain}, float32(val>>32))
 	metrics.SetGauge([]string{relayerMetricsPrefix, "balance_low", chain}, float32(uint32(val))) //nolint:gosec
+}
+
+func UpdateRelayerSendTxFailed(chain string) {
+	metrics.IncrCounter([]string{relayerMetricsPrefix, "send_tx_failed_counter", chain}, 1)
 }

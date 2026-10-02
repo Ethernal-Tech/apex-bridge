@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -59,9 +60,20 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 		r.config.Chain.ChainID,
 		r.bridgeSmartContract,
 		r.db,
-		r.operations.SendTx,
+		r.sendTx,
 		r.logger,
 	)
+}
+
+func (r *RelayerImpl) sendTx(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch,
+) error {
+	err := r.operations.SendTx(ctx, bridgeSmartContract, confirmedBatch)
+	if err != nil {
+		telemetry.UpdateRelayerSendTxFailed(r.config.Chain.ChainID)
+	}
+
+	return err
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
