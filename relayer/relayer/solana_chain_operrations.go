@@ -24,7 +24,7 @@ type SolanaChainOperations struct {
 	config     *solanatx.SolanaChainConfig
 	privateKey *solana.PrivateKey
 	txSender   *sendtx.TxSender
-	txProvider wallet.ITxSubmiter
+	txProvider wallet.ITxProvider
 	logger     hclog.Logger
 }
 
@@ -112,38 +112,18 @@ func (sco *SolanaChainOperations) SendTx(
 
 	blockhash := solana.HashFromBytes(payload.Blockhash[:])
 
-	var options []sendtx.CreateTxOption
-
-	if sco.config.ALTPublicKey != "" {
-		altPublicKey, err := solana.PublicKeyFromBase58(sco.config.ALTPublicKey)
-		if err != nil {
-			return fmt.Errorf("failed to convert alt public key to solana.PublicKey: %w", err)
-		}
-
-		provider, ok := sco.txProvider.(*wallet.Provider)
-		if !ok {
-			return fmt.Errorf("address lookup tables require a concrete wallet provider")
-		}
-
-		altResolver := wallet.NewAddressLookupTableResolver(provider)
-
-		lookupTables, err := altResolver.Resolve(ctx, altPublicKey)
-		if err != nil {
-			return fmt.Errorf("failed to resolve alt lookup table: %w", err)
-		}
-
-		options = append(options, sendtx.WithAddressLookupTables(lookupTables))
-	}
-
 	tx, err := sco.txSender.CreateTx(
 		ctx, sco.privateKey.PublicKey(),
 		sendtx.InstructionTypeBridgeTransaction,
 		blockhash,
 		bridgingTxDto,
-		options...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create tx: %w", err)
+	}
+
+	if version := tx.Message.GetVersion(); version != solana.MessageVersionV1 {
+		return fmt.Errorf("expected a v1 batch transaction, got message version %s", messageVersionLabel(version))
 	}
 
 	binaryTx, err := wallet.MarshalTransaction(tx)
@@ -159,6 +139,19 @@ func (sco *SolanaChainOperations) SendTx(
 	if err != nil {
 		return fmt.Errorf("failed to sign tx: %w", err)
 	}
+
+	// Size is logged after signing: the marshal above carries no signature
+	// bytes yet, so it is not the size the node sees.
+	signedBinaryTx, err := wallet.MarshalTransaction(tx)
+	if err != nil {
+		return fmt.Errorf("failed to marshal signed tx: %w", err)
+	}
+
+	sco.logger.Info("Signed transaction",
+		"size", len(signedBinaryTx),
+		"maxSize", solana.MaxTransactionSizeV1,
+		"version", messageVersionLabel(tx.Message.GetVersion()),
+		"receivers", len(payload.Receivers))
 
 	txSignature, err := sco.txSender.SendTx(ctx, tx)
 	if err != nil {
@@ -232,6 +225,22 @@ func (sco *SolanaChainOperations) getSignaturePairs(
 	}
 
 	return signaturePairs, nil
+}
+
+// messageVersionLabel names a message version the way the wire format and the
+// docs do. solana-go's enum is offset by one - legacy is 0, v0 is 1, v1 is 2 -
+// so logging the raw value reads as the version below the one in hand.
+func messageVersionLabel(version solana.MessageVersion) string {
+	switch version {
+	case solana.MessageVersionLegacy:
+		return "legacy"
+	case solana.MessageVersionV0:
+		return "v0"
+	case solana.MessageVersionV1:
+		return "v1"
+	default:
+		return fmt.Sprintf("unknown(%d)", version)
+	}
 }
 
 func isExpiredBlockhashErr(err error) bool {
