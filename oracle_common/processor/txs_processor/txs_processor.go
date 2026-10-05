@@ -10,7 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/ethgo"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -226,6 +226,7 @@ func (p *TxsProcessorImpl) submitClaims(
 		p.logger.Error("Failed to submit claims", "err", err)
 
 		p.settings.OnSubmitClaimsFailed(startChainID, bridgeClaims.Count())
+		utils.UpdateClaimsSubmitTelemetry(startChainID, bridgeClaims, true)
 
 		p.logger.Warn("Adjusted submit claims settings",
 			"startChainID", startChainID,
@@ -238,7 +239,7 @@ func (p *TxsProcessorImpl) submitClaims(
 
 	p.settings.ResetSubmitClaimsSettings(startChainID)
 
-	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
+	utils.UpdateClaimsSubmitTelemetry(startChainID, bridgeClaims, false)
 
 	return receipt, true
 }
