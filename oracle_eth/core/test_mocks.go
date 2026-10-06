@@ -159,6 +159,20 @@ func (m *EthTxsProcessorDBMock) GetPendingTx(entityID oCore.DBTxID) (oCore.BaseT
 	return nil, args.Error(1)
 }
 
+// HasPendingTx implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) HasPendingTx(entityID oCore.DBTxID) (bool, error) {
+	args := m.Called(entityID)
+
+	return args.Bool(0), args.Error(1)
+}
+
+// HasUnprocessedTx implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) HasUnprocessedTx(chainID string, unprocessedDBKey []byte) (bool, error) {
+	args := m.Called(chainID, unprocessedDBKey)
+
+	return args.Bool(0), args.Error(1)
+}
+
 // GetGenericProcessedTx implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error) {
 	args := m.Called(entityID)
@@ -428,12 +442,6 @@ func (m *EventStoreMock) InsertLastProcessedBlock(blockNumber uint64) error {
 
 func (m *EventStoreMock) InsertLogs(logs []*ethgo.Log) error {
 	args := m.Called(logs)
-
-	return args.Error(0)
-}
-
-func (m *EventStoreMock) InsertLogsAndLastProcessedBlock(logs []*ethgo.Log, blockNumber uint64) error {
-	args := m.Called(logs, blockNumber)
 
 	return args.Error(0)
 }

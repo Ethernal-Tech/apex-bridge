@@ -217,6 +217,51 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, uint32(1), txs[0].SubmitTryCount)
 	})
 
+	t.Run("HasUnprocessedTx and HasPendingTx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db, err := createDB(filePath)
+		require.NoError(t, err)
+
+		tx := &core.EthTx{
+			Priority:      1,
+			OriginChainID: common.ChainIDStrNexus,
+			BlockNumber:   1,
+			Hash:          ethgo.Hash{1, 2},
+		}
+		entityID := cCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]}
+
+		_, err = db.HasUnprocessedTx("invalid", tx.UnprocessedDBKey())
+		require.ErrorContains(t, err, "unsupported chain")
+
+		_, err = db.HasPendingTx(cCore.DBTxID{ChainID: "invalid", DBKey: tx.Hash[:]})
+		require.ErrorContains(t, err, "unsupported chain")
+
+		exists, err := db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		require.NoError(t, err)
+		require.False(t, exists)
+
+		require.NoError(t, db.AddTxs(nil, []*core.EthTx{tx}))
+
+		exists, err = db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		exists, err = db.HasPendingTx(entityID)
+		require.NoError(t, err)
+		require.False(t, exists)
+
+		require.NoError(t, db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: []*core.EthTx{tx}}, chainIDConverter))
+
+		exists, err = db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		require.NoError(t, err)
+		require.False(t, exists)
+
+		exists, err = db.HasPendingTx(entityID)
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
+
 	t.Run("GetPendingTxs and UpdateTxs - MoveUnprocessedToPending", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
