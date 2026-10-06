@@ -209,9 +209,11 @@ func (c *OracleStateControllerImpl) hasTxFailed(
 		c.logger.Error("Failed to find tx with error", err)
 	}
 
-	passedTTL, err = passedTTLFunc(chainID, ttl)
-	if err != nil {
-		c.logger.Error("Failed to check TTL with error", err)
+	if !foundTx {
+		passedTTL, err = passedTTLFunc(chainID, ttl)
+		if err != nil {
+			c.logger.Error("Failed to check TTL with error", err)
+		}
 	}
 
 	return !foundTx && passedTTL, nil
