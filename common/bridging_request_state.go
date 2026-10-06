@@ -2,6 +2,8 @@ package common
 
 import (
 	"fmt"
+	"math/big"
+	"time"
 )
 
 type BridgingRequestStatus string // @name BridgingRequestStatus
@@ -21,6 +23,26 @@ const (
 	bridgingRequestStatusRefundExecuted                 = "RefundExecuted"
 )
 
+// BridgingRequestStateReceiver is a single output of a bridging request, as declared in tx metadata.
+type BridgingRequestStateReceiver struct {
+	Address string
+	Amount  *big.Int // wei
+	TokenID uint16
+}
+
+// BridgingRequestStateDetails holds what was requested to be bridged. It is filled on a best effort
+// basis when the request is first observed, so it is nil for refund requests and for every state
+// stored before this field existed.
+type BridgingRequestStateDetails struct {
+	SenderAddr   string
+	Receivers    []BridgingRequestStateReceiver
+	Amount       *big.Int // native currency sent to the receivers on source, wei
+	TokenAmount  *big.Int // token sent to the receivers on source, wei
+	TokenID      uint16   // token id, zero when nothing but currency is bridged
+	BridgingFee  *big.Int
+	OperationFee *big.Int
+}
+
 type BridgingRequestState struct {
 	SourceChainID      string
 	SourceTxHash       []byte
@@ -28,6 +50,39 @@ type BridgingRequestState struct {
 	Status             BridgingRequestStatus
 	DestinationTxHash  []byte
 	IsRefund           bool
+	// CreatedAt is assigned by the database when the state is first stored.
+	// It is zero for states stored before this field existed.
+	CreatedAt time.Time
+	Details   *BridgingRequestStateDetails
+}
+
+func NewBridgingRequestStateDetails(
+	senderAddr string, receivers []BridgingRequestStateReceiver,
+	bridgingFee, operationFee *big.Int, currencyID uint16,
+) *BridgingRequestStateDetails {
+	details := &BridgingRequestStateDetails{
+		SenderAddr:   senderAddr,
+		Receivers:    receivers,
+		Amount:       big.NewInt(0),
+		TokenAmount:  big.NewInt(0),
+		BridgingFee:  bridgingFee,
+		OperationFee: operationFee,
+	}
+
+	for _, receiver := range receivers {
+		if receiver.Amount == nil {
+			continue
+		}
+
+		if receiver.TokenID == currencyID {
+			details.Amount.Add(details.Amount, receiver.Amount)
+		} else {
+			details.TokenAmount.Add(details.TokenAmount, receiver.Amount)
+			details.TokenID = receiver.TokenID
+		}
+	}
+
+	return details
 }
 
 func (s *BridgingRequestState) ToDBKey() []byte {

@@ -82,11 +82,20 @@ func (r *SolEventReceiverImpl) NewUnprocessedEvent(originChainID string, event t
 
 		if txProcessorType == common.BridgingTxTypeBridgingRequest ||
 			txProcessorType == common.TxTypeRefundRequest {
+			isRefund := txProcessorType == common.TxTypeRefundRequest
+
+			dstChainID, details := "", (*common.BridgingRequestStateDetails)(nil)
+			if !isRefund {
+				dstChainID, details = r.getBridgingRequestStateDetails(originChainID, tx.Metadata)
+			}
+
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
-					SourceTxHash: tx.TxSignature[:],
-					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
+					SourceTxHash:       tx.TxSignature[:],
+					IsRefund:           isRefund,
+					DestinationChainID: dstChainID,
+					Details:            details,
 				},
 			)
 		}
@@ -115,6 +124,48 @@ func (r *SolEventReceiverImpl) NewUnprocessedEvent(originChainID string, event t
 	}
 
 	return nil
+}
+
+// getBridgingRequestStateDetails reads what was requested to be bridged out of the tx metadata.
+// It is reporting data only, so any failure yields empty details instead of an error.
+func (r *SolEventReceiverImpl) getBridgingRequestStateDetails(
+	originChainID string, txMetadata []byte,
+) (string, *common.BridgingRequestStateDetails) {
+	chainConfig := r.appConfig.SolanaChains[originChainID]
+	if chainConfig == nil {
+		r.logger.Warn("no chain config for bridging request state details", "chainID", originChainID)
+
+		return "", nil
+	}
+
+	metadata, err := core.UnmarshalSolMetadata[core.BridgingRequestSolMetadata](txMetadata)
+	if err != nil {
+		r.logger.Warn("failed to unmarshal metadata for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return "", nil
+	}
+
+	currencyID, err := chainConfig.GetCurrencyID()
+	if err != nil {
+		r.logger.Warn("failed to get currency id for bridging request state details",
+			"chainID", originChainID, "err", err)
+
+		return metadata.DestinationChainID, nil
+	}
+
+	receivers := make([]common.BridgingRequestStateReceiver, len(metadata.Transactions))
+	for i, receiver := range metadata.Transactions {
+		receivers[i] = common.BridgingRequestStateReceiver{
+			Address: receiver.Address,
+			Amount:  receiver.Amount,
+			TokenID: receiver.TokenID,
+		}
+	}
+
+	return metadata.DestinationChainID, common.NewBridgingRequestStateDetails(
+		metadata.SenderAddr, receivers, metadata.BridgingFee, metadata.OperationFee,
+		currencyID)
 }
 
 func (r *SolEventReceiverImpl) parseEvent(

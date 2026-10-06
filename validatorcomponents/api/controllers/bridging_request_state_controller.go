@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
@@ -12,6 +13,11 @@ import (
 	utils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
+)
+
+const (
+	defaultGetPageLimit = 100
+	maxGetPageLimit     = 1000
 )
 
 type BridgingRequestStateControllerImpl struct {
@@ -38,6 +44,7 @@ func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoi
 	return []*apiCore.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.get, APIKeyAuth: true},
 		{Path: "GetMultiple", Method: http.MethodGet, Handler: c.getMultiple, APIKeyAuth: true},
+		{Path: "GetPage", Method: http.MethodGet, Handler: c.getPage, APIKeyAuth: true},
 	}
 }
 
@@ -164,4 +171,62 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 	}
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)
+}
+
+// @Summary Get a page of bridging request states
+// @Description Returns bridging request states in the order the oracle observed them, starting at the given sync index. Pass the returned nextFrom as "from" to get the following page. A change in the returned instanceId means the oracle database was recreated and any stored sync index should be discarded.
+// @Tags BridgingRequestState
+// @Produce json
+// @Param from query integer false "Sync index to start from" default(0)
+// @Param limit query integer false "Maximum number of states to return" default(100) maximum(1000)
+// @Success 200 {object} response.BridgingRequestStatePageResponse "OK - Returns a page of bridging request states."
+// @Failure 400 {object} response.ErrorResponse "Bad Request – from or limit is not a valid number, or the bridging request states could not be retrieved."
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Security ApiKeyAuth
+// @Router /BridgingRequestState/GetPage [get]
+func (c *BridgingRequestStateControllerImpl) getPage(w http.ResponseWriter, r *http.Request) {
+	queryValues := r.URL.Query()
+	c.logger.Debug("getPage request", "query values", queryValues, "url", r.URL)
+
+	from := uint64(0)
+
+	if fromArr, exists := queryValues["from"]; exists && len(fromArr) > 0 {
+		parsed, err := strconv.ParseUint(fromArr[0], 10, 64)
+		if err != nil {
+			apiUtils.WriteErrorResponse(
+				w, r, http.StatusBadRequest,
+				fmt.Errorf("invalid from: %w", err), c.logger)
+
+			return
+		}
+
+		from = parsed
+	}
+
+	limit := defaultGetPageLimit
+
+	if limitArr, exists := queryValues["limit"]; exists && len(limitArr) > 0 {
+		parsed, err := strconv.Atoi(limitArr[0])
+		if err != nil || parsed <= 0 || parsed > maxGetPageLimit {
+			apiUtils.WriteErrorResponse(
+				w, r, http.StatusBadRequest,
+				fmt.Errorf("limit must be a number between 1 and %d", maxGetPageLimit), c.logger)
+
+			return
+		}
+
+		limit = parsed
+	}
+
+	states, nextFrom, instanceID, err := c.bridgingRequestStateManager.GetPage(from, limit)
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("failed to get bridging request states: %w", err), c.logger)
+
+		return
+	}
+
+	apiUtils.WriteResponse(w, r, http.StatusOK,
+		response.NewBridgingRequestStatePageResponse(states, nextFrom, instanceID, limit), c.logger)
 }
