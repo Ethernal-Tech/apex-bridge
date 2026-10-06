@@ -230,7 +230,7 @@ func (c *OracleStateControllerImpl) hasTxFailed(
 ) (bool, error) {
 	cardanoConfig, ethConfig, solanaConfig := vcUtils.GetChainConfig(c.appConfig, chainID)
 	if cardanoConfig == nil && ethConfig == nil && solanaConfig == nil {
-		return false, fmt.Errorf("invalid chainID: %s", chainID)
+		return true, fmt.Errorf("invalid chainID: %s", chainID)
 	}
 
 	findTxFunc := c.findCardanoTx
@@ -253,14 +253,12 @@ func (c *OracleStateControllerImpl) hasTxFailed(
 
 	foundTx, err = findTxFunc(chainID, txHash)
 	if err != nil {
-		return false, err
+		c.logger.Error("Failed to find tx with error", err)
 	}
 
-	if !foundTx {
-		passedTTL, err = passedTTLFunc(chainID, ttl)
-		if err != nil {
-			return false, err
-		}
+	passedTTL, err = passedTTLFunc(chainID, ttl)
+	if err != nil {
+		c.logger.Warn("Failed to check TTL with error", err)
 	}
 
 	return !foundTx && passedTTL, nil
