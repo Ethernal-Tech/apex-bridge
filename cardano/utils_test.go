@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/blinklabs-io/gouroboros/base58"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -117,7 +118,7 @@ func Test_IsValidReceiverAddress(t *testing.T) {
 }
 
 // newByronAddress builds a Byron address around a zeroed address root of rootLen bytes.
-// Real Byron roots are 28 bytes, but cardano-infrastructure parses any length with a valid checksum.
+// Encode directly so malformed roots reach the validator under test.
 func newByronAddress(t *testing.T, rootLen int) string {
 	t.Helper()
 
@@ -127,10 +128,7 @@ func newByronAddress(t *testing.T, rootLen int) string {
 	raw, err := cbor.Marshal([]any{cbor.Tag{Number: 24, Content: payload}, crc32.ChecksumIEEE(payload)})
 	require.NoError(t, err)
 
-	addr, err := wallet.NewCardanoAddress(raw)
-	require.NoError(t, err)
-
-	return addr.String()
+	return base58.Encode(raw)
 }
 
 func Test_GetKnownTokens(t *testing.T) {

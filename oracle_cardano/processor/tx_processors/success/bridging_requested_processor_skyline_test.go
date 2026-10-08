@@ -20,6 +20,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -1560,6 +1561,197 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 			require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 		}
+	})
+
+	t.Run("ValidateAndAddClaim NUL in metadata strings", func(t *testing.T) {
+		// Go strings do not end at NUL the way C strings do, so the oracle reads every
+		// variant byte for byte, as the ledger does. Each base request is bridged as is,
+		// so whatever stops a variant is the NUL alone.
+		type baseRequest struct {
+			name         string
+			srcChain     string
+			destChain    string
+			bridgingAddr string
+			currencyID   uint16
+			senderAddr   string
+			receiverAddr string
+			feeAddr      string
+			feeAddrMeta  []string
+		}
+
+		bases := []baseRequest{
+			{
+				name:         "cardano destination",
+				srcChain:     common.ChainIDStrPrime,
+				destChain:    common.ChainIDStrCardano,
+				bridgingAddr: primeBridgingAddr,
+				currencyID:   primeCurrencyID,
+				senderAddr:   validPrimeTestAddress,
+				receiverAddr: validTestAddress,
+				feeAddr:      cardanoBridgingFeeAddr,
+				feeAddrMeta:  sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+			},
+			{
+				name:         "eth destination",
+				srcChain:     common.ChainIDStrCardano,
+				destChain:    common.ChainIDStrNexus,
+				bridgingAddr: cardanoBridgingAddr,
+				currencyID:   cardanoCurrencyID,
+				senderAddr:   validTestAddress,
+				receiverAddr: validNexusAddr,
+				feeAddr:      nexusBridgingFeeAddr,
+				feeAddrMeta:  []string{nexusBridgingFeeAddr},
+			},
+		}
+
+		getMetadata := func(base baseRequest) common.BridgingRequestMetadata {
+			return common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: base.destChain,
+				SenderAddr:         sendtx.AddrToMetaDataAddr(base.senderAddr),
+				Transactions: []sendtx.BridgingRequestMetadataTransaction{
+					{Address: base.feeAddrMeta, Amount: minFeeForBridgingTokens, TokenID: base.currencyID},
+					{Address: sendtx.AddrToMetaDataAddr(base.receiverAddr), Amount: utxoMinValue, TokenID: base.currencyID},
+				},
+				OperationFee: minOperationFee,
+			}
+		}
+
+		validateAndAddClaim := func(
+			t *testing.T, base baseRequest, metadata common.BridgingRequestMetadata,
+		) (*cCore.BridgeClaims, *core.CardanoTxSuccessRefundProcessorMock) {
+			t.Helper()
+
+			rawMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, metadata)
+			require.NoError(t, err)
+
+			appConfig := getAppConfig(true)
+			claims := &cCore.BridgeClaims{}
+			cardanoTx := &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: rawMetadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: base.bridgingAddr, Amount: utxoMinValue + minFeeForBridgingTokens},
+						{Address: appConfig.CardanoChains[base.srcChain].TreasuryAddress, Amount: minOperationFee},
+					},
+				},
+				OriginChainID: base.srcChain,
+			}
+
+			refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+				SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+			}
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
+
+			proc := NewSkylineBridgingRequestedProcessor(
+				refundRequestProcessorMock,
+				hclog.NewNullLogger(),
+				chainInfos,
+			)
+
+			require.NoError(t, proc.ValidateAndAddClaim(claims, cardanoTx, appConfig))
+
+			for _, claim := range claims.BridgingRequestClaims {
+				for _, receiver := range claim.Receivers {
+					require.NotContains(t, receiver.DestinationAddress, "\x00")
+				}
+			}
+
+			return claims, refundRequestProcessorMock
+		}
+
+		for _, base := range bases {
+			t.Run(base.name, func(t *testing.T) {
+				claims, refundRequestProcessorMock := validateAndAddClaim(t, base, getMetadata(base))
+				require.Len(t, claims.BridgingRequestClaims, 1)
+				refundRequestProcessorMock.AssertNotCalled(t, "HandleBridgingProcessorError",
+					mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+				type mutation struct {
+					name   string
+					reason string
+					mutate func(*common.BridgingRequestMetadata)
+				}
+
+				var mutations []mutation
+
+				for variant, value := range withNUL(string(common.BridgingTxTypeBridgingRequest)) {
+					mutations = append(mutations, mutation{"tx type " + variant, "irrelevant tx",
+						func(m *common.BridgingRequestMetadata) {
+							m.BridgingTxType = sendtx.BridgingRequestType(value)
+						}})
+				}
+
+				for variant, value := range withNUL(base.destChain) {
+					mutations = append(mutations, mutation{"destination chain " + variant, "unsupported chain id",
+						func(m *common.BridgingRequestMetadata) {
+							m.DestinationChainID = value
+						}})
+				}
+
+				for variant, value := range metadataAddrWithNUL(base.receiverAddr) {
+					mutations = append(mutations, mutation{"receiver address " + variant, "receiver addr in metadata",
+						func(m *common.BridgingRequestMetadata) {
+							m.Transactions[1].Address = value
+						}})
+				}
+
+				// with a NUL the fee address is an ordinary receiver, and an invalid one. The fee
+				// falls under the minimum too, so the reason shows which check stopped it.
+				for variant, value := range metadataAddrWithNUL(base.feeAddr) {
+					mutations = append(mutations, mutation{"fee address " + variant, "receiver addr in metadata",
+						func(m *common.BridgingRequestMetadata) {
+							m.Transactions[0].Address = value
+						}})
+				}
+
+				for _, mut := range mutations {
+					t.Run(mut.name, func(t *testing.T) {
+						metadata := getMetadata(base)
+						mut.mutate(&metadata)
+
+						claims, refundRequestProcessorMock := validateAndAddClaim(t, base, metadata)
+						require.Empty(t, claims.BridgingRequestClaims)
+						refundRequestProcessorMock.AssertNumberOfCalls(t, "HandleBridgingProcessorError", 1)
+
+						args := refundRequestProcessorMock.Calls[len(refundRequestProcessorMock.Calls)-1].Arguments
+						reason := args.String(4)
+
+						if err := args.Error(3); err != nil {
+							reason += ": " + err.Error()
+						}
+
+						require.Contains(t, reason, mut.reason)
+					})
+				}
+
+				// the sender is only read to pay a refund, which rejects a NUL in it
+				for variant, value := range metadataAddrWithNUL(base.senderAddr) {
+					t.Run("sender address "+variant, func(t *testing.T) {
+						metadata := getMetadata(base)
+						metadata.SenderAddr = value
+
+						claims, _ := validateAndAddClaim(t, base, metadata)
+						require.Len(t, claims.BridgingRequestClaims, 1)
+					})
+				}
+			})
+		}
+
+		t.Run("solana receiver address", func(t *testing.T) {
+			// no token pair bridges to solana in this config, so check the validator
+			// validateReceiverSolana relies on directly
+			const solanaAddr = "So11111111111111111111111111111111111111112"
+
+			require.True(t, solanawallet.IsSolanaAddress(solanaAddr))
+
+			for variant, value := range metadataAddrWithNUL(solanaAddr) {
+				require.False(t, solanawallet.IsSolanaAddress(strings.Join(value, "")), variant)
+			}
+		})
 	})
 
 	//nolint:dupl
