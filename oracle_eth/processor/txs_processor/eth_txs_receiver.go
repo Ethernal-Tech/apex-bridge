@@ -73,14 +73,31 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 
 	r.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-	txProcessor, err := r.txProcessors.getSuccess(tx, r.appConfig)
+	txProcessor, procErr := r.txProcessors.getSuccess(tx, r.appConfig)
+	if procErr == nil {
+		// priority is part of the unprocessed db key, so it must be set before alreadyObserved
+		tx.Priority = utils.GetTxPriority(txProcessor.GetType())
+	}
+
+	// the tracker can deliver the same log again (e.g. after a restart), so skip txs
+	// the oracle already knows about. Re-adding them would resubmit claims or reset retry counters
+	alreadyObserved, err := r.alreadyObserved(tx)
 	if err != nil {
-		r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
+		return err
+	}
+
+	if alreadyObserved {
+		r.logger.Info("Skipping already observed tx", "chainID", originChainID, "txHash", tx.Hash)
+
+		return nil
+	}
+
+	if procErr != nil {
+		r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", procErr)
 
 		processedTxs = append(processedTxs, tx.ToProcessedEthTx(false))
 	} else {
 		txProcessorType := txProcessor.GetType()
-		tx.Priority = utils.GetTxPriority(txProcessorType)
 
 		relevantTxs = append(relevantTxs, tx)
 
@@ -275,4 +292,23 @@ func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, log
 	}
 
 	return metadata, innerActionTxHash, txValue, nil
+}
+
+func (r *EthTxsReceiverImpl) alreadyObserved(tx *core.EthTx) (bool, error) {
+	entityID := oCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]}
+
+	if exists, err := r.db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey()); err != nil || exists {
+		return exists, err
+	}
+
+	if exists, err := r.db.HasPendingTx(entityID); err != nil || exists {
+		return exists, err
+	}
+
+	processedTx, err := r.db.GetProcessedTx(entityID)
+	if err != nil {
+		return false, err
+	}
+
+	return processedTx != nil, nil
 }
