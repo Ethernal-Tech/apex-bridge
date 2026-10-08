@@ -757,4 +757,74 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			require.ErrorContains(t, err, "invalid sender addr")
 		}
 	})
+
+	t.Run("ValidateAndAddClaim NUL in metadata strings", func(t *testing.T) {
+		// the refund is paid to the sender read from metadata, so a NUL there has to stop
+		// it, while a NUL in a field the refund never reads must not
+		validateAndAddClaim := func(
+			t *testing.T, txType, destinationChainID string, senderAddr []string,
+		) (*cCore.BridgeClaims, error) {
+			t.Helper()
+
+			metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(txType),
+				DestinationChainID: destinationChainID,
+				SenderAddr:         senderAddr,
+				Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			})
+			require.NoError(t, err)
+
+			claims := &cCore.BridgeClaims{}
+
+			err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: metadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + 2_500_000},
+					},
+				},
+				OriginChainID: common.ChainIDStrPrime,
+			}, getAppConfig(true))
+
+			for _, claim := range claims.RefundRequestClaims {
+				require.NotContains(t, claim.OriginSenderAddress, "\x00")
+			}
+
+			return claims, err
+		}
+
+		bridge := string(common.BridgingTxTypeBridgingRequest)
+		senderAddr := sendtx.AddrToMetaDataAddr(validPrimeTestAddress)
+
+		claims, err := validateAndAddClaim(t, bridge, common.ChainIDStrCardano, senderAddr)
+		require.NoError(t, err)
+		require.Len(t, claims.RefundRequestClaims, 1)
+
+		for variant, value := range metadataAddrWithNUL(validPrimeTestAddress) {
+			t.Run("sender address "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, bridge, common.ChainIDStrCardano, value)
+				require.ErrorContains(t, err, "invalid sender addr")
+				require.Empty(t, claims.RefundRequestClaims)
+			})
+		}
+
+		// an unknown tx type is handed to the refund processor, so these are refunded
+		for variant, value := range withNUL(bridge) {
+			t.Run("tx type "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, value, common.ChainIDStrCardano, senderAddr)
+				require.NoError(t, err)
+				require.Len(t, claims.RefundRequestClaims, 1)
+				require.Equal(t, validPrimeTestAddress, claims.RefundRequestClaims[0].OriginSenderAddress)
+			})
+		}
+
+		for variant, value := range withNUL(common.ChainIDStrCardano) {
+			t.Run("destination chain "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, bridge, value, senderAddr)
+				require.NoError(t, err)
+				require.Len(t, claims.RefundRequestClaims, 1)
+				require.Equal(t, validPrimeTestAddress, claims.RefundRequestClaims[0].OriginSenderAddress)
+			})
+		}
+	})
 }

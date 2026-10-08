@@ -419,6 +419,53 @@ func TestUnmarshalMetadataAdversarialAuxiliaryData(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, metadata)
 	})
+
+	t.Run("NUL in a string is kept rather than ending it", func(t *testing.T) {
+		// NUL is valid UTF-8, so the ledger accepts it in metadata text. Ending a string
+		// at it would read "nexus\x00..." as the configured "nexus".
+		withNUL := BridgingRequestMetadata{
+			BridgingTxType:     "bridge\x00",
+			DestinationChainID: "nexus\x00cardano",
+			SenderAddr:         []string{"\x00", "sender\x00"},
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: []string{"\x00nexus_addr", "\x00"}, Amount: 1000, TokenID: 1},
+			},
+			BridgingFee: 4000000,
+		}
+
+		data := mustMarshal(t, cbor.Tag{Number: alonzoAuxiliaryDataTag,
+			Content: map[uint64]interface{}{
+				0: map[uint64]BridgingRequestMetadata{MetadataMapKey: withNUL},
+			}})
+
+		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, data)
+		require.NoError(t, err)
+		require.Equal(t, withNUL, *metadata)
+
+		base, err := UnmarshalMetadata[BaseMetadata](MetadataEncodingTypeCbor, data)
+		require.NoError(t, err)
+		require.Equal(t, withNUL.BridgingTxType, sendtx.BridgingRequestType(base.BridgingTxType))
+	})
+
+	t.Run("a key that differs only by NUL is another key", func(t *testing.T) {
+		// a reader that ends strings at NUL sees "d\x00" as a second "d"
+		data := mustMarshal(t, map[uint64]interface{}{
+			MetadataMapKey: map[string]interface{}{"t": "bridge", "d": "nexus", "d\x00": "cardano"},
+		})
+
+		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, data)
+		require.NoError(t, err)
+		require.Equal(t, "nexus", metadata.DestinationChainID)
+
+		data = mustMarshal(t, map[uint64]interface{}{
+			MetadataMapKey: map[string]interface{}{"t\x00": "bridge", "d\x00": "nexus"},
+		})
+
+		metadata, err = UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, data)
+		require.NoError(t, err)
+		require.Empty(t, metadata.BridgingTxType)
+		require.Empty(t, metadata.DestinationChainID)
+	})
 }
 
 func mustMarshal(t *testing.T, v interface{}) cbor.RawMessage {
