@@ -38,7 +38,7 @@ const (
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
 	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer, counted back from the latest block, or from the finalized block with the finalized strategy" //nolint:lll
-	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: numBlockConfirmations or finalized"                                                   //nolint:lll
+	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: finalized (default) or numBlockConfirmations"                                         //nolint:lll
 	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
 	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
 
@@ -216,7 +216,7 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&p.evmConfirmationStrategy,
 		evmConfirmationStrategyFlag,
-		string(eventTracker.ConfirmationStrategyNumBlockConfirmations),
+		string(eventTracker.ConfirmationStrategyFinalized),
 		evmConfirmationStrategyFlagDesc,
 	)
 
