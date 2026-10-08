@@ -343,7 +343,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 	receiver *core.BridgingRequestEthMetadataTransaction,
 	tokenPair *common.TokenPair,
 ) error {
-	if !cardanotx.IsValidOutputAddress(receiver.Address, ctx.CardanoDestConfig.NetworkID) {
+	if !cardanotx.IsValidReceiverAddress(receiver.Address, ctx.CardanoDestConfig.NetworkID) {
 		return fmt.Errorf(
 			"found an invalid receiver addr in metadata. metadata: %v, receiver: %v", ctx.metadata, receiver)
 	}

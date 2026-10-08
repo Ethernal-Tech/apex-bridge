@@ -442,6 +442,10 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 		}
 	}
 
+	if len(filteredUtxos) == 0 {
+		return nil, fmt.Errorf("no utxos found for relayer address %s", relayerAddr)
+	}
+
 	sort.SliceStable(filteredUtxos, func(i, j int) bool {
 		return relayerUtxos[i].Amount > relayerUtxos[j].Amount
 	})

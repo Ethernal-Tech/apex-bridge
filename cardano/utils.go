@@ -15,6 +15,19 @@ func IsValidOutputAddress(addr string, networkID wallet.CardanoNetworkType) bool
 		cardAddr.GetInfo().Network == networkID
 }
 
+// IsValidReceiverAddress validates a payout address taken from user supplied metadata.
+// Byron addresses are rejected by header before GetInfo is called: the cardano-infrastructure
+// Byron parser panics on a malformed address root, and the ledger refuses any tx running a
+// Plutus script that has a Byron output (ByronTxOutInContext), so such a receiver fails the whole batch.
+func IsValidReceiverAddress(addr string, networkID wallet.CardanoNetworkType) bool {
+	cardAddr, err := wallet.NewCardanoAddressFromString(addr)
+	if err != nil || wallet.GetAddressTypeFromHeader(cardAddr.GetBytes()[0]) == wallet.ByronAddress {
+		return false
+	}
+
+	return cardAddr.GetInfo().AddressType != wallet.RewardAddress && cardAddr.GetInfo().Network == networkID
+}
+
 func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Token) bool {
 	knownTokensMap := make(map[string]bool, len(knownTokens))
 

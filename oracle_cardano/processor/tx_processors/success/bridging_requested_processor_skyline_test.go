@@ -1505,6 +1505,63 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	t.Run("ValidateAndAddClaim byron receiver addr in metadata", func(t *testing.T) {
+		for _, byronAddr := range getByronAddresses(t) {
+			byronAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: common.ChainIDStrCardano,
+				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+				Transactions: []sendtx.BridgingRequestMetadataTransaction{
+					{
+						Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+						Amount:  utxoMinValue,
+						TokenID: primeCurrencyID,
+					},
+					{
+						Address: sendtx.AddrToMetaDataAddr(byronAddr),
+						Amount:  utxoMinValue,
+						TokenID: primeCurrencyID,
+					},
+				},
+				OperationFee: minOperationFee,
+			})
+			require.NoError(t, err)
+
+			appConfig := getAppConfig(false)
+
+			srcChain := common.ChainIDStrPrime
+
+			claims := &cCore.BridgeClaims{}
+			cardanoTx := &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: byronAddrInReceiversMetadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: utxoMinValue},
+						{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
+					},
+				},
+				OriginChainID: srcChain,
+			}
+
+			refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+				SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+			}
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+			proc := NewSkylineBridgingRequestedProcessor(
+				refundRequestProcessorMock,
+				hclog.NewNullLogger(),
+				chainInfos,
+			)
+
+			err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+			require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+		}
+	})
+
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
