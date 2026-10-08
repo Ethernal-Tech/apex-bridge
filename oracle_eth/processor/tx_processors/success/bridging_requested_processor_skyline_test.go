@@ -988,6 +988,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
@@ -1015,6 +1016,51 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		ethTx := &core.EthTx{
 			Metadata:      invalidAddrInReceiversMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessorSkyline(refundRequestProcessorMock, hclog.NewNullLogger(), getChainInfos())
+
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim byron receiver addr in metadata", func(t *testing.T) {
+		byronAddrInReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrPrime,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestEthMetadataTransaction{
+				{
+					Address: primeBridgingFeeAddr,
+					Amount:  common.DfmToWei(big.NewInt(utxoMinValue)),
+					TokenID: nexusCurrencyID,
+				},
+				{
+					Address: "37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na",
+					Amount:  common.DfmToWei(big.NewInt(utxoMinValue)),
+					TokenID: nexusCurrencyID,
+				},
+			},
+			BridgingFee:  common.DfmToWei(big.NewInt(100)),
+			OperationFee: common.DfmToWei(big.NewInt(minOperationFee)),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, byronAddrInReceiversMetadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		ethTx := &core.EthTx{
+			Metadata:      byronAddrInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}
 

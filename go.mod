@@ -12,7 +12,7 @@ replace github.com/blinklabs-io/gouroboros => github.com/Ethernal-Tech/gouroboro
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20260806125200-a31862150760
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261001101934-0a7cc764f670
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261008091314-256dee57bc43
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20260930111308-8285fb65f86f
 	github.com/ethereum/go-ethereum v1.13.14

@@ -264,7 +264,7 @@ func (p *RefundRequestProcessorImpl) getSenderAddr(
 ) (string, error) {
 	senderAddr := strings.Join(metadata.SenderAddr, "")
 
-	if valid := cardanotx.IsValidOutputAddress(senderAddr, config.NetworkID); !valid {
+	if valid := cardanotx.IsValidReceiverAddress(senderAddr, config.NetworkID); !valid {
 		return "", fmt.Errorf("invalid sender addr: %s", senderAddr)
 	}
 

@@ -214,7 +214,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 				break
 			}
 
-			if !cardanotx.IsValidOutputAddress(receiverAddr, cardanoDestConfig.NetworkID) {
+			if !cardanotx.IsValidReceiverAddress(receiverAddr, cardanoDestConfig.NetworkID) {
 				foundAnInvalidReceiverAddr = true
 
 				break
