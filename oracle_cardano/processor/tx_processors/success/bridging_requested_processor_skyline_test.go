@@ -1331,6 +1331,81 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("ValidateAndAddClaim fee address aliases", func(t *testing.T) {
+		destinations := []struct {
+			chainID    string
+			feeAddress string
+			feeAmount  *big.Int
+		}{
+			{common.ChainIDStrPrime, primeBridgingFeeAddr, common.DfmToWei(new(big.Int).SetUint64(feeAddrBridgingAmount))},
+			{common.ChainIDStrNexus, common.EthZeroAddr, feeAddrBridgingAmountEvm},
+			{common.ChainIDStrSolana, common.EthZeroAddr, common.LamportToWei(big.NewInt(9))},
+		}
+
+		for _, destination := range destinations {
+			t.Run(destination.chainID, func(t *testing.T) {
+				aliases := map[string][]string{
+					"canonical":    common.SplitString(destination.feeAddress, 20),
+					"uppercase":    common.SplitString(strings.ToUpper(destination.feeAddress), 20),
+					"split prefix": {"0", "X", strings.TrimPrefix(destination.feeAddress, "0x")},
+				}
+				if destination.feeAddress == common.EthZeroAddr {
+					aliases["without prefix"] = []string{strings.TrimPrefix(destination.feeAddress, "0x")}
+				}
+
+				for name, address := range aliases {
+					t.Run(name, func(t *testing.T) {
+						appConfig := getAppConfig(false)
+						appConfig.CardanoChains[common.ChainIDStrCardano].DestinationChains[common.ChainIDStrSolana] = common.TokenPairs{
+							{SourceTokenID: cardanoCurrencyID, DestinationTokenID: cardanoCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+						}
+						appConfig.SolanaChains[common.ChainIDStrSolana].FeeAddrBridgingAmount = 9
+
+						const deposit = utxoMinValue + defaultMinFeeForBridging
+
+						metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+							BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+							DestinationChainID: destination.chainID,
+							Transactions: []sendtx.BridgingRequestMetadataTransaction{
+								{Address: address, Amount: deposit, TokenID: cardanoCurrencyID},
+							},
+							OperationFee: minOperationFee,
+						})
+						require.NoError(t, err)
+
+						tx := &core.CardanoTx{
+							OriginChainID: common.ChainIDStrCardano,
+							Tx: indexer.Tx{
+								Metadata: metadata,
+								Outputs: []*indexer.TxOutput{
+									{Address: cardanoBridgingAddr, Amount: deposit},
+									{Address: cardanoTreasuryAddress, Amount: minOperationFee},
+								},
+							},
+						}
+						claims := &cCore.BridgeClaims{}
+						proc := NewSkylineBridgingRequestedProcessor(NewRefundDisabledProcessor(), hclog.NewNullLogger(), chainInfos)
+
+						require.NoError(t, proc.ValidateAndAddClaim(claims, tx, appConfig))
+						require.Len(t, claims.BridgingRequestClaims, 1)
+
+						claim := claims.BridgingRequestClaims[0]
+						require.Equal(t, []cCore.BridgingRequestReceiver{{
+							DestinationAddress: destination.feeAddress,
+							Amount:             destination.feeAmount,
+							AmountWrapped:      big.NewInt(0),
+							TokenId:            0,
+						}}, claim.Receivers)
+						require.Equal(t, common.DfmToWei(big.NewInt(deposit)), claim.NativeCurrencyAmountSource)
+						require.Equal(t, destination.feeAmount, claim.NativeCurrencyAmountDestination)
+						require.Zero(t, claim.WrappedTokenAmountSource.Sign())
+						require.Zero(t, claim.WrappedTokenAmountDestination.Sign())
+					})
+				}
+			})
+		}
+	})
+
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		tokensOnSrc := []uint16{primeCurrencyID, primeWrappedTokenID}

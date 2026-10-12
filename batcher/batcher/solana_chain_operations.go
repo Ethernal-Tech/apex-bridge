@@ -273,7 +273,10 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 			}
 
 			if amount.Cmp(big.NewInt(0)) == 1 {
-				addressBytes := solana.MustPublicKeyFromBase58(recv.DestinationAddress)
+				addressBytes, err := solana.PublicKeyFromBase58(recv.DestinationAddress)
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid solana receiver address %q: %w", recv.DestinationAddress, err)
+				}
 
 				if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
 					feeAmount.Add(feeAmount, minFeeForBridging)
@@ -304,9 +307,12 @@ func (sco *SolanaChainOperations) newSolanaReceivers(
 					realTokenID = wrappedTokenID
 				}
 
-				addressBytes := solana.MustPublicKeyFromBase58(recv.DestinationAddress)
+				addressBytes, err := solana.PublicKeyFromBase58(recv.DestinationAddress)
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid solana receiver address %q: %w", recv.DestinationAddress, err)
+				}
 
-				err := updateAmount(sourceAddrTxMap, addressBytes, realTokenID, tokenAmount)
+				err = updateAmount(sourceAddrTxMap, addressBytes, realTokenID, tokenAmount)
 				if err != nil {
 					return nil, nil, err
 				}

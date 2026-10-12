@@ -150,8 +150,9 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	}
 
 	for _, receiver := range metadata.Transactions {
-		if receiver.Address == destChainInfo.FeeAddress {
-			// fee address will be added at the end
+		if oUtils.NormalizeAddr(receiver.Address) == oUtils.NormalizeAddr(destChainInfo.FeeAddress) {
+			// Match validateReceiver: fee aliases must not become payout receivers.
+			// The canonical fee address will be added at the end.
 			continue
 		}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -719,6 +720,84 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.NoError(t, err)
+	})
+
+	t.Run("ValidateAndAddClaim fee address aliases", func(t *testing.T) {
+		destinations := []struct {
+			chainID    string
+			feeAddress string
+			feeAmount  *big.Int
+		}{
+			{common.ChainIDStrPrime, primeBridgingFeeAddr, common.DfmToWei(new(big.Int).SetUint64(feeAddrBridgingAmount))},
+			{common.ChainIDStrPolygon, evmZeroAddr, feeAddrBridgingAmountEvm},
+			{common.ChainIDStrSolana, evmZeroAddr, common.LamportToWei(big.NewInt(9))},
+		}
+
+		for _, destination := range destinations {
+			t.Run(destination.chainID, func(t *testing.T) {
+				aliases := map[string]string{
+					"canonical":        destination.feeAddress,
+					"uppercase":        strings.ToUpper(destination.feeAddress),
+					"uppercase prefix": "0X" + strings.TrimPrefix(destination.feeAddress, "0x"),
+				}
+				if destination.feeAddress == evmZeroAddr {
+					aliases["without prefix"] = strings.TrimPrefix(destination.feeAddress, "0x")
+				}
+
+				for name, address := range aliases {
+					t.Run(name, func(t *testing.T) {
+						appConfig := getAppConfig(false)
+						appConfig.EthChains[common.ChainIDStrNexus].DestinationChains[common.ChainIDStrSolana] = common.TokenPairs{
+							{SourceTokenID: nexusCurrencyID, DestinationTokenID: cardanoCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+						}
+						appConfig.SolanaChains[common.ChainIDStrSolana].FeeAddrBridgingAmount = 9
+
+						feeReceiverAmount := common.DfmToWei(big.NewInt(minFeeForBridging))
+						bridgingFee := common.DfmToWei(big.NewInt(100))
+
+						metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+							BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+							DestinationChainID: destination.chainID,
+							SenderAddr:         "addr1",
+							Transactions: []core.BridgingRequestEthMetadataTransaction{
+								{Address: address, Amount: feeReceiverAmount, TokenID: nexusCurrencyID},
+							},
+							BridgingFee:  bridgingFee,
+							OperationFee: common.DfmToWei(big.NewInt(minOperationFee)),
+						})
+						require.NoError(t, err)
+
+						ethTx := &core.EthTx{
+							Metadata:      metadata,
+							OriginChainID: common.ChainIDStrNexus,
+							Value:         new(big.Int).Add(feeReceiverAmount, bridgingFee),
+						}
+
+						refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+						refundRequestProcessorMock.On(
+							"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+						claims := &oCore.BridgeClaims{}
+						proc := NewEthBridgingRequestedProcessorSkyline(refundRequestProcessorMock, hclog.NewNullLogger(), getChainInfos())
+
+						require.NoError(t, proc.ValidateAndAddClaim(claims, ethTx, appConfig))
+						require.Len(t, claims.BridgingRequestClaims, 1)
+
+						claim := claims.BridgingRequestClaims[0]
+						require.Equal(t, []oCore.BridgingRequestReceiver{{
+							DestinationAddress: destination.feeAddress,
+							Amount:             destination.feeAmount,
+							AmountWrapped:      big.NewInt(0),
+							TokenId:            0,
+						}}, claim.Receivers)
+						require.Equal(t, ethTx.Value, claim.NativeCurrencyAmountSource)
+						require.Equal(t, destination.feeAmount, claim.NativeCurrencyAmountDestination)
+						require.Zero(t, claim.WrappedTokenAmountSource.Sign())
+						require.Zero(t, claim.WrappedTokenAmountDestination.Sign())
+					})
+				}
+			})
+		}
 	})
 
 	//nolint:dupl
