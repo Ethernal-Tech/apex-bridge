@@ -80,6 +80,7 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		processedTxs = append(processedTxs, tx.ToProcessedEthTx(false))
 	} else {
 		txProcessorType := txProcessor.GetType()
+		// priority is part of the unprocessed db key, so it must be set before the tx is added
 		tx.Priority = utils.GetTxPriority(txProcessorType)
 
 		relevantTxs = append(relevantTxs, tx)
@@ -96,7 +97,28 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		}
 	}
 
-	if len(bridgingRequests) > 0 {
+	// the tracker can deliver the same log again (e.g. after a restart), so AddNewTxs skips txs
+	// the oracle already knows about. Re-adding them would resubmit claims or reset retry counters
+	r.logger.Debug("Adding txs to db", "processed", processedTxs, "unprocessed", relevantTxs)
+
+	processedTxs, relevantTxs, err = r.db.AddNewTxs(processedTxs, relevantTxs)
+	if err != nil {
+		r.logger.Error("Failed to add processed and unprocessed txs", "err", err)
+
+		return err
+	}
+
+	if len(processedTxs)+len(relevantTxs) == 0 {
+		r.logger.Info("Skipping already observed tx", "chainID", originChainID, "txHash", tx.Hash)
+
+		return nil
+	}
+
+	utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
+
+	// a bridging request state is added only for a tx that was just added. If the processor already
+	// updated the state in the meantime, adding it fails without overwriting it
+	if len(relevantTxs) > 0 && len(bridgingRequests) > 0 {
 		r.logger.Debug("Adding multiple new bridging request states to db",
 			"chainID", originChainID, "states", bridgingRequests)
 
@@ -104,19 +126,6 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		if err != nil {
 			r.logger.Error("error while adding new bridging request states", "err", err)
 		}
-	}
-
-	// we should update db only if there are some changes needed
-	if len(processedTxs)+len(relevantTxs) > 0 {
-		r.logger.Debug("Adding txs to db", "processed", processedTxs, "unprocessed", relevantTxs)
-
-		if err := r.db.AddTxs(processedTxs, relevantTxs); err != nil {
-			r.logger.Error("Failed to add processed and unprocessed txs", "err", err)
-
-			return err
-		}
-
-		utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
 	}
 
 	return nil

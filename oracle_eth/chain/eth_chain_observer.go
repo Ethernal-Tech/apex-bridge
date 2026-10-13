@@ -141,11 +141,11 @@ func loadTrackerConfigs(
 	}
 
 	return &eventTracker.EventTrackerConfig{
-		RPCEndpoint:            config.NodeURL,
-		PollInterval:           time.Duration(config.PoolIntervalMiliseconds) * time.Millisecond, //nolint:gosec
-		SyncBatchSize:          config.SyncBatchSize,
-		NumBlockConfirmations:  config.NumBlockConfirmations,
-		NumOfBlocksToReconcile: uint64(0),
+		RPCEndpoint:           config.NodeURL,
+		PollInterval:          time.Duration(config.PoolIntervalMiliseconds) * time.Millisecond, //nolint:gosec
+		SyncBatchSize:         config.SyncBatchSize,
+		ConfirmationStrategy:  eventTracker.ConfirmationStrategy(config.ConfirmationStrategy),
+		NumBlockConfirmations: config.NumBlockConfirmations,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:     config.ChainID,
 			TxsReceiver: txsReceiver,
