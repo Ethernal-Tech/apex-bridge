@@ -217,49 +217,60 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, uint32(1), txs[0].SubmitTryCount)
 	})
 
-	t.Run("HasUnprocessedTx and HasPendingTx", func(t *testing.T) {
+	t.Run("AddNewTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db, err := createDB(filePath)
 		require.NoError(t, err)
 
-		tx := &core.EthTx{
-			Priority:      1,
-			OriginChainID: common.ChainIDStrNexus,
-			BlockNumber:   1,
-			Hash:          ethgo.Hash{1, 2},
+		newTx := func(hash byte) *core.EthTx {
+			return &core.EthTx{
+				Priority:      1,
+				OriginChainID: common.ChainIDStrNexus,
+				BlockNumber:   1,
+				Hash:          ethgo.Hash{hash},
+			}
 		}
-		entityID := cCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]}
 
-		_, err = db.HasUnprocessedTx("invalid", tx.UnprocessedDBKey())
+		_, _, err = db.AddNewTxs(nil, []*core.EthTx{{OriginChainID: "invalid"}})
 		require.ErrorContains(t, err, "unsupported chain")
 
-		_, err = db.HasPendingTx(cCore.DBTxID{ChainID: "invalid", DBKey: tx.Hash[:]})
-		require.ErrorContains(t, err, "unsupported chain")
+		unprocessedTx, pendingTx, processedTx, irrelevantTx := newTx(1), newTx(2), newTx(3), newTx(4)
 
-		exists, err := db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		require.NoError(t, db.AddTxs(nil, []*core.EthTx{unprocessedTx, pendingTx, processedTx}))
+		require.NoError(t, db.UpdateTxs(&core.EthUpdateTxsData{
+			MoveUnprocessedToPending:   []*core.EthTx{pendingTx},
+			MoveUnprocessedToProcessed: []*core.ProcessedEthTx{processedTx.ToProcessedEthTx(false)},
+		}, chainIDConverter))
+
+		// keep a retry counter on the unprocessed tx, so an overwrite would be visible
+		unprocessedTx.SubmitTryCount = 2
+		require.NoError(t, db.UpdateTxs(&core.EthUpdateTxsData{UpdateUnprocessed: []*core.EthTx{unprocessedTx}}, chainIDConverter))
+
+		freshTx := newTx(5)
+
+		addedProcessed, addedUnprocessed, err := db.AddNewTxs(
+			[]*core.ProcessedEthTx{irrelevantTx.ToProcessedEthTx(false), processedTx.ToProcessedEthTx(false)},
+			[]*core.EthTx{newTx(1), newTx(2), newTx(3), freshTx},
+		)
 		require.NoError(t, err)
-		require.False(t, exists)
+		require.Equal(t, []*core.ProcessedEthTx{irrelevantTx.ToProcessedEthTx(false)}, addedProcessed)
+		require.Equal(t, []*core.EthTx{freshTx}, addedUnprocessed)
 
-		require.NoError(t, db.AddTxs(nil, []*core.EthTx{tx}))
-
-		exists, err = db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
-		require.True(t, exists)
+		require.Len(t, txs, 2)
+		require.Equal(t, unprocessedTx.Hash, txs[0].Hash)
+		require.Equal(t, uint32(2), txs[0].SubmitTryCount)
+		require.Equal(t, freshTx.Hash, txs[1].Hash)
 
-		exists, err = db.HasPendingTx(entityID)
+		pending, err := db.GetPendingTx(cCore.DBTxID{ChainID: common.ChainIDStrNexus, DBKey: pendingTx.Hash[:]})
 		require.NoError(t, err)
-		require.False(t, exists)
+		require.NotNil(t, pending)
 
-		require.NoError(t, db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: []*core.EthTx{tx}}, chainIDConverter))
-
-		exists, err = db.HasUnprocessedTx(tx.OriginChainID, tx.UnprocessedDBKey())
+		processed, err := db.GetProcessedTx(cCore.DBTxID{ChainID: common.ChainIDStrNexus, DBKey: irrelevantTx.Hash[:]})
 		require.NoError(t, err)
-		require.False(t, exists)
-
-		exists, err = db.HasPendingTx(entityID)
-		require.NoError(t, err)
-		require.True(t, exists)
+		require.NotNil(t, processed)
 	})
 
 	t.Run("GetPendingTxs and UpdateTxs - MoveUnprocessedToPending", func(t *testing.T) {

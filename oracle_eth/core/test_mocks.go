@@ -100,6 +100,18 @@ func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocess
 	return args.Error(0)
 }
 
+// AddNewTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) AddNewTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) (
+	[]*ProcessedEthTx, []*EthTx, error,
+) {
+	args := m.Called(processedTxs, unprocessedTxs)
+
+	arg0, _ := args.Get(0).([]*ProcessedEthTx)
+	arg1, _ := args.Get(1).([]*EthTx)
+
+	return arg0, arg1, args.Error(2)
+}
+
 // ClearAllTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) ClearAllTxs(chainID string) error {
 	args := m.Called(chainID)
@@ -157,20 +169,6 @@ func (m *EthTxsProcessorDBMock) GetPendingTx(entityID oCore.DBTxID) (oCore.BaseT
 	}
 
 	return nil, args.Error(1)
-}
-
-// HasPendingTx implements EthTxsProcessorDB.
-func (m *EthTxsProcessorDBMock) HasPendingTx(entityID oCore.DBTxID) (bool, error) {
-	args := m.Called(entityID)
-
-	return args.Bool(0), args.Error(1)
-}
-
-// HasUnprocessedTx implements EthTxsProcessorDB.
-func (m *EthTxsProcessorDBMock) HasUnprocessedTx(chainID string, unprocessedDBKey []byte) (bool, error) {
-	args := m.Called(chainID, unprocessedDBKey)
-
-	return args.Bool(0), args.Error(1)
 }
 
 // GetGenericProcessedTx implements EthTxsProcessorDB.
