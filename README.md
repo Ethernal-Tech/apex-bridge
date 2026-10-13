@@ -669,6 +669,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 For redelegation of stake address to another stake pool use: 
 ```shell
 $ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -753,6 +754,7 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances skyline \
 
 ```shell
 $ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --chain-ids-config ./chainIDsConfig.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -765,16 +767,17 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 $ apex-bridge bridge-admin register-gateway-token \
         --node-url http://localhost:12001 \
         --chain-ids-config ./chainIDsConfig.json \
-        --gateway-address 0x020202 \
+        --chain nexus \
+        --gateway-addr 0xeefcd00000000000000000000000000000000013 \
         --gas-limit 10_000_000 \
-        --token-sc-address 0x03030300 \
+        --token-sc-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
         --token-id 2 \
         --token-name USDT \
         --token-symbol USDT \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
-- `--token-sc-address` is only passed if the token contract is not owned by the bridge
+- `--token-sc-addr` is the address of the token contract on the chain set by `--chain`
 
 ```shell
 $ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \

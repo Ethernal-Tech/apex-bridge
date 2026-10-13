@@ -64,7 +64,7 @@ func (g *defundParams) ValidateFlags() error {
 			nativeTokenAmountFlag, 0)
 	}
 
-	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 

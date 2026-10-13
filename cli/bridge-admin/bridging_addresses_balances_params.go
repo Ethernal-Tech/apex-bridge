@@ -47,11 +47,11 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 			primeWalletAddressFlag, vectorWalletAddressFlag, nexusWalletAddressFlag)
 	}
 
-	if err := validateConfigFilePath(b.config); err != nil {
+	if err := validateConfigFilePath(b.config, configFlag); err != nil {
 		return err
 	}
 
-	if err := validateConfigFilePath(b.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(b.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 
