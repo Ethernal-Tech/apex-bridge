@@ -17,8 +17,6 @@ type EthTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*EthTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error)
 	GetPendingTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
-	HasPendingTx(entityID oCore.DBTxID) (bool, error)
-	HasUnprocessedTx(chainID string, unprocessedDBKey []byte) (bool, error)
 	GetGenericProcessedTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
 	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedEthTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedEthTx, error)
@@ -26,6 +24,8 @@ type EthTxsDB interface {
 	MoveProcessedExpectedTxs(chainID string) error
 	GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
+	AddNewTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) (
+		addedProcessedTxs []*ProcessedEthTx, addedUnprocessedTxs []*EthTx, err error)
 	UpdateTxs(data *EthUpdateTxsData) error
 }
 
