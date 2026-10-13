@@ -112,6 +112,32 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetPendingTx(
 	return result, err
 }
 
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) HasPendingTx(entityID core.DBTxID) (bool, error) {
+	return bd.hasKey(PendingTxsBucket, entityID.ChainID, entityID.DBKey)
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) HasUnprocessedTx(
+	chainID string, unprocessedDBKey []byte,
+) (bool, error) {
+	return bd.hasKey(UnprocessedTxsBucket, chainID, unprocessedDBKey)
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) hasKey(
+	bucketName string, chainID string, key []byte,
+) (exists bool, err error) {
+	if supported := bd.SupportedChains[chainID]; !supported {
+		return false, fmt.Errorf("unsupported chain: %s", chainID)
+	}
+
+	err = bd.DB.View(func(tx *bbolt.Tx) error {
+		exists = len(tx.Bucket(ChainBucket(bucketName, chainID)).Get(key)) > 0
+
+		return nil
+	})
+
+	return exists, err
+}
+
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetGenericProcessedTx(
 	entityID core.DBTxID,
 ) (result core.BaseTx, err error) {
