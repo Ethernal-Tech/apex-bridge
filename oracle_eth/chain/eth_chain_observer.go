@@ -136,11 +136,11 @@ func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.
 	}
 
 	return &eventTracker.EventTrackerConfig{
-		RPCEndpoint:            config.NodeURL,
-		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
-		SyncBatchSize:          config.SyncBatchSize,
-		NumBlockConfirmations:  config.NumBlockConfirmations,
-		NumOfBlocksToReconcile: uint64(0),
+		RPCEndpoint:           config.NodeURL,
+		PollInterval:          config.PoolIntervalMiliseconds * time.Millisecond,
+		SyncBatchSize:         config.SyncBatchSize,
+		ConfirmationStrategy:  eventTracker.ConfirmationStrategy(config.ConfirmationStrategy),
+		NumBlockConfirmations: config.NumBlockConfirmations,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:     config.ChainID,
 			TxsReceiver: txsReceiver,

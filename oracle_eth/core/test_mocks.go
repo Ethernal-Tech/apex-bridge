@@ -6,6 +6,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
@@ -97,6 +98,18 @@ func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocess
 	args := m.Called(processedTxs, unprocessedTxs)
 
 	return args.Error(0)
+}
+
+// AddNewTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) AddNewTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) (
+	[]*ProcessedEthTx, []*EthTx, error,
+) {
+	args := m.Called(processedTxs, unprocessedTxs)
+
+	arg0, _ := args.Get(0).([]*ProcessedEthTx)
+	arg1, _ := args.Get(1).([]*EthTx)
+
+	return arg0, arg1, args.Error(2)
 }
 
 // ClearAllTxs implements EthTxsProcessorDB.
@@ -385,6 +398,8 @@ var _ oCore.BridgeBlocksSubmitter = (*BridgeSubmitterMock)(nil)
 type EventStoreMock struct {
 	mock.Mock
 }
+
+var _ eventTrackerStore.EventTrackerStore = (*EventStoreMock)(nil)
 
 func (m *EventStoreMock) GetLastProcessedBlock() (uint64, error) {
 	args := m.Called()
