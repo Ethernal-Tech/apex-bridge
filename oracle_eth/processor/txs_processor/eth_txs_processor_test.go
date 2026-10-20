@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -1243,10 +1244,10 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Equal(t, tx.Hash[:], pendingTx.GetTxHash())
 	})
 
-	// setupReplayTest delivers a withdraw log once and returns everything needed to replay it.
-	// NewMultiple is expected exactly once, so a replay that re-registers the bridging request fails the test
-	setupReplayTest := func(t *testing.T, txHash ethgo.Hash) (
-		*databaseaccess.BBoltDatabase, *EthTxsReceiverImpl, *common.BridgingRequestStateUpdaterMock, *ethgo.Log,
+	// newReplayReceiver returns a receiver whose bridging request state updater behaves like the real one:
+	// the first NewMultiple for a tx succeeds, and every later one fails because the state already exists
+	newReplayReceiver := func(t *testing.T) (
+		*databaseaccess.BBoltDatabase, *EthTxsReceiverImpl, *common.BridgingRequestStateUpdaterMock,
 	) {
 		t.Helper()
 
@@ -1255,6 +1256,8 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		stateUpdater := &common.BridgingRequestStateUpdaterMock{}
 		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Return(nil).Once()
+		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Return(
+			errors.New("trying to add a BridgingRequestState that already exists"))
 
 		_, rec := newValidProcessor(
 			context.Background(),
@@ -1266,6 +1269,12 @@ func TestEthTxsProcessor(t *testing.T) {
 			map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}},
 			stateUpdater,
 		)
+
+		return oracleDB, rec, stateUpdater
+	}
+
+	newWithdrawLog := func(t *testing.T, txHash ethgo.Hash) *ethgo.Log {
+		t.Helper()
 
 		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
@@ -1286,18 +1295,74 @@ func TestEthTxsProcessor(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		log := &ethgo.Log{
+		return &ethgo.Log{
 			BlockNumber:     101,
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
 			Data:            receiptData,
 			Topics:          []ethgo.Hash{withdrawEventSig},
 		}
+	}
+
+	// setupReplayTest delivers a withdraw log once and returns everything needed to replay it
+	setupReplayTest := func(t *testing.T, txHash ethgo.Hash) (
+		*databaseaccess.BBoltDatabase, *EthTxsReceiverImpl, *common.BridgingRequestStateUpdaterMock, *ethgo.Log,
+	) {
+		t.Helper()
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, txHash)
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
 		return oracleDB, rec, stateUpdater, log
 	}
+
+	t.Run("NewUnprocessedLog replay after a stop between adding the state and the tx adds the tx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910999"))
+
+		// the first delivery added the bridging request state, then the process stopped before adding the tx
+		require.NoError(t, stateUpdater.NewMultiple(originChainID, nil))
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, log.TransactionHash, unprocessedTxs[0].Hash)
+
+		stateUpdater.AssertNumberOfCalls(t, "NewMultiple", 2)
+	})
+
+	t.Run("NewUnprocessedLog adds the bridging request state before the tx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b191099a"))
+
+		// when NewMultiple runs, the tx must not be in the db yet
+		stateUpdater.ExpectedCalls = nil
+		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+			require.NoError(t, err)
+			require.Empty(t, unprocessedTxs)
+		}).Return(nil).Once()
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+
+		stateUpdater.AssertExpectations(t)
+	})
 
 	t.Run("NewUnprocessedLog replay after pending is skipped", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
