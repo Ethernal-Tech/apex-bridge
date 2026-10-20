@@ -98,6 +98,20 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		}
 	}
 
+	// the bridging request state must be added before the tx. If the process stops in between, the
+	// replayed log still adds the tx, while a tx without a state would never get one from a replay,
+	// and the oracle state api would report it as failed once its ttl passes.
+	// A state that already exists is not overwritten, so a replay only returns an error here
+	if len(bridgingRequests) > 0 {
+		r.logger.Debug("Adding multiple new bridging request states to db",
+			"chainID", originChainID, "states", bridgingRequests)
+
+		err := r.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
+		if err != nil {
+			r.logger.Error("error while adding new bridging request states", "err", err)
+		}
+	}
+
 	// the tracker can deliver the same log again (e.g. after a restart), so AddNewTxs skips txs
 	// the oracle already knows about. Re-adding them would resubmit claims or reset retry counters
 	r.logger.Debug("Adding txs to db", "processed", processedTxs, "unprocessed", relevantTxs)
@@ -116,18 +130,6 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 	}
 
 	utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
-
-	// a bridging request state is added only for a tx that was just added. If the processor already
-	// updated the state in the meantime, adding it fails without overwriting it
-	if len(relevantTxs) > 0 && len(bridgingRequests) > 0 {
-		r.logger.Debug("Adding multiple new bridging request states to db",
-			"chainID", originChainID, "states", bridgingRequests)
-
-		err := r.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
-		if err != nil {
-			r.logger.Error("error while adding new bridging request states", "err", err)
-		}
-	}
 
 	return nil
 }
