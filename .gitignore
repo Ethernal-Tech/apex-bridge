@@ -29,3 +29,19 @@ contractbuild
 
 */keys
 /blade-dir
+
+# >>> ethernal core (managed) >>>
+# Claude Code: personal and session state
+.claude/settings.local.json
+.claude/ethernal/handoff.md
+.claude/ethernal/state.json
+.claude/ethernal/state.lock
+.claude/ethernal/hooks.log
+.claude/ethernal/hook-crash-*
+.claude/worktrees/
+# Secrets: environment files, except the examples
+.env
+.env.*
+!.env*.example
+!.env*.sample
+# <<< ethernal core (managed) <<<
