@@ -184,6 +184,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-min-fee-for-bridging <minimal bridging fee> \
         --evm-num-block-confirmations <num> \
         --evm-confirmation-strategy <finalized (default)|latest> \
+        --evm-restart-tracker-pull-check <seconds without a new confirmed block before the indexer is restarted - default 150> \
         --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
         --chain-id <evm chain id> \
         --allowed-directions <allowed bridging directions> \
