@@ -234,6 +234,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-starting-block <block number> \
         --evm-num-block-confirmations <num> \
         --evm-confirmation-strategy <finalized (default)|latest> \
+        --evm-restart-tracker-pull-check <seconds without a new confirmed block before the indexer is restarted - default 150> \
         --evm-poll-interval <how often a tracker polls the rpc for new blocks - uint64 in milliseconds> \
         --evm-sync-batch-size <batch size of blocks for tracker to fetch at a time> \
         --evm-min-fee-for-bridging <minimal bridging fee> \
