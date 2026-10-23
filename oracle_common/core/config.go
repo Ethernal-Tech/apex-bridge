@@ -30,6 +30,7 @@ type EthChainConfig struct {
 	BridgingAddresses       EthBridgingAddresses `json:"-"`
 	NodeURL                 string               `json:"nodeUrl"`
 	SyncBatchSize           uint64               `json:"syncBatchSize"`
+	ConfirmationStrategy    string               `json:"confirmationStrategy"`
 	NumBlockConfirmations   uint64               `json:"numBlockConfirmations"`
 	StartBlockNumber        uint64               `json:"startBlockNumber"`
 	PoolIntervalMiliseconds time.Duration        `json:"poolIntervalMs"`
