@@ -52,7 +52,7 @@ type registerGatewayTokenParams struct {
 
 // ValidateFlags implements common.CliCommandValidator.
 func (g *registerGatewayTokenParams) ValidateFlags() error {
-	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 

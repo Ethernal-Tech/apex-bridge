@@ -23,6 +23,8 @@ type EthTxsDB interface {
 	ClearAllTxs(chainID string) error
 	GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
+	AddNewTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) (
+		addedProcessedTxs []*ProcessedEthTx, addedUnprocessedTxs []*EthTx, err error)
 	UpdateTxs(data *EthUpdateTxsData, chainIDConverter *common.ChainIDConverter) error
 }
 
