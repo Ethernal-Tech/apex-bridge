@@ -9,7 +9,7 @@ go 1.23.1
 replace github.com/blinklabs-io/gouroboros => github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f
 
 require (
-	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20261021073754-4cdbc9dd17a8
+	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20261023113908-ed976452bc2d
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261022131430-c1ab64eea8bc
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
