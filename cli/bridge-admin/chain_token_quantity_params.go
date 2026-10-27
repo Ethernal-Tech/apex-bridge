@@ -39,7 +39,7 @@ func (g *getChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 

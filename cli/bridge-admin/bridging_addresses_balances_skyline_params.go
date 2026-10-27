@@ -32,11 +32,11 @@ func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
 			primeWalletAddressFlag, cardanoWalletAddressFlag)
 	}
 
-	if err := validateConfigFilePath(b.config); err != nil {
+	if err := validateConfigFilePath(b.config, configFlag); err != nil {
 		return err
 	}
 
-	if err := validateConfigFilePath(b.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(b.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 
