@@ -93,13 +93,6 @@ func (m *EthTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpectedEthT
 	return args.Error(0)
 }
 
-// AddTxs implements EthTxsProcessorDB.
-func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error {
-	args := m.Called(processedTxs, unprocessedTxs)
-
-	return args.Error(0)
-}
-
 // AddNewTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) AddNewTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) (
 	[]*ProcessedEthTx, []*EthTx, error,
