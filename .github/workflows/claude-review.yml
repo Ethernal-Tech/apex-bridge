@@ -32,7 +32,8 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # A thread counts as settled when it is resolved
+      # A thread counts as settled when it is resolved and an owner, member or collaborator
+      # (the PR author included) replied to it; the replies give the reason.
       - name: Fetch settled review threads
         env:
           GH_TOKEN: ${{ github.token }}
