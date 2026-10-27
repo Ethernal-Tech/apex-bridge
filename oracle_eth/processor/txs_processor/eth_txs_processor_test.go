@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -1452,6 +1453,225 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Equal(t, tx.Hash[:], pendingTx.GetTxHash())
 	})
 
+	// newReplayReceiver returns a receiver whose bridging request state updater behaves like the real one:
+	// the first NewMultiple for a tx succeeds, and every later one fails because the state already exists
+	newReplayReceiver := func(t *testing.T) (
+		*databaseaccess.BBoltDatabase, *EthTxsReceiverImpl, *common.BridgingRequestStateUpdaterMock,
+	) {
+		t.Helper()
+
+		oracleDB, err := createOracleDB(dbFilePath)
+		require.NoError(t, err)
+
+		stateUpdater := &common.BridgingRequestStateUpdaterMock{}
+		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Return(nil).Once()
+		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Return(
+			errors.New("trying to add a BridgingRequestState that already exists"))
+
+		_, rec := newValidProcessor(
+			context.Background(),
+			appConfig, oracleDB,
+			&ethcore.EthTxSuccessProcessorMock{
+				ShouldAddClaim: true,
+				Type:           common.BridgingTxTypeBridgingRequest,
+			}, nil, nil, nil,
+			map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}},
+			stateUpdater,
+			nil,
+		)
+
+		return oracleDB, rec, stateUpdater
+	}
+
+	newWithdrawLog := func(t *testing.T, txHash ethgo.Hash) *ethgo.Log {
+		t.Helper()
+
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		gatewayABI, err := contractbinding.GatewayMetaData.GetAbi()
+		require.NoError(t, err)
+
+		eventABI, err := gatewayABI.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		receiptData, err := eventABI.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		return &ethgo.Log{
+			BlockNumber:     101,
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHash,
+			Data:            receiptData,
+			Topics:          []ethgo.Hash{withdrawEventSig},
+		}
+	}
+
+	// setupReplayTest delivers a withdraw log once and returns everything needed to replay it
+	setupReplayTest := func(t *testing.T, txHash ethgo.Hash) (
+		*databaseaccess.BBoltDatabase, *EthTxsReceiverImpl, *common.BridgingRequestStateUpdaterMock, *ethgo.Log,
+	) {
+		t.Helper()
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, txHash)
+
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
+
+		return oracleDB, rec, stateUpdater, log
+	}
+
+	t.Run("NewUnprocessedLog replay after a stop between adding the state and the tx adds the tx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910999"))
+
+		// the first delivery added the bridging request state, then the process stopped before adding the tx
+		require.NoError(t, stateUpdater.NewMultiple(originChainID, nil))
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, log.TransactionHash, unprocessedTxs[0].Hash)
+
+		stateUpdater.AssertNumberOfCalls(t, "NewMultiple", 2)
+	})
+
+	t.Run("NewUnprocessedLog adds the bridging request state before the tx", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		oracleDB, rec, stateUpdater := newReplayReceiver(t)
+		log := newWithdrawLog(t, ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b191099a"))
+
+		// when NewMultiple runs, the tx must not be in the db yet
+		stateUpdater.ExpectedCalls = nil
+		stateUpdater.On("NewMultiple", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+			require.NoError(t, err)
+			require.Empty(t, unprocessedTxs)
+		}).Return(nil).Once()
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+
+		stateUpdater.AssertExpectations(t)
+	})
+
+	t.Run("NewUnprocessedLog replay after pending is skipped", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+		oracleDB, rec, stateUpdater, log := setupReplayTest(t, txHash)
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+
+		require.NoError(t, oracleDB.UpdateTxs(
+			&ethcore.EthUpdateTxsData{MoveUnprocessedToPending: unprocessedTxs},
+		))
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Empty(t, unprocessedTxs)
+
+		pendingTx, err := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
+		require.NoError(t, err)
+		require.NotNil(t, pendingTx)
+
+		stateUpdater.AssertExpectations(t)
+	})
+
+	t.Run("NewUnprocessedLog replay after processed is skipped", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
+		oracleDB, rec, stateUpdater, log := setupReplayTest(t, txHash)
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+
+		require.NoError(t, oracleDB.UpdateTxs(
+			&ethcore.EthUpdateTxsData{
+				MoveUnprocessedToProcessed: []*ethcore.ProcessedEthTx{
+					unprocessedTxs[0].ToProcessedEthTx(false),
+				},
+			},
+		))
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Empty(t, unprocessedTxs)
+
+		processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
+		require.NoError(t, err)
+		require.NotNil(t, processedTx)
+
+		stateUpdater.AssertExpectations(t)
+	})
+
+	t.Run("NewUnprocessedLog replay while unprocessed keeps retry state", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const originChainID = common.ChainIDStrNexus
+
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910997")
+		oracleDB, rec, stateUpdater, log := setupReplayTest(t, txHash)
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+
+		// simulate the processor having already retried this tx
+		lastTimeTried := time.Now().UTC().Truncate(time.Second)
+		unprocessedTxs[0].SubmitTryCount = 2
+		unprocessedTxs[0].BatchTryCount = 1
+		unprocessedTxs[0].RefundTryCount = 1
+		unprocessedTxs[0].LastTimeTried = lastTimeTried
+
+		require.NoError(t, oracleDB.UpdateTxs(
+			&ethcore.EthUpdateTxsData{UpdateUnprocessed: unprocessedTxs},
+		))
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, err = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, uint32(2), unprocessedTxs[0].SubmitTryCount)
+		require.Equal(t, uint32(1), unprocessedTxs[0].BatchTryCount)
+		require.Equal(t, uint32(1), unprocessedTxs[0].RefundTryCount)
+		require.True(t, lastTimeTried.Equal(unprocessedTxs[0].LastTimeTried))
+
+		stateUpdater.AssertExpectations(t)
+	})
+
 	t.Run("Start - unprocessedTxs - valid brc rejected and retry", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -1674,7 +1894,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
-		err = oracleDB.AddTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
+		_, _, err = oracleDB.AddNewTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
 		require.NoError(t, err)
 
 		err = oracleDB.UpdateTxs(&oCore.UpdateTxsData[*ethcore.EthTx, *ethcore.ProcessedEthTx, *ethcore.BridgeExpectedEthTx]{
