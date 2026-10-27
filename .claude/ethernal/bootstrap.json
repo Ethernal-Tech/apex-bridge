@@ -14,6 +14,9 @@
     "gateFastQuiet": null,
     "gateFullQuiet": null,
     "sourceGlobs": [
+      "*.go",
+      ".golangci.yml",
+      "Makefile",
       "go.mod",
       "go.sum"
     ],

@@ -26,7 +26,7 @@ Apex Bridge validator and relayer software in Go: moves value between Cardano ch
 | `testenv/` | `//go:build testenv` hooks used by tests |
 | `gorules/` | ruleguard rules run by golangci-lint |
 | `versioning/` | build info injected by `make build` |
-| `.github/` | CI: lint and unit-test workflows |
+| `.github/` | CI: `ci.yml` runs `lint.yml` and `unit-test.yml`; `claude*.yml` run the Claude PR bot and reviewer |
 | `docs/` | `efficiency/journal.md`: per-task estimate vs actual time |
 | `.claude/rules/` | path-scoped rules Claude loads when it reads matching files |
 
