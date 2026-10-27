@@ -112,9 +112,9 @@ func loadConfig(configPath string, chainIDsConfig *common.ChainIDsConfigFile) (*
 	return config, nil
 }
 
-func validateConfigFilePath(configPath string) error {
+func validateConfigFilePath(configPath string, flag string) error {
 	if configPath == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+		return fmt.Errorf("--%s flag not specified", flag)
 	}
 
 	if _, err := os.Stat(configPath); err != nil {

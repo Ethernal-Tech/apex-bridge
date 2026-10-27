@@ -40,7 +40,7 @@ func (params *stakeDeregParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if err := validateConfigFilePath(params.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(params.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 
