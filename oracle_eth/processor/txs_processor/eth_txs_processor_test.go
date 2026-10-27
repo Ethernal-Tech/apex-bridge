@@ -1894,7 +1894,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
-		err = oracleDB.AddTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
+		_, _, err = oracleDB.AddNewTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
 		require.NoError(t, err)
 
 		err = oracleDB.UpdateTxs(&oCore.UpdateTxsData[*ethcore.EthTx, *ethcore.ProcessedEthTx, *ethcore.BridgeExpectedEthTx]{
