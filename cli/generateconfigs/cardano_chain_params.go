@@ -11,6 +11,7 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,10 @@ const (
 	minFeeForBridgingFlag      = "min-fee-for-bridging"
 	blockConfirmationCountFlag = "block-confirmation-count"
 	allowedDirectionsFlag      = "allowed-directions"
+	networkTLSCAFileFlag       = "network-tls-ca-file"
+	networkTLSCertFileFlag     = "network-tls-cert-file"
+	networkTLSKeyFileFlag      = "network-tls-key-file"
+	networkTLSServerNameFlag   = "network-tls-server-name"
 
 	chainIDStringFlagDesc          = "(mandatory) chain id string for the chain config"
 	networkAddressFlagDesc         = "(mandatory) address of network"
@@ -47,6 +52,10 @@ const (
 	minFeeForBridgingFlagDesc      = "minimal bridging fee for the chain"
 	blockConfirmationCountFlagDesc = "block confirmation count for the chain"
 	allowedDirectionsFlagDesc      = "allowed bridging directions for the chain"
+	networkTLSCAFileFlagDesc       = "CA certificate file that signed the Cardano node's TLS certificate (enables mutual TLS, needs cert and key file)" //nolint:lll
+	networkTLSCertFileFlagDesc     = "client certificate file sent to the Cardano node over mutual TLS (needs CA and key file)"                         //nolint:lll
+	networkTLSKeyFileFlagDesc      = "client private key file for the client certificate (needs CA and cert file)"                                      //nolint:lll
+	networkTLSServerNameFlagDesc   = "server name to verify in the Cardano node's TLS certificate (default: host of network address)"                   //nolint:lll
 
 	defaultBlockConfirmationCount = 10
 	defaultTTLSlotNumberInc       = 1800 + defaultBlockConfirmationCount*10 // BlockTimeSeconds
@@ -73,6 +82,11 @@ type cardanoChainGenerateConfigsParams struct {
 	blockConfirmationCount uint
 	allowedDirections      []string
 
+	networkTLSCAFile     string
+	networkTLSCertFile   string
+	networkTLSKeyFile    string
+	networkTLSServerName string
+
 	dbsPath string
 
 	outputDir                         string
@@ -89,6 +103,10 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 
 	if !common.IsValidNetworkAddress(p.networkAddress) {
 		return fmt.Errorf("invalid %s: %s", networkAddressFlag, p.networkAddress)
+	}
+
+	if err := p.validateNetworkTLSFlags(); err != nil {
+		return err
 	}
 
 	if p.blockfrostURL == "" && p.socketPath == "" && p.ogmiosURL == "" {
@@ -117,6 +135,52 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 	}
 
 	return nil
+}
+
+func (p *cardanoChainGenerateConfigsParams) validateNetworkTLSFlags() error {
+	files := []struct{ flag, value string }{
+		{networkTLSCAFileFlag, p.networkTLSCAFile},
+		{networkTLSCertFileFlag, p.networkTLSCertFile},
+		{networkTLSKeyFileFlag, p.networkTLSKeyFile},
+	}
+
+	var set, missing []string
+
+	for _, f := range files {
+		if f.value == "" {
+			missing = append(missing, f.flag)
+		} else {
+			set = append(set, f.flag)
+		}
+	}
+
+	if len(set) == 0 {
+		if p.networkTLSServerName != "" {
+			return fmt.Errorf("%s requires %s, %s and %s", networkTLSServerNameFlag,
+				networkTLSCAFileFlag, networkTLSCertFileFlag, networkTLSKeyFileFlag)
+		}
+
+		return nil
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("%s requires also: %s", strings.Join(set, ", "), strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
+func (p *cardanoChainGenerateConfigsParams) networkTLSConfig() *gouroboros.TLSConfig {
+	if p.networkTLSCAFile == "" && p.networkTLSCertFile == "" && p.networkTLSKeyFile == "" {
+		return nil
+	}
+
+	return &gouroboros.TLSConfig{
+		CAFile:     p.networkTLSCAFile,
+		CertFile:   p.networkTLSCertFile,
+		KeyFile:    p.networkTLSKeyFile,
+		ServerName: p.networkTLSServerName,
+	}
 }
 
 func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
@@ -218,6 +282,31 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.networkTLSCAFile,
+		networkTLSCAFileFlag,
+		"",
+		networkTLSCAFileFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.networkTLSCertFile,
+		networkTLSCertFileFlag,
+		"",
+		networkTLSCertFileFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.networkTLSKeyFile,
+		networkTLSKeyFileFlag,
+		"",
+		networkTLSKeyFileFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.networkTLSServerName,
+		networkTLSServerNameFlag,
+		"",
+		networkTLSServerNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.dbsPath,
 		dbsPathFlag,
 		defaultDBsPath,
@@ -293,6 +382,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		OtherAddressesOfInterest: []string{},
 		FeeAddrBridgingAmount:    p.utxoMinAmount,
 		MinFeeForBridging:        p.minFeeForBridging,
+		NetworkTLS:               p.networkTLSConfig(),
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
