@@ -2,7 +2,6 @@
 
 - `gen-certs.sh` creates a private CA, a server certificate and one client certificate per validator (OpenSSL, ECDSA P-256).
 - `stunnel.conf` terminates TLS 1.3 in front of `cardano-node` and requires a client certificate from that CA.
-- `e2e.sh` (with `e2e_test.go`) proves the path in Docker: needs Docker and internet (preprod node, Alpine packages).
 
 ## Certificates
 
@@ -22,7 +21,7 @@ relay port keeps serving Cardano peers. Firewall port 5522 to the validator IPs.
 
 ## Validator side
 
-In the Cardano chain config (`networkTls`), with `nodeAddress` set to `<server-dns-name>:5522`:
+In the Cardano chain config (`networkTls`), with `networkAddress` set to `<server-dns-name>:5522`:
 
 ```json
 "networkTls": {"caFile": "ca.crt", "certFile": "validator1.crt", "keyFile": "validator1.key", "serverName": "node.example.org"}
