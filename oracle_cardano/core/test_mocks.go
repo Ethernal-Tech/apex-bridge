@@ -220,7 +220,7 @@ func (m *CardanoTxsProcessorDBMock) UpdateTxs(data *CardanoUpdateTxsData) error 
 }
 
 func (m *CardanoTxsProcessorDBMock) MoveProcessedExpectedTxs(chainID string) error {
-	return nil
+	return m.Called(chainID).Error(0)
 }
 
 var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
