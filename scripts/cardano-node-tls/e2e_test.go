@@ -5,9 +5,13 @@ package cardanonodetls
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -92,6 +96,28 @@ func readAfterHandshake(t *testing.T, addr string, cfg *tls.Config) error {
 	return err
 }
 
+// requireServerAlert requires that the server itself rejected the client with a TLS alert
+// containing one of the given texts (a client-side failure would not be a "remote error").
+func requireServerAlert(t *testing.T, err error, texts ...string) {
+	t.Helper()
+
+	require.Error(t, err)
+	t.Logf("rejected with: %v", err)
+
+	var op *net.OpError
+
+	require.ErrorAs(t, err, &op)
+	require.Equal(t, "remote error", op.Op)
+
+	for _, text := range texts {
+		if strings.Contains(err.Error(), text) {
+			return
+		}
+	}
+
+	t.Fatalf("alert %q contains none of %v", err.Error(), texts)
+}
+
 func baseConfig(roots *x509.CertPool) *tls.Config {
 	return &tls.Config{
 		RootCAs:    roots,
@@ -145,9 +171,7 @@ func TestNodeTLSE2E_RejectsNoClientCert(t *testing.T) {
 	e := loadEnv(t)
 
 	err := readAfterHandshake(t, e.addr, baseConfig(caPool(t, e.dir)))
-	require.Error(t, err)
-	t.Logf("rejected with: %v", err)
-	require.NotErrorIs(t, err, os.ErrDeadlineExceeded)
+	requireServerAlert(t, err, "certificate required")
 }
 
 func TestNodeTLSE2E_RejectsForeignClientCert(t *testing.T) {
@@ -161,9 +185,7 @@ func TestNodeTLSE2E_RejectsForeignClientCert(t *testing.T) {
 	}
 
 	err := readAfterHandshake(t, e.addr, cfg)
-	require.Error(t, err)
-	t.Logf("rejected with: %v", err)
-	require.NotErrorIs(t, err, os.ErrDeadlineExceeded)
+	requireServerAlert(t, err, "unknown certificate authority", "bad certificate")
 }
 
 func TestNodeTLSE2E_RejectsServerFromOtherCA(t *testing.T) {
@@ -201,7 +223,5 @@ func TestNodeTLSE2E_RejectsPlainTCP(t *testing.T) {
 		}
 	}
 
-	require.Error(t, err)
-	t.Logf("rejected with: %v", err)
-	require.NotErrorIs(t, err, os.ErrDeadlineExceeded)
+	require.True(t, errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET), "got %v", err)
 }

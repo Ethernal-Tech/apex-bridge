@@ -13,8 +13,10 @@ certs=""
 foreign=""
 conf=""
 
+test_pid=""
 cleanup() {
   local rc=$?
+  if [ -n "$test_pid" ]; then kill "$test_pid" 2>/dev/null || true; fi
   docker rm -f "$name" >/dev/null 2>&1 || true
   for d in "$certs" "$foreign" "$conf"; do
     [ -z "$d" ] || rm -rf "$d"
@@ -67,15 +69,24 @@ if [ "$ready" != 1 ]; then
   fail "stunnel not ready on 127.0.0.1:$port within 60 s"
 fi
 
-# a TLS 1.2-only client must be refused
-if (cd "$certs" && timeout 5 openssl s_client -tls1_2 -connect "127.0.0.1:$port" -servername node.test \
-  -CAfile ca.crt -cert validator1.crt -key validator1.key </dev/null >/dev/null 2>&1); then
-  fail "stunnel accepted a TLS 1.2 client"
+# a TLS 1.2-only client must be refused by stunnel (not time out or fail locally)
+rc=0
+out="$(cd "$certs" && timeout 5 openssl s_client -tls1_2 -connect "127.0.0.1:$port" -servername node.test \
+  -CAfile ca.crt -cert validator1.crt -key validator1.key </dev/null 2>&1)" || rc=$?
+if [ "$rc" = 0 ] || [ "$rc" = 124 ] || ! grep -Eq 'alert protocol version|wrong version number|handshake failure' <<<"$out"; then
+  echo "$out" >&2
+  fail "TLS 1.2 client was not refused with a protocol-version alert (exit $rc)"
 fi
 echo "e2e: TLS 1.2 client refused"
 
 export E2E_NODE_ADDR="127.0.0.1:$port" E2E_TLS_DIR="$certs" E2E_FOREIGN_TLS_DIR="$foreign"
-if ! go test -tags e2e -count=1 -v ./scripts/cardano-node-tls/; then
+# run in the background and wait, so SIGINT/SIGTERM reach the trap at once
+go test -tags e2e -count=1 -v ./scripts/cardano-node-tls/ &
+test_pid=$!
+rc=0
+wait "$test_pid" || rc=$?
+if [ "$rc" != 0 ]; then
   docker logs "$name" >&2 || true
-  fail "go test failed"
+  echo "e2e: go test failed (exit $rc)" >&2
+  exit "$rc"
 fi

@@ -48,9 +48,17 @@ fi
 umask 077
 work="$(mktemp -d)"
 created=0
+moved=()
+done_ok=0
 cleanup() {
   rm -rf "$work"
-  if [ "$created" = 1 ] && [ "${done_ok:-0}" != 1 ]; then rm -rf "$out"; fi
+  if [ "$done_ok" != 1 ]; then
+    if [ "$created" = 1 ]; then
+      rm -rf "$out"
+    else
+      for f in "${moved[@]}"; do rm -f "$out/$f"; done
+    fi
+  fi
 }
 trap cleanup EXIT
 
@@ -77,13 +85,18 @@ for c in "${clients[@]}"; do
 done
 
 if [ ! -e "$out" ]; then
-  mkdir -p "$out"
+  parent="$(dirname "$out")"
+  [ -d "$parent" ] || { echo "parent directory $parent of $out does not exist" >&2; exit 1; }
+  mkdir "$out"
   created=1
 fi
 chmod 700 "$out"
-mv "$work/ca.key" "$work/ca.crt" "$work/server.key" "$work/server.crt" "$out/"
-for c in "${clients[@]}"; do
-  mv "$work/$c.key" "$work/$c.crt" "$out/"
+files=(ca.key ca.crt server.key server.crt)
+for c in "${clients[@]}"; do files+=("$c.key" "$c.crt"); done
+for f in "${files[@]}"; do
+  mv "$work/$f" "$out/$f"
+  moved+=("$f")
+  case "$f" in *.crt) chmod 644 "$out/$f" ;; esac
 done
 done_ok=1
 echo "created CA, server and ${#clients[@]} client certificate(s) in $out (keep ca.key offline)"
