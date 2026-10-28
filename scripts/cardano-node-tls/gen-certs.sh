@@ -39,6 +39,8 @@ done
 
 command -v openssl >/dev/null 2>&1 || { echo "openssl not found in PATH" >&2; exit 1; }
 
+parent="$(dirname "$out")"
+[ -d "$parent" ] || { echo "parent directory $parent of $out does not exist" >&2; exit 1; }
 if [ -e "$out" ] || [ -L "$out" ]; then
   [ -d "$out" ] || { echo "$out exists and is not a directory" >&2; exit 1; }
   [ -z "$(ls -A "$out")" ] || { echo "$out is not empty, refusing to overwrite" >&2; exit 1; }
@@ -56,7 +58,7 @@ cleanup() {
     if [ "$created" = 1 ]; then
       rm -rf "$out"
     else
-      for f in "${moved[@]}"; do rm -f "$out/$f"; done
+      for f in ${moved[@]+"${moved[@]}"}; do rm -f "$out/$f"; done
     fi
   fi
 }
@@ -85,8 +87,6 @@ for c in "${clients[@]}"; do
 done
 
 if [ ! -e "$out" ]; then
-  parent="$(dirname "$out")"
-  [ -d "$parent" ] || { echo "parent directory $parent of $out does not exist" >&2; exit 1; }
   mkdir "$out"
   created=1
 fi
