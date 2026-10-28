@@ -124,7 +124,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 			tokenID, ok := tokenNamesAndIDs[token.TokenName()]
 
 			if zeroAddress != out.Address || !ok {
-				unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
+				unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx))
 
 				break
 			} else {
