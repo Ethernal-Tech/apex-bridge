@@ -37,7 +37,9 @@ jobs:
         uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
+          # No progress comment: the "Post review" step below posts the whole
+          # run as a single PR review.
+          track_progress: false
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ inputs.pr_number }}
@@ -55,19 +57,27 @@ jobs:
             4. **Tests**: adequate coverage for the change, missing scenarios
             5. **Conventions**: idiomatic Go and the rules in .golangci.yml
 
-            Provide detailed feedback using inline comments for specific issues.
-            Use top-level comments for general observations.
+            Do not post anything to the PR yourself; a later workflow step posts
+            your files below as one PR review.
 
-            For every finding that has a mechanical fix, include in the inline
-            comment a GitHub ```suggestion fenced block containing the exact
-            replacement lines, so the reviewer can apply it with the "Commit
-            suggestion" button. Findings without a mechanical fix keep plain
-            inline comments.
+            Write the findings tied to specific lines to the file
+            claude-review-findings.json in the repository root: a JSON array of
+            objects {"path": string, "line": number, "start_line": number
+            (optional, for a multi-line range), "body": string}. "path" is
+            relative to the repository root and "line" is a line number in the
+            new version of the file that is part of the PR diff. Write [] when
+            there are none.
+
+            For every finding that has a mechanical fix, include in its body a
+            GitHub ```suggestion fenced block containing the exact replacement
+            lines for start_line..line, so the reviewer can apply it with the
+            "Commit suggestion" button. Findings without a mechanical fix keep
+            a plain body.
 
             Also write a file claude-review-summary.md in the repository root:
             a short markdown report with the verdict line first, then a table
             with the columns Severity | File:line | Finding | Has suggestion?,
-            then this single line:
+            then any general observations, then this single line:
             Reply `@claude fix <finding>` on the PR to have Claude implement a fix.
 
             Finally, write your verdict to the file claude-review-verdict in the
@@ -77,7 +87,42 @@ jobs:
 
           claude_args: |
             --model ${{ inputs.model }}
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Write(claude-review-verdict),Write(claude-review-summary.md)"
+            --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Write(claude-review-verdict),Write(claude-review-summary.md),Write(claude-review-findings.json)"
+
+      # One review per run, so findings are grouped instead of each one showing
+      # up as its own review. GitHub rejects the whole review when any line is
+      # outside the diff; then the findings go into the review body instead.
+      - name: Post review
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEWS_URL: repos/${{ github.repository }}/pulls/${{ inputs.pr_number }}/reviews
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ ! -f claude-review-summary.md ]; then
+            echo "No review summary was produced; nothing to post."
+            exit 0
+          fi
+          printf '\n\n[View job](%s)\n' "$RUN_URL" >>claude-review-summary.md
+
+          if ! jq -e 'type == "array"' claude-review-findings.json >/dev/null 2>&1; then
+            echo "[]" >claude-review-findings.json
+          fi
+          jq '[.[] | {path, line, body, side: "RIGHT"}
+                + (if (.start_line // .line) < .line then {start_line, start_side: "RIGHT"} else {} end)]' \
+            claude-review-findings.json >comments.json
+
+          jq -n --rawfile body claude-review-summary.md --slurpfile comments comments.json \
+            '{event: "COMMENT", body: $body, comments: $comments[0]}' >review.json
+          if gh api --method POST "$REVIEWS_URL" --input review.json >/dev/null; then
+            exit 0
+          fi
+
+          echo "::warning::GitHub rejected the inline comments; posting the findings in the review body."
+          printf '\n## Findings\n\n' >>claude-review-summary.md
+          jq -r '.[] | "### `\(.path):\(.line)`\n\n\(.body)\n"' comments.json >>claude-review-summary.md
+          jq -n --rawfile body claude-review-summary.md '{event: "COMMENT", body: $body}' |
+            gh api --method POST "$REVIEWS_URL" --input - >/dev/null
 
       - name: Publish review summary
         if: always()
