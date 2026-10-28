@@ -167,16 +167,11 @@ func (p *cardanoChainGenerateConfigsParams) validateNetworkTLSFlags() error {
 		return fmt.Errorf("%s requires also: %s", strings.Join(set, ", "), strings.Join(missing, ", "))
 	}
 
-	if strings.HasPrefix(p.networkAddress, "/") {
-		return fmt.Errorf("network tls is not supported with a unix socket %s: %s",
-			networkAddressFlag, p.networkAddress)
-	}
-
 	return nil
 }
 
 func (p *cardanoChainGenerateConfigsParams) networkTLSConfig() *gouroboros.TLSConfig {
-	if p.networkTLSCAFile == "" {
+	if p.networkTLSCAFile == "" && p.networkTLSCertFile == "" && p.networkTLSKeyFile == "" {
 		return nil
 	}
 

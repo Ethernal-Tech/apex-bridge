@@ -165,9 +165,7 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 func loadSyncerConfigs(
 	config *cCore.CardanoChainConfig,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
-	networkAddress := strings.TrimPrefix(
-		strings.TrimPrefix(config.NetworkAddress, "http://"),
-		"https://")
+	networkAddress := trimmedNetworkAddress(config)
 
 	addressesOfInterest := append([]string{
 		config.BridgingAddresses.BridgingAddress,
@@ -196,6 +194,11 @@ func loadSyncerConfigs(
 	return indexerConfig, syncerConfig
 }
 
+// trimmedNetworkAddress returns the network address as the block syncer dials it (without http:// or https://).
+func trimmedNetworkAddress(config *cCore.CardanoChainConfig) string {
+	return strings.TrimPrefix(strings.TrimPrefix(config.NetworkAddress, "http://"), "https://")
+}
+
 // checkNetworkTLS loads the networkTls files so that a bad setting stops the observer at startup
 // instead of failing on every reconnect. It does nothing when networkTls is not set.
 func checkNetworkTLS(config *cCore.CardanoChainConfig) error {
@@ -203,7 +206,7 @@ func checkNetworkTLS(config *cCore.CardanoChainConfig) error {
 		return nil
 	}
 
-	if strings.HasPrefix(config.NetworkAddress, "/") {
+	if strings.HasPrefix(trimmedNetworkAddress(config), "/") {
 		return fmt.Errorf("tls is not supported with a unix socket address %s", config.NetworkAddress)
 	}
 
@@ -225,11 +228,7 @@ func networkTLSDefaultServerName(config *cCore.CardanoChainConfig) (string, erro
 		return "", nil
 	}
 
-	address := strings.TrimPrefix(
-		strings.TrimPrefix(config.NetworkAddress, "http://"),
-		"https://")
-
-	host, _, err := net.SplitHostPort(address)
+	host, _, err := net.SplitHostPort(trimmedNetworkAddress(config))
 	if err != nil {
 		return "", fmt.Errorf("networkAddress %q has no host:port to take the tls server name from: %w",
 			config.NetworkAddress, err)

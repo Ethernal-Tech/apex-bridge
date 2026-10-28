@@ -633,16 +633,28 @@ func TestCardanoChainObserver_InvalidNetworkTLS(t *testing.T) {
 		db.AssertNotCalled(t, "MoveProcessedExpectedTxs", mock.Anything)
 	})
 
-	t.Run("unix socket address", func(t *testing.T) {
-		t.Parallel()
+	for _, tc := range []struct{ name, address string }{
+		{"unix socket address", "/ipc/node.socket"},
+		{"unix socket address after scheme trimming", "http:///ipc/node.socket"},
+	} {
+		for _, serverName := range []string{"node.example", ""} {
+			t.Run(tc.name+" serverName="+serverName, func(t *testing.T) {
+				t.Parallel()
 
-		files := newTestTLSFiles(t)
-		_, db, err := newObserver(t, "/ipc/node.socket", &gouroboros.TLSConfig{
-			CAFile: files.caFile, CertFile: files.certFile, KeyFile: files.keyFile,
-		})
-		require.ErrorContains(t, err, "invalid networkTls for chain prime")
-		db.AssertNotCalled(t, "MoveProcessedExpectedTxs", mock.Anything)
-	})
+				files := newTestTLSFiles(t)
+				_, db, err := newObserver(t, tc.address, &gouroboros.TLSConfig{
+					CAFile: files.caFile, CertFile: files.certFile, KeyFile: files.keyFile, ServerName: serverName,
+				})
+				require.ErrorContains(t, err, "invalid networkTls for chain prime")
+
+				if serverName != "" {
+					require.ErrorContains(t, err, "unix socket")
+				}
+
+				db.AssertNotCalled(t, "MoveProcessedExpectedTxs", mock.Anything)
+			})
+		}
+	}
 
 	t.Run("no port and no server name", func(t *testing.T) {
 		t.Parallel()

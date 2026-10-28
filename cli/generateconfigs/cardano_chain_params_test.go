@@ -198,6 +198,18 @@ func TestCardanoChainParams_NetworkTLSFlags(t *testing.T) {
 	})
 }
 
+func TestCardanoChainParams_networkTLSConfig(t *testing.T) {
+	t.Parallel()
+
+	p := validTLSChainParams()
+	require.Nil(t, p.networkTLSConfig())
+
+	p.networkTLSCertFile = "/c/v.crt"
+	p.networkTLSKeyFile = "/c/v.key"
+
+	require.Equal(t, &gouroboros.TLSConfig{CertFile: "/c/v.crt", KeyFile: "/c/v.key"}, p.networkTLSConfig())
+}
+
 func mustMarshal(t *testing.T, v any) []byte {
 	t.Helper()
 
