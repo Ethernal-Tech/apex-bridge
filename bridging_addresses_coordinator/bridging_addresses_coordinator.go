@@ -249,7 +249,7 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeCurrencyTokens(
 		}
 
 		addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName] = currencyTokensPerAddress
-		if uint64(i) < extra { //nolint:gosec
+		if uint64(i) < extra {
 			addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName] += 1 // Distribute the remainder fairly
 		}
 
@@ -348,7 +348,7 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 
 		addrAmounts = append(addrAmounts, addrAmount{
 			address:           address,
-			addressIndex:      uint8(i), //nolint:gosec
+			addressIndex:      uint8(i),
 			totalTokenAmounts: totalTokenAmounts,
 			includeInTx:       make(map[string]uint64),
 			utxoCount:         len(utxos),
@@ -491,7 +491,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 		}
 
 		if amount == 0 {
-			return common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}, nil //nolint:gosec
+			return common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}, nil
 		}
 
 		if i == 0 {
@@ -502,7 +502,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 		}
 	}
 
-	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil //nolint:gosec
+	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil
 }
 
 func validateTokenFunds(

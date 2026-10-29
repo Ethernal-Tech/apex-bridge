@@ -153,7 +153,7 @@ func (b *BridgingAddressesManagerImpl) GetPaymentAddressFromIndex(chainID uint8,
 func (b *BridgingAddressesManagerImpl) GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool) {
 	for i, addr := range b.bridgingPaymentAddresses[chainID] {
 		if addr == address {
-			return uint8(i), true //nolint:gosec
+			return uint8(i), true
 		}
 	}
 
@@ -172,7 +172,7 @@ func (b *BridgingAddressesManagerImpl) GetStakeAddressFromIndex(chainID uint8, i
 func (b *BridgingAddressesManagerImpl) GetStakeAddressIndex(chainID uint8, address string) (uint8, bool) {
 	for i, addr := range b.bridgingStakeAddresses[chainID] {
 		if addr == address {
-			return uint8(i), true //nolint:gosec
+			return uint8(i), true
 		}
 	}
 

@@ -583,7 +583,6 @@ func (s *SolStateProcessor) checkExpectedTxs(
 		return
 	}
 
-	//nolint:prealloc
 	var (
 		invalidRelevantExpiredTxs   []*core.BridgeExpectedSolanaTx
 		processedRelevantExpiredTxs []*core.BridgeExpectedSolanaTx
