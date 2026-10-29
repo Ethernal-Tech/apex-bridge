@@ -213,7 +213,7 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			return nil, err
 		}
 
-		addr, err := cardanowallet.NewBaseAddress(cardanowallet.CardanoNetworkType(ip.networkID),
+		addr, err := cardanowallet.NewBaseAddress(cardanowallet.CardanoNetworkType(ip.networkID), //nolint:gosec
 			wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
 		if err != nil {
 			return nil, err

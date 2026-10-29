@@ -427,7 +427,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	vcConfig.CardanoChains[p.chainIDString] = &oCore.CardanoChainConfig{
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
 			NetworkMagic:             p.networkMagic,
-			NetworkID:                wallet.CardanoNetworkType(p.networkID),
+			NetworkID:                wallet.CardanoNetworkType(p.networkID), //nolint:gosec
 			TTLSlotNumberInc:         p.ttlSlotInc,
 			OgmiosURL:                p.ogmiosURL,
 			BlockfrostURL:            p.blockfrostURL,

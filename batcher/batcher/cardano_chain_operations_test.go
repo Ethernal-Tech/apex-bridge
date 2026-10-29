@@ -405,7 +405,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		3: {ChainSpecific: coloredCoin2.String(), LockUnlock: false},
 	}
 
-	confirmedTransactions := make([]eth.ConfirmedTransaction, 0)
+	confirmedTransactions := make([]eth.ConfirmedTransaction, 0, 3)
 	confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
