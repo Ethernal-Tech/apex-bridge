@@ -2,8 +2,10 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
+	"net"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -44,6 +46,10 @@ func NewCardanoChainObserver(
 	indexerLogger hclog.Logger,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
+	if err := checkNetworkTLS(config); err != nil {
+		return nil, fmt.Errorf("invalid networkTls for chain %s: %w", config.ChainID, err)
+	}
+
 	indexerConfig, syncerConfig := loadSyncerConfigs(config, chainIDConverter, bridgingAddressesManager)
 
 	err := initOracleState(indexerDB,
@@ -158,9 +164,7 @@ func loadSyncerConfigs(
 	chainIDConverter *common.ChainIDConverter,
 	bridgingAddressesManager common.BridgingAddressesManager,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
-	networkAddress := strings.TrimPrefix(
-		strings.TrimPrefix(config.NetworkAddress, "http://"),
-		"https://")
+	networkAddress := trimmedNetworkAddress(config)
 
 	chainID := chainIDConverter.ToChainIDNum(config.ChainID)
 
@@ -192,9 +196,57 @@ func loadSyncerConfigs(
 		RestartDelay:   indexerRestartDelay,
 		KeepAlive:      indexerKeepAlive,
 		SyncStartTries: indexerSyncStartTries,
+		TLS:            config.NetworkTLS,
 	}
 
 	return indexerConfig, syncerConfig
+}
+
+// trimmedNetworkAddress returns the network address as the block syncer dials it (without http:// or https://).
+func trimmedNetworkAddress(config *cCore.CardanoChainConfig) string {
+	return strings.TrimPrefix(strings.TrimPrefix(config.NetworkAddress, "http://"), "https://")
+}
+
+// checkNetworkTLS loads the networkTls files so that a bad setting stops the observer at startup
+// instead of failing on every reconnect. It does nothing when networkTls is not set.
+func checkNetworkTLS(config *cCore.CardanoChainConfig) error {
+	if config.NetworkTLS == nil {
+		return nil
+	}
+
+	if strings.HasPrefix(trimmedNetworkAddress(config), "/") {
+		return fmt.Errorf("tls is not supported with a unix socket address %s", config.NetworkAddress)
+	}
+
+	serverName, err := networkTLSDefaultServerName(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = config.NetworkTLS.ClientConfig(serverName)
+
+	return err
+}
+
+// networkTLSDefaultServerName returns the server name to verify when networkTls.serverName is empty:
+// the host of the network address (same rule as the block syncer's DialNode).
+// When serverName is set it is used as is and the address is not parsed ("" is returned).
+func networkTLSDefaultServerName(config *cCore.CardanoChainConfig) (string, error) {
+	if config.NetworkTLS.ServerName != "" {
+		return "", nil
+	}
+
+	host, _, err := net.SplitHostPort(trimmedNetworkAddress(config))
+	if err != nil {
+		return "", fmt.Errorf("networkAddress %q has no host:port to take the tls server name from: %w",
+			config.NetworkAddress, err)
+	}
+
+	if host == "" {
+		return "", errors.New("networkAddress has an empty host")
+	}
+
+	return host, nil
 }
 
 func initOracleState(
