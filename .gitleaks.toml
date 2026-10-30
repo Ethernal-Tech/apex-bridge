@@ -1,0 +1,10 @@
+# gitleaks configuration, rendered by /core:bootstrap (ethernal core plugin): the default rules.
+# Allow a known false positive by path or pattern, never a real secret (rotate that instead).
+title = "apex-bridge"
+
+[extend]
+useDefault = true
+
+# [[allowlists]]
+# description = "test fixtures"
+# paths = ['''^tests/fixtures/''']
