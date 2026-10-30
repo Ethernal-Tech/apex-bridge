@@ -5,6 +5,7 @@ import (
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
@@ -56,6 +57,8 @@ type CardanoChainConfig struct {
 	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
 	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
 	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
+	// NetworkTLS turns on mutual TLS for the connection to the Cardano node (nil: plain tcp or unix socket)
+	NetworkTLS *gouroboros.TLSConfig `json:"networkTls,omitempty"`
 }
 
 type SubmitConfig struct {
