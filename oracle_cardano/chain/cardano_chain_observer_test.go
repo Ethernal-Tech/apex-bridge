@@ -765,10 +765,7 @@ func TestCardanoChainObserver_InvalidNetworkTLS(t *testing.T) {
 					CAFile: files.caFile, CertFile: files.certFile, KeyFile: files.keyFile, ServerName: serverName,
 				})
 				require.ErrorContains(t, err, "invalid networkTls for chain prime")
-
-				if serverName != "" {
-					require.ErrorContains(t, err, "unix socket")
-				}
+				require.ErrorContains(t, err, "unix socket")
 
 				db.AssertNotCalled(t, "ClearAllTxs", mock.Anything)
 			})
