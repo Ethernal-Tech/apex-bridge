@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "gates": {
+    "fast": {
+      "run": "make lint"
+    },
+    "full": {
+      "run": "make lint build"
+    }
+  },
+  "sourceGlobs": [
+    "*.go",
+    ".golangci.yml",
+    "Makefile",
+    "go.mod",
+    "go.sum"
+  ],
+  "protectedBranches": [
+    "main"
+  ],
+  "delivery": {
+    "mode": "none",
+    "branch": "current"
+  },
+  "onEdit": [
+    {
+      "glob": [
+        "*.go"
+      ],
+      "run": "gofmt -s -w {file}"
+    }
+  ],
+  "issues": {
+    "trackers": [
+      "github",
+      "jira"
+    ],
+    "jiraKeys": [
+      "AD",
+      "APEX"
+    ]
+  }
+}

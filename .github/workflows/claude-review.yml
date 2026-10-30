@@ -1,0 +1,146 @@
+---
+name: Claude Review
+on: # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: string
+      model:
+        required: false
+        type: string
+        default: claude-sonnet-5-5
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+
+permissions: {}
+
+jobs:
+  review:
+    name: Claude Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # A thread counts as settled when it is resolved
+      - name: Fetch settled review threads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          gh api graphql -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$PR_NUMBER" -f query='
+            query($owner: String!, $name: String!, $number: Int!) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $number) {
+                  reviewThreads(first: 100) {
+                    nodes {
+                      isResolved
+                      path
+                      line
+                      originalLine
+                      comments(first: 20) { nodes { author { login } authorAssociation body } }
+                    }
+                  }
+                }
+              }
+            }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+              | select(.isResolved and any(.comments.nodes[1:][];
+                  .authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR"))
+              | {path, line: (.line // .originalLine), comments: [.comments.nodes[] | {author: .author.login, body}]}]' \
+            >claude-review-settled.json
+          echo "Settled threads: $(jq length claude-review-settled.json)"
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ inputs.pr_number }}
+
+            This repository is apex-bridge, a Go cross-chain bridge between
+            Cardano and EVM chains (oracles, batcher, relayer, validator
+            components). Perform a code review with the following focus areas:
+
+            1. **Correctness**: bugs, edge cases, error handling, nil checks,
+               integer overflow and amount/fee arithmetic, tx state transitions
+            2. **Security**: untrusted chain and API input (CBOR, tx metadata,
+               addresses), signature and quorum handling, secrets and keys
+            3. **Concurrency**: data races, goroutine leaks, context
+               cancellation, lock ordering
+            4. **Tests**: adequate coverage for the change, missing scenarios
+            5. **Conventions**: idiomatic Go and the rules in .golangci.yml
+
+            Findings a maintainer has already settled are in
+            claude-review-settled.json: each resolved review thread with its
+            replies, which give the reason. Don't raise a settled finding again,
+            inline or in the summary, and don't list it as still open. Raise it
+            again only if the PR has since changed the lines it points at in a
+            way the replies don't cover.
+
+            Provide detailed feedback using inline comments for specific issues.
+            Use top-level comments for general observations.
+
+            For every finding that has a mechanical fix, include in the inline
+            comment a GitHub ```suggestion fenced block containing the exact
+            replacement lines, so the reviewer can apply it with the "Commit
+            suggestion" button. Findings without a mechanical fix keep plain
+            inline comments.
+
+            Also write a file claude-review-summary.md in the repository root:
+            a short markdown report with the verdict line first, then a table
+            with the columns Severity | File:line | Finding | Has suggestion?,
+            then this single line:
+            Reply `@claude fix <finding>` on the PR to have Claude implement a fix.
+
+            Finally, write your verdict to the file claude-review-verdict in the
+            repository root: the single word REQUEST_CHANGES if you found any
+            blocking issue (a bug, a security problem, or a broken repo invariant),
+            otherwise the single word APPROVE.
+
+          claude_args: |
+            --model ${{ inputs.model }}
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Write(claude-review-verdict),Write(claude-review-summary.md)"
+
+      - name: Publish review summary
+        if: always()
+        run: |
+          if [ -f claude-review-summary.md ]; then
+            cat claude-review-summary.md >>"$GITHUB_STEP_SUMMARY"
+          else
+            echo "No review summary was produced (the review step likely crashed before running)." >>"$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce review verdict
+        if: always()
+        env:
+          PR_URL: https://github.com/${{ github.repository }}/pull/${{ inputs.pr_number }}
+        run: |
+          verdict=$(cat claude-review-verdict 2>/dev/null || echo "MISSING")
+          echo "Review verdict: $verdict"
+          case "$verdict" in
+            APPROVE)
+              exit 0
+              ;;
+            REQUEST_CHANGES)
+              echo "::error::Claude review requested changes. Findings are posted on the PR ($PR_URL) and in the step summary above."
+              exit 1
+              ;;
+            *)
+              echo "::error::The review step itself failed before producing a verdict. The most common cause of an immediate failure is a missing or expired CLAUDE_CODE_OAUTH_TOKEN repo secret; regenerate it with 'claude setup-token'."
+              exit 1
+              ;;
+          esac
