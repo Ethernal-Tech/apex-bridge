@@ -13,7 +13,7 @@ require (
 	github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261030103848-c6266ba831b1
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261029153924-f659a86863cc
+	github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261102104253-879a34e156b6
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/gagliardetto/solana-go v1.23.0
