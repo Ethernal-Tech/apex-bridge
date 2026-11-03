@@ -32,7 +32,8 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      # A thread counts as settled when it is resolved
+      # A thread counts as settled when someone with write access resolved it; a reply is optional.
+      # PR authors can resolve threads on their own PR, so the resolver's permission is checked.
       - name: Fetch settled review threads
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,19 +47,29 @@ jobs:
                   reviewThreads(first: 100) {
                     nodes {
                       isResolved
+                      resolvedBy { login }
                       path
                       line
                       originalLine
-                      comments(first: 20) { nodes { author { login } authorAssociation body } }
+                      comments(first: 20) { nodes { author { login } body } }
                     }
                   }
                 }
               }
             }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
-              | select(.isResolved and any(.comments.nodes[1:][];
-                  .authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR"))
-              | {path, line: (.line // .originalLine), comments: [.comments.nodes[] | {author: .author.login, body}]}]' \
-            >claude-review-settled.json
+              | select(.isResolved)
+              | {path, line: (.line // .originalLine), resolvedBy: .resolvedBy.login,
+                 comments: [.comments.nodes[] | {author: .author.login, body}]}]' \
+            >claude-review-resolved.json
+          maintainers='[]'
+          for login in $(jq -r '.[].resolvedBy // empty' claude-review-resolved.json | sort -u); do
+            perm=$(gh api "repos/$REPO/collaborators/$login/permission" --jq .permission 2>/dev/null || echo none)
+            case "$perm" in
+              admin | write) maintainers=$(jq -c --arg l "$login" '. + [$l]' <<<"$maintainers") ;;
+            esac
+          done
+          jq --argjson m "$maintainers" '[.[] | select(.resolvedBy as $r | $m | index($r))]' \
+            claude-review-resolved.json >claude-review-settled.json
           echo "Settled threads: $(jq length claude-review-settled.json)"
 
       - name: Run Claude Code Review
@@ -85,8 +96,9 @@ jobs:
             5. **Conventions**: idiomatic Go and the rules in .golangci.yml
 
             Findings a maintainer has already settled are in
-            claude-review-settled.json: each resolved review thread with its
-            replies, which give the reason. Don't raise a settled finding again,
+            claude-review-settled.json: each review thread a maintainer
+            resolved, with its replies if any. A thread resolved without a reply
+            was dismissed and needs no reason. Don't raise a settled finding again,
             inline or in the summary, and don't list it as still open. Raise it
             again only if the PR has since changed the lines it points at in a
             way the replies don't cover.
@@ -129,7 +141,8 @@ jobs:
         env:
           PR_URL: https://github.com/${{ github.repository }}/pull/${{ inputs.pr_number }}
         run: |
-          verdict=$(cat claude-review-verdict 2>/dev/null || echo "MISSING")
+          verdict=$(tr -d '[:space:]' 2>/dev/null <claude-review-verdict | tr '[:lower:]' '[:upper:]')
+          verdict=${verdict:-MISSING}
           echo "Review verdict: $verdict"
           case "$verdict" in
             APPROVE)
