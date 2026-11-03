@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "renderedWith": "0.5.0",
+  "answers": {
+    "tier": "harness",
+    "plugins": [
+      "go"
+    ],
+    "superpowers": true,
+    "marketplace": "github",
+    "profile": "standard",
+    "gateFast": "make lint",
+    "gateFull": "make lint build",
+    "gateFastQuiet": null,
+    "gateFullQuiet": null,
+    "sourceGlobs": [
+      "*.go",
+      ".golangci.yml",
+      "Makefile",
+      "go.mod",
+      "go.sum"
+    ],
+    "onEdit": [
+      {
+        "glob": [
+          "*.go"
+        ],
+        "run": "gofmt -s -w {file}"
+      }
+    ],
+    "requiredChecks": [],
+    "authGlobs": [],
+    "merge": "auto",
+    "signedCommits": false,
+    "delivery": "none",
+    "deliveryBranch": "current",
+    "issues": {
+      "trackers": [
+        "github",
+        "jira"
+      ],
+      "jiraKeys": [
+        "AD",
+        "APEX"
+      ]
+    },
+    "protectedBranches": [
+      "main"
+    ],
+    "commitScopes": [],
+    "model": "default",
+    "effort": "default",
+    "mcp": false,
+    "stackPlanned": {
+      "frontend": null,
+      "backend": null,
+      "database": null,
+      "testing": null,
+      "orm": null,
+      "language": null,
+      "kind": null,
+      "router": null,
+      "migrations": null
+    },
+    "layout": "single",
+    "packageManager": "pnpm",
+    "gitHook": false,
+    "ciGate": false,
+    "dependabot": false,
+    "secretsHygiene": true,
+    "release": "none",
+    "releaseTriggers": [
+      "release-please",
+      "tag",
+      "dispatch"
+    ],
+    "releaseBranches": [
+      "main"
+    ],
+    "dockerRegistries": [
+      "ghcr"
+    ],
+    "dockerPlatforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "dockerImage": "ethernal-tech/apex-bridge",
+    "cosign": false,
+    "journal": true,
+    "records": false
+  }
+}
