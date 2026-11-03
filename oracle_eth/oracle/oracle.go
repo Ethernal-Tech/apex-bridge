@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -176,18 +177,34 @@ func (o *OracleImpl) Start() error {
 }
 
 func (o *OracleImpl) Dispose() error {
-	errs := make([]error, 0)
+	var (
+		wg   sync.WaitGroup
+		lock sync.Mutex
+		errs = make([]error, 0)
+	)
 
+	// observers are disposed in parallel, since each one waits for its tracker to stop
 	for _, eco := range o.ethChainObservers {
-		err := eco.Dispose()
-		if err != nil {
-			chainID := eco.GetConfig().ChainID
+		wg.Add(1)
 
-			o.logger.Error("error while disposing eth chain observer", "chainId", chainID, "err", err)
-			errs = append(errs, fmt.Errorf("error while disposing eth chain observer. chainId: %v, err: %w",
-				chainID, err))
-		}
+		go func(eco core.EthChainObserver) {
+			defer wg.Done()
+
+			err := eco.Dispose()
+			if err != nil {
+				chainID := eco.GetConfig().ChainID
+
+				o.logger.Error("error while disposing eth chain observer", "chainId", chainID, "err", err)
+
+				lock.Lock()
+				errs = append(errs, fmt.Errorf("error while disposing eth chain observer. chainId: %v, err: %w",
+					chainID, err))
+				lock.Unlock()
+			}
+		}(eco)
 	}
+
+	wg.Wait()
 
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing oracle_eth. errors: %w", errors.Join(errs...))

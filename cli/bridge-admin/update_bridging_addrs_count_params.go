@@ -40,14 +40,14 @@ func (params *updateBridgingAddrsCountParams) ValidateFlags() error {
 	}
 
 	if params.bridgingAddrsCount < 1 {
-		return fmt.Errorf("--%s flag not specified or less than 1", bridgeAddrIdxFlag)
+		return fmt.Errorf("--%s flag not specified or less than 1", bridgingAddrsCountFlag)
 	}
 
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if err := validateConfigFilePath(params.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(params.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 

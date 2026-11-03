@@ -98,13 +98,11 @@ func CreateTx(
 	}
 
 	for _, multisig := range txInputInfos.MultiSig {
-		multisigChangeTxOutput := cardanowallet.TxOutput{}
-
 		if addrAndAmountToDeduct != nil {
 			multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
 			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
 
-			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
+			multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 				multisigOutput, multisig.Sum, outputsAmountNew)
 			if err != nil {
 				return nil, "", err

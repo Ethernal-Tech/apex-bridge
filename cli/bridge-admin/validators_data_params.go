@@ -42,11 +42,11 @@ func (v *validatorsDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if err := validateConfigFilePath(v.config); err != nil {
+	if err := validateConfigFilePath(v.config, configFlag); err != nil {
 		return err
 	}
 
-	if err := validateConfigFilePath(v.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(v.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 
