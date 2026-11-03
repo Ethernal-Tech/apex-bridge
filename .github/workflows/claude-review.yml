@@ -32,6 +32,36 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # A thread counts as settled when it is resolved and an owner, member or collaborator
+      # (the PR author included) replied to it; the replies give the reason.
+      - name: Fetch settled review threads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          gh api graphql -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$PR_NUMBER" -f query='
+            query($owner: String!, $name: String!, $number: Int!) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $number) {
+                  reviewThreads(first: 100) {
+                    nodes {
+                      isResolved
+                      path
+                      line
+                      originalLine
+                      comments(first: 20) { nodes { author { login } authorAssociation body } }
+                    }
+                  }
+                }
+              }
+            }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+              | select(.isResolved and any(.comments.nodes[1:][];
+                  .authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR"))
+              | {path, line: (.line // .originalLine), comments: [.comments.nodes[] | {author: .author.login, body}]}]' \
+            >claude-review-settled.json
+          echo "Settled threads: $(jq length claude-review-settled.json)"
+
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
@@ -54,6 +84,13 @@ jobs:
                cancellation, lock ordering
             4. **Tests**: adequate coverage for the change, missing scenarios
             5. **Conventions**: idiomatic Go and the rules in .golangci.yml
+
+            Findings a maintainer has already settled are in
+            claude-review-settled.json: each resolved review thread with its
+            replies, which give the reason. Don't raise a settled finding again,
+            inline or in the summary, and don't list it as still open. Raise it
+            again only if the PR has since changed the lines it points at in a
+            way the replies don't cover.
 
             Provide detailed feedback using inline comments for specific issues.
             Use top-level comments for general observations.
