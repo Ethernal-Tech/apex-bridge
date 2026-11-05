@@ -231,6 +231,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-node-url <node URL> \
         --evm-ttl-block-inc <ttl block increment> \
         --evm-block-rounding-threshold <block rounding threshold> \
+        --evm-no-batch-period-percent <part of the rounding window at both ends in which no batch is created, 0 - default 0.2> \
         --evm-starting-block <block number> \
         --evm-num-block-confirmations <num> \
         --evm-confirmation-strategy <finalized (default)|latest> \

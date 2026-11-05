@@ -21,6 +21,7 @@ const (
 	evmChainNodeURLFlag                = "evm-node-url"
 	evmChainTTLBlockNumberIncFlag      = "evm-ttl-block-inc"
 	evmChainBlockRoundingThresholdFlag = "evm-block-rounding-threshold"
+	evmNoBatchPeriodPercentFlag        = "evm-no-batch-period-percent"
 	evmChainStartingBlockFlag          = "evm-starting-block"
 	evmChainMinFeeForBridgingFlag      = "evm-min-fee-for-bridging"
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
@@ -34,6 +35,7 @@ const (
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
 	evmChainBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for evm chain. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
+	evmNoBatchPeriodPercentFlagDesc        = "part of the block rounding threshold at both ends of a rounding window in which no batch is created, from 0 (disabled) up to but excluding 0.5"                               //nolint:lll
 	evmChainStartingBlockFlagDesc          = "block from where to start evm chain oracle / evm chain block submitter"
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
@@ -62,6 +64,7 @@ type evmChainGenerateConfigsParams struct {
 	evmChainNodeURL                string
 	evmChainTTLBlockNumberInc      uint64
 	evmChainBlockRoundingThreshold uint64
+	evmNoBatchPeriodPercent        float64
 	evmChainStartingBlock          uint64
 	evmChainMinFeeForBridgingStr   string
 	evmChainMinFeeForBridging      *big.Int
@@ -130,6 +133,11 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", evmConfirmationStrategyFlag, p.evmConfirmationStrategy)
 	}
 
+	if !(p.evmNoBatchPeriodPercent >= 0) {
+		return fmt.Errorf("%s must be at least 0: %v",
+			evmNoBatchPeriodPercentFlag, p.evmNoBatchPeriodPercent)
+	}
+
 	if p.evmRestartTrackerPullCheck == 0 {
 		return fmt.Errorf("%s must be greater than zero", evmRestartTrackerPullCheckFlag)
 	}
@@ -161,6 +169,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmChainBlockRoundingThresholdFlag,
 		defaultEvmTTLBlockRoundingThreshold,
 		evmChainBlockRoundingThresholdFlagDesc,
+	)
+	cmd.Flags().Float64Var(
+		&p.evmNoBatchPeriodPercent,
+		evmNoBatchPeriodPercentFlag,
+		defaultEvmNoBatchPeriodPercent,
+		evmNoBatchPeriodPercentFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.evmChainStartingBlock,
@@ -303,7 +317,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		PoolIntervalMiliseconds:    p.evmPollIntervalMiliseconds,
 		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
 		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
-		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
+		NoBatchPeriodPercent:       p.evmNoBatchPeriodPercent,
 		DynamicTx:                  true,
 		MinFeeForBridging:          p.evmChainMinFeeForBridging,
 		MinOperationFee:            p.minOperationFee,
