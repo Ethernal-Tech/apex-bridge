@@ -6,16 +6,23 @@
 ## Certificates
 
 ```bash
-./gen-certs.sh <out-dir> <server-dns-name> <client-name>...   # e.g. ./gen-certs.sh certs node.example.org validator1 validator2
+./gen-certs.sh <out-dir> <server-dns-name> [client-name...]   # e.g. ./gen-certs.sh certs node.example.org validator1 validator2
 ```
 
-`<out-dir>` must be missing or empty. Keep `ca.key` offline (it is only needed to issue certificates) and
-give each validator its own `<name>.crt`/`<name>.key` plus `ca.crt`. Certificates expire after 397 days,
-the CA after 3650; re-issue before that.
+The script never overwrites a file. Each run issues only what `<out-dir>` is missing and then lists every
+certificate there with the days it has left, so it is safe to run again:
 
-The node accepts every certificate the CA has signed and there is no revocation list. To revoke one
-(e.g. a leaked validator key), create a new CA with `gen-certs.sh` and roll the new certificates out to
-the node and every validator; until then the port 5522 firewall allowlist limits the damage.
+- **First run**: creates `ca.crt`/`ca.key`, `server.crt`/`server.key` and one `<name>.crt`/`<name>.key` per client.
+- **Add a validator**: run it again with the new name; the existing CA signs it. `ca.key` must be in `<out-dir>` for that.
+- **Check expiry**: run it with no client names; it issues nothing and prints the days left.
+- **Re-issue a certificate**: delete its `.crt` and `.key` and run again; the CA stays the same.
+
+It stops without changing anything when only one file of a pair exists, when `server.crt` was issued for
+another `<server-dns-name>`, or when `ca.crt` is missing but other certificates are present.
+
+Keep `ca.key` offline (it is only needed to issue certificates) and give each validator its own
+`<name>.crt`/`<name>.key` plus `ca.crt`. Certificates expire after 397 days, the CA after 3650; re-issue
+before that.
 
 ## Node side
 
@@ -28,10 +35,9 @@ relay port keeps serving Cardano peers. Firewall port 5522 to the validator IPs.
 In the Cardano chain config (`networkTls`), with `networkAddress` set to `<server-dns-name>:5522`:
 
 ```json
-"networkTls": {"caFile": "ca.crt", "certFile": "validator1.crt", "keyFile": "validator1.key"}
+"networkTls": {"caFile": "ca.crt", "certFile": "validator1.crt", "keyFile": "validator1.key", "serverName": "node.example.org"}
 ```
 
-`serverName` is optional: it defaults to the host of `networkAddress`, which must then match the server
-certificate SAN (the `<server-dns-name>` given to `gen-certs.sh`). Set it only when connecting by IP or another name.
+`serverName` must match the server certificate SAN (the `<server-dns-name>` given to `gen-certs.sh`).
 `generate-configs cardano-chain` takes the same four values as `--network-tls-ca-file`,
 `--network-tls-cert-file`, `--network-tls-key-file` and `--network-tls-server-name`.
