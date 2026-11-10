@@ -12,8 +12,9 @@ require (
 	github.com/DataDog/dd-trace-go/v2 v2.12.0
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20261023113908-ed976452bc2d
 	github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261109150226-68b05bd58b8c
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261110112856-c2f5f928a6ae
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
+	github.com/blinklabs-io/gouroboros v0.103.1
 	github.com/ethereum/go-ethereum v1.17.10
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/gorilla/handlers v1.5.2
@@ -60,7 +61,6 @@ require (
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
-	github.com/blinklabs-io/gouroboros v0.103.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fjl/jsonw v0.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
