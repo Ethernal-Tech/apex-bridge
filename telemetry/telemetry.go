@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/dd-trace-go/v2/profiler"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-metrics"
 	prometheusmetrics "github.com/hashicorp/go-metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
 type TelemetryConfig struct {
@@ -106,7 +106,11 @@ func startDataDogProfiler(addr string) error {
 		return fmt.Errorf("could not start datadog profiler: %w", err)
 	}
 
-	tracer.Start() // start the tracer
+	if err := tracer.Start(); err != nil {
+		profiler.Stop()
+
+		return fmt.Errorf("could not start datadog tracer: %w", err)
+	}
 
 	return nil
 }
