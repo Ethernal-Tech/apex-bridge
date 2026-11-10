@@ -888,6 +888,46 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	t.Run("ValidateAndAddClaim byron receiver addr in metadata", func(t *testing.T) {
+		for _, byronAddr := range getByronAddresses(t) {
+			byronAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: common.ChainIDStrVector,
+				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+				Transactions: []sendtx.BridgingRequestMetadataTransaction{
+					{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
+					{Address: sendtx.AddrToMetaDataAddr(byronAddr), Amount: utxoMinValue},
+				},
+			})
+			require.NoError(t, err)
+
+			claims := &cCore.BridgeClaims{}
+			cardanoTx := &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: byronAddrInReceiversMetadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: utxoMinValue},
+					},
+				},
+				OriginChainID: common.ChainIDStrPrime,
+			}
+
+			appConfig := getAppConfig(false)
+			refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+				SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+			}
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+			proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+			err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+			require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+		}
+	})
+
 	t.Run("ValidateAndAddClaim invalid eth receiver addr in metadata", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),

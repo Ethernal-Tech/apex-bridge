@@ -302,6 +302,30 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	t.Run("ValidateAndAddClaim byron cardano receiver address", func(t *testing.T) {
+		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrPrime,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestSolMetadataTransaction{
+				{Address: "37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na", Amount: common.LamportToWei(new(big.Int).SetUint64(utxoMinValue)), TokenID: solanaCurrencyID},
+			},
+			OperationFee: minOperationFee,
+			BridgingFee:  minFeeForBridging,
+		})
+		require.NoError(t, err)
+
+		claims := &oCore.BridgeClaims{}
+		appConfig := getAppConfig()
+
+		err = proc.ValidateAndAddClaim(claims, &core.SolanaTx{
+			Metadata:      metadata,
+			OriginChainID: common.ChainIDStrSolana,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+	})
+
 	t.Run("ValidateAndAddClaim cardano utxo below minimum", func(t *testing.T) {
 		metadata, err := core.MarshalSolMetadata(core.BridgingRequestSolMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,

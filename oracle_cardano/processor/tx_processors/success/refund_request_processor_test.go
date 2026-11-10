@@ -520,4 +520,30 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Equal(t, common.PackNumbersToBytes([]uint16{2}), claims.RefundRequestClaims[0].OutputIndexes)
 	})
+
+	t.Run("ValidateAndAddClaim byron sender address", func(t *testing.T) {
+		for _, byronAddr := range getByronAddresses(t) {
+			metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: common.ChainIDStrVector,
+				SenderAddr:         sendtx.AddrToMetaDataAddr(byronAddr),
+				Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			})
+			require.NoError(t, err)
+
+			appConfig := getAppConfig(true)
+
+			err = proc.ValidateAndAddClaim(&cCore.BridgeClaims{}, &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: metadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: 3},
+						{Address: primeBridgingFeeAddr, Amount: 4},
+					},
+				},
+				OriginChainID: common.ChainIDStrPrime,
+			}, appConfig)
+			require.ErrorContains(t, err, "invalid sender addr")
+		}
+	})
 }

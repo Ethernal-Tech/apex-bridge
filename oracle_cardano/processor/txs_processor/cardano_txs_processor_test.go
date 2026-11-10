@@ -1693,3 +1693,49 @@ var (
 		{Name: "availableAmount", Type: abi.Type{T: abi.UintTy, Size: 256}},
 	}
 )
+
+// TestTxProcessorsCollectionNULInTxType checks that a NUL character in the tx type never
+// selects the processor of the type without it. An unknown type goes to refund, if enabled.
+func TestTxProcessorsCollectionNULInTxType(t *testing.T) {
+	refundProcessor := &core.CardanoTxSuccessProcessorMock{Type: common.TxTypeRefundRequest}
+	processors := []core.CardanoTxSuccessProcessor{
+		&core.CardanoTxSuccessProcessorMock{Type: common.BridgingTxTypeBridgingRequest},
+		&core.CardanoTxSuccessProcessorMock{Type: common.BridgingTxTypeBatchExecution},
+		&core.CardanoTxSuccessProcessorMock{Type: common.TxTypeHotWalletFund},
+	}
+
+	getSuccess := func(
+		t *testing.T, txType string, processors []core.CardanoTxSuccessProcessor,
+	) (core.CardanoTxSuccessProcessor, error) {
+		t.Helper()
+
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxType(txType),
+		})
+		require.NoError(t, err)
+
+		return NewTxProcessorsCollection(processors, nil).getSuccess(&core.CardanoTx{
+			OriginChainID: common.ChainIDStrPrime,
+			Tx:            indexer.Tx{Metadata: metadata},
+		}, &cCore.AppConfig{})
+	}
+
+	withRefund := append([]core.CardanoTxSuccessProcessor{refundProcessor}, processors...)
+
+	for _, processor := range processors {
+		txType := string(processor.GetType())
+
+		selected, err := getSuccess(t, txType, withRefund)
+		require.NoError(t, err)
+		require.Same(t, processor, selected)
+
+		for _, value := range []string{"\x00", "\x00" + txType, txType + "\x00", txType[:2] + "\x00" + txType[2:]} {
+			selected, err := getSuccess(t, value, withRefund)
+			require.NoError(t, err)
+			require.Same(t, refundProcessor, selected)
+
+			_, err = getSuccess(t, value, processors)
+			require.ErrorContains(t, err, "irrelevant tx")
+		}
+	}
+}
