@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"math/big"
+	"sync/atomic"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -14,12 +15,21 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+// trackerStopTimeout bounds how long Dispose waits for the event tracker to stop. The tracker
+// finishes the batch it is processing first, and a single rpc call can take up to the tracker's
+// rpc timeout, so this has to stay well above it.
+const trackerStopTimeout = time.Minute
+
 type EthChainObserverImpl struct {
-	config        *oCore.EthChainConfig
-	indexerDB     eventTrackerStore.EventTrackerStore
-	txsReceiver   ethOracleCore.EthTxsReceiver
-	lastBlock     uint64
-	closedCh      chan struct{}
+	config      *oCore.EthChainConfig
+	indexerDB   eventTrackerStore.EventTrackerStore
+	txsReceiver ethOracleCore.EthTxsReceiver
+	lastBlock   uint64
+	closedCh    chan struct{}
+	// stoppedCh is closed once the tracker has stopped after Dispose
+	stoppedCh     chan struct{}
+	started       atomic.Bool
+	stopTimeout   time.Duration
 	indexerLogger hclog.Logger
 	logger        hclog.Logger
 }
@@ -44,6 +54,8 @@ func NewEthChainObserver(
 		indexerDB:     indexerDB,
 		txsReceiver:   txsReceiver,
 		closedCh:      make(chan struct{}),
+		stoppedCh:     make(chan struct{}),
+		stopTimeout:   trackerStopTimeout,
 		indexerLogger: indexerLogger,
 		logger:        logger,
 	}, nil
@@ -59,6 +71,8 @@ func (co *EthChainObserverImpl) Start() error {
 		co.logger.Error("Failed to create event tracker", "error", err)
 	}
 
+	co.started.Store(true)
+
 	go tracker.Start()
 
 	go func() {
@@ -66,6 +80,8 @@ func (co *EthChainObserverImpl) Start() error {
 			select {
 			case <-co.closedCh:
 				tracker.Close() // close old tracker
+				<-notifyClosedCh
+				close(co.stoppedCh)
 
 				return
 
@@ -80,6 +96,8 @@ func (co *EthChainObserverImpl) Start() error {
 
 					select {
 					case <-co.closedCh:
+						<-notifyClosedCh
+						close(co.stoppedCh)
 					case <-notifyClosedCh:
 						_ = co.Start()
 					}
@@ -93,10 +111,21 @@ func (co *EthChainObserverImpl) Start() error {
 	return nil
 }
 
+// Dispose stops the event tracker and waits until it has stopped, so the databases it writes
+// to can be closed afterwards. The tracker finishes the batch it is processing before it stops.
 func (co *EthChainObserverImpl) Dispose() error {
 	close(co.closedCh)
 
-	return nil
+	if !co.started.Load() {
+		return nil
+	}
+
+	select {
+	case <-co.stoppedCh:
+		return nil
+	case <-time.After(co.stopTimeout):
+		return fmt.Errorf("event tracker for chain %s did not stop within %s", co.config.ChainID, co.stopTimeout)
+	}
 }
 
 func (co *EthChainObserverImpl) GetConfig() *oCore.EthChainConfig {
@@ -106,7 +135,7 @@ func (co *EthChainObserverImpl) GetConfig() *oCore.EthChainConfig {
 func (co *EthChainObserverImpl) updateIsTrackerAlive() bool {
 	block, err := co.indexerDB.GetLastProcessedBlock()
 	if err != nil {
-		co.logger.Warn("failed to retrieve last processed eth block from eth tracker: %w")
+		co.logger.Warn("failed to retrieve last processed eth block from eth tracker", "err", err)
 
 		return true
 	}
@@ -141,11 +170,11 @@ func loadTrackerConfigs(
 	}
 
 	return &eventTracker.EventTrackerConfig{
-		RPCEndpoint:            config.NodeURL,
-		PollInterval:           time.Duration(config.PoolIntervalMiliseconds) * time.Millisecond, //nolint:gosec
-		SyncBatchSize:          config.SyncBatchSize,
-		NumBlockConfirmations:  config.NumBlockConfirmations,
-		NumOfBlocksToReconcile: uint64(0),
+		RPCEndpoint:           config.NodeURL,
+		PollInterval:          time.Duration(config.PoolIntervalMiliseconds) * time.Millisecond, //nolint:gosec
+		SyncBatchSize:         config.SyncBatchSize,
+		ConfirmationStrategy:  eventTracker.ConfirmationStrategy(config.ConfirmationStrategy),
+		NumBlockConfirmations: config.NumBlockConfirmations,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:     config.ChainID,
 			TxsReceiver: txsReceiver,

@@ -38,7 +38,7 @@ type setAdditionalDataParams struct {
 }
 
 func (ip *setAdditionalDataParams) ValidateFlags() error {
-	if err := validateConfigFilePath(ip.chainIDsConfig); err != nil {
+	if err := validateConfigFilePath(ip.chainIDsConfig, chainIDsConfigFlag); err != nil {
 		return err
 	}
 

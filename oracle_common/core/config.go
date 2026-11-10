@@ -9,6 +9,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	solana "github.com/Ethernal-Tech/apex-bridge/solana"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -42,6 +43,7 @@ type EthChainConfig struct {
 	BridgingAddresses                     EthBridgingAddresses         `json:"-"`
 	NodeURL                               string                       `json:"nodeUrl"`
 	SyncBatchSize                         uint64                       `json:"syncBatchSize"`
+	ConfirmationStrategy                  string                       `json:"confirmationStrategy"`
 	NumBlockConfirmations                 uint64                       `json:"numBlockConfirmations"`
 	StartBlockNumber                      uint64                       `json:"startBlockNumber"`
 	PoolIntervalMiliseconds               uint64                       `json:"poolIntervalMs"`
@@ -73,6 +75,8 @@ type CardanoChainConfig struct {
 	MinOperationFee            uint64                   `json:"minOperationFee"`
 	MinColCoinsAllowedToBridge uint64                   `json:"minColCoinsAllowedToBridge"`
 	TreasuryAddress            string                   `json:"treasuryAddress"`
+	// NetworkTLS turns on mutual TLS for the connection to the Cardano node (nil: plain tcp or unix socket)
+	NetworkTLS *gouroboros.TLSConfig `json:"networkTls,omitempty"`
 }
 
 type SolanaChainConfig struct {

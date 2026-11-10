@@ -13,6 +13,7 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/spf13/cobra"
 )
 
@@ -20,22 +21,28 @@ const (
 	evmChainNodeURLFlag                = "evm-node-url"
 	evmChainTTLBlockNumberIncFlag      = "evm-ttl-block-inc"
 	evmChainBlockRoundingThresholdFlag = "evm-block-rounding-threshold"
+	evmNoBatchPeriodPercentFlag        = "evm-no-batch-period-percent"
 	evmChainStartingBlockFlag          = "evm-starting-block"
 	evmChainMinFeeForBridgingFlag      = "evm-min-fee-for-bridging"
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
 	evmChainFeeAddrBridgingFlag        = "evm-fee-addr-bridging"
 	evmNumBlockConfirmationsFlag       = "evm-num-block-confirmations"
+	evmConfirmationStrategyFlag        = "evm-confirmation-strategy"
+	evmRestartTrackerPullCheckFlag     = "evm-restart-tracker-pull-check"
 	evmPollIntervalFlag                = "evm-poll-interval"
 	evmSyncBatchSizeFlag               = "evm-sync-batch-size"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
 	evmChainBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for evm chain. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
+	evmNoBatchPeriodPercentFlagDesc        = "part of the block rounding threshold at both ends of a rounding window in which no batch is created, from 0 (disabled) up to but excluding 0.5"                               //nolint:lll
 	evmChainStartingBlockFlagDesc          = "block from where to start evm chain oracle / evm chain block submitter"
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
 	evmChainFeeAddrBridgingDesc            = "minimal addr fee bridging"
-	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer"
+	evmNumBlockConfirmationsFlagDesc       = "number of confirmation blocks for indexer, counted back from the latest block, or from the finalized block with the finalized strategy"                                     //nolint:lll
+	evmConfirmationStrategyFlagDesc        = "how the evm indexer decides a block is confirmed: finalized (default) or latest"                                                                                            //nolint:lll
+	evmRestartTrackerPullCheckFlagDesc     = "seconds without a new confirmed block after which the evm indexer is restarted. With the finalized strategy it has to be longer than the time between two finalized blocks" //nolint:lll
 	evmPollIntervalFlagDesc                = "interval to poll for new transactions in milliseconds"
 	evmSyncBatchSizeFlagDesc               = "number of blocks per batch when syncing the evm chain"
 
@@ -46,6 +53,7 @@ const (
 	defaultEvmTTLBlockRoundingThreshold = 10
 	defaultEvmTTLBlockNumberInc         = 20
 	defaultEvmRelayerGasFeeMultiplier   = 140
+	defaultEvmRestartTrackerPullCheck   = 150
 )
 
 var defaultEvmFeeAddrBridgingAmount string = common.DfmToWei(big.NewInt(1_000_000)).String()
@@ -56,6 +64,7 @@ type evmChainGenerateConfigsParams struct {
 	evmChainNodeURL                string
 	evmChainTTLBlockNumberInc      uint64
 	evmChainBlockRoundingThreshold uint64
+	evmNoBatchPeriodPercent        float64
 	evmChainStartingBlock          uint64
 	evmChainMinFeeForBridgingStr   string
 	evmChainMinFeeForBridging      *big.Int
@@ -64,6 +73,8 @@ type evmChainGenerateConfigsParams struct {
 	evmChainFeeAddrBridgingStr     string
 	evmChainFeeAddrBridging        *big.Int
 	evmNumBlockConfirmations       uint64
+	evmConfirmationStrategy        string
+	evmRestartTrackerPullCheck     uint64
 	evmSyncBatchSize               uint64
 	evmPollIntervalMiliseconds     uint64
 
@@ -117,6 +128,20 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 	p.minOperationFee = minOperationFee
 	p.evmChainFeeAddrBridging = evmChainFeeAddrBridging
 
+	if p.evmConfirmationStrategy != string(eventTracker.ConfirmationStrategyLatest) &&
+		p.evmConfirmationStrategy != string(eventTracker.ConfirmationStrategyFinalized) {
+		return fmt.Errorf("invalid %s: %s", evmConfirmationStrategyFlag, p.evmConfirmationStrategy)
+	}
+
+	if !(p.evmNoBatchPeriodPercent >= 0) {
+		return fmt.Errorf("%s must be at least 0: %v",
+			evmNoBatchPeriodPercentFlag, p.evmNoBatchPeriodPercent)
+	}
+
+	if p.evmRestartTrackerPullCheck == 0 {
+		return fmt.Errorf("%s must be greater than zero", evmRestartTrackerPullCheckFlag)
+	}
+
 	return nil
 }
 
@@ -144,6 +169,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmChainBlockRoundingThresholdFlag,
 		defaultEvmTTLBlockRoundingThreshold,
 		evmChainBlockRoundingThresholdFlagDesc,
+	)
+	cmd.Flags().Float64Var(
+		&p.evmNoBatchPeriodPercent,
+		evmNoBatchPeriodPercentFlag,
+		defaultEvmNoBatchPeriodPercent,
+		evmNoBatchPeriodPercentFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.evmChainStartingBlock,
@@ -203,6 +234,18 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmNumBlockConfirmationsFlag,
 		defaultEvmBlockConfirmationCount,
 		evmNumBlockConfirmationsFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.evmConfirmationStrategy,
+		evmConfirmationStrategyFlag,
+		string(eventTracker.ConfirmationStrategyFinalized),
+		evmConfirmationStrategyFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.evmRestartTrackerPullCheck,
+		evmRestartTrackerPullCheckFlag,
+		defaultEvmRestartTrackerPullCheck,
+		evmRestartTrackerPullCheckFlagDesc,
 	)
 
 	// Output params
@@ -268,17 +311,18 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
 		NodeURL:                    p.evmChainNodeURL,
 		SyncBatchSize:              p.evmSyncBatchSize,
+		ConfirmationStrategy:       p.evmConfirmationStrategy,
 		NumBlockConfirmations:      p.evmNumBlockConfirmations,
 		StartBlockNumber:           p.evmChainStartingBlock,
 		PoolIntervalMiliseconds:    p.evmPollIntervalMiliseconds,
 		TTLBlockNumberInc:          p.evmChainTTLBlockNumberInc,
 		BlockRoundingThreshold:     p.evmChainBlockRoundingThreshold,
-		NoBatchPeriodPercent:       defaultEvmNoBatchPeriodPercent,
+		NoBatchPeriodPercent:       p.evmNoBatchPeriodPercent,
 		DynamicTx:                  true,
 		MinFeeForBridging:          p.evmChainMinFeeForBridging,
 		MinOperationFee:            p.minOperationFee,
 		MinColCoinsAllowedToBridge: common.MinAmountAllowedToBridgeEVM,
-		RestartTrackerPullCheck:    time.Second * 150,
+		RestartTrackerPullCheck:    time.Second * time.Duration(p.evmRestartTrackerPullCheck), //nolint:gosec
 		FeeAddrBridgingAmount:      p.evmChainFeeAddrBridging,
 	}
 

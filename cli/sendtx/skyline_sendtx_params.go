@@ -756,7 +756,7 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 	common.ICommandResult, error,
 ) {
 	receivers := toSkylineCardanoMetadata(p.receiversParsed, p.tokenIDSrc)
-	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
+	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc) //nolint:gosec
 
 	srcConfig := common.GetChainConfig(p.chainIDSrc)
 	dstConfig := common.GetChainConfig(p.chainIDDst)
