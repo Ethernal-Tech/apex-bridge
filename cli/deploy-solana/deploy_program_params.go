@@ -221,14 +221,6 @@ func (p *deployProgramParams) validateFlags() error {
 
 	p.confirmationTimeout = time.Duration(p.confirmationTimeoutSeconds) * time.Second //nolint:gosec
 
-	if p.feePayerKeyPath == "" && p.programKeyPath == "" {
-		return fmt.Errorf(
-			"fee payer key path not specified: --%s (required when --%s is not set)",
-			feePayerKeyFlag,
-			programKeyFlag,
-		)
-	}
-
 	return nil
 }
 

@@ -19,7 +19,7 @@ const (
 )
 
 type registerTokenCommonParams struct {
-	altCommonParams
+	programAdminParams
 
 	treasuryAddress string
 

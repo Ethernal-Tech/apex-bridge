@@ -399,6 +399,7 @@ func allocateInputsForConsolidation(
 
 	for {
 		var remainingUtxosNum int
+
 		alloc, remainingUtxosNum = calculateInitialAllocations(inputsWorkingSet, totalNumberOfUtxos, maxUtxoCount)
 
 		if len(alloc) == 0 {

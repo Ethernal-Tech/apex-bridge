@@ -20,7 +20,7 @@ const (
 )
 
 type updateMinBridgingAmountParams struct {
-	altCommonParams
+	programAdminParams
 
 	tokenID           uint16
 	minBridgingAmount uint64
