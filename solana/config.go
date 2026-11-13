@@ -19,7 +19,6 @@ type SolanaChainConfig struct {
 	Tokens                                map[uint16]common.Token      `json:"tokens"`
 	AlwaysTrackCurrencyAndWrappedCurrency bool                         `json:"alwaysTrackCurrencyAndWrappedCurrency"`
 	TxProviderEndpoint                    string                       `json:"txProviderEndpoint"`
-	ALTPublicKey                          string                       `json:"altPublicKey"`
 	ProgramID                             string                       `json:"trackedProgram"`
 }
 

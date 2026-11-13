@@ -668,7 +668,6 @@ func (s *SolStateProcessor) UpdateBridgingRequestStates(
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
 				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
 				chainIDConverter.ToChainIDStr(destinationChainId))
-
 			if err != nil {
 				s.logger.Error(
 					"error while updating a bridging request state to",

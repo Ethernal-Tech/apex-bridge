@@ -14,20 +14,22 @@ import (
 )
 
 const (
-	altRPCURLFlag                     = "url"
-	altProgramIDFlag                  = "program-id"
-	altAdminKeyPathFlag               = "admin-key"
-	altConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
+	programAdminRPCURLFlag                     = "url"
+	programAdminProgramIDFlag                  = "program-id"
+	programAdminAdminKeyPathFlag               = "admin-key"
+	programAdminConfirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
-	altRPCURLFlagDesc                     = "Solana RPC URL"
-	altProgramIDFlagDesc                  = "skyline program ID"
-	altAdminKeyPathFlagDesc               = "path to Solana admin keypair file"
-	altConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
+	programAdminRPCURLFlagDesc                     = "Solana RPC URL"
+	programAdminProgramIDFlagDesc                  = "skyline program ID"
+	programAdminAdminKeyPathFlagDesc               = "path to Solana admin keypair file"
+	programAdminConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for tx finalization"
 
-	defaultALTConfirmationTimeoutSeconds = uint64(120)
+	defaultProgramAdminConfirmationTimeoutSeconds = uint64(120)
 )
 
-type altCommonParams struct {
+// programAdminParams holds the flags shared by commands that send admin-signed
+// transactions to the skyline Solana program.
+type programAdminParams struct {
 	rpcURL                     string
 	programID                  string
 	adminKeyPath               string
@@ -39,24 +41,24 @@ type altCommonParams struct {
 	programPublicKey    solana.PublicKey
 }
 
-func (p *altCommonParams) setCommonFlags(cmd commonFlagSetter) {
+func (p *programAdminParams) setCommonFlags(cmd commonFlagSetter) {
 	cmd.StringVar(
 		&p.rpcURL,
-		altRPCURLFlag,
+		programAdminRPCURLFlag,
 		"",
-		altRPCURLFlagDesc,
+		programAdminRPCURLFlagDesc,
 	)
 	cmd.StringVar(
 		&p.programID,
-		altProgramIDFlag,
+		programAdminProgramIDFlag,
 		"",
-		altProgramIDFlagDesc,
+		programAdminProgramIDFlagDesc,
 	)
 	cmd.StringVar(
 		&p.adminKeyPath,
-		altAdminKeyPathFlag,
+		programAdminAdminKeyPathFlag,
 		"",
-		altAdminKeyPathFlagDesc,
+		programAdminAdminKeyPathFlagDesc,
 	)
 	cmd.StringVar(
 		&p.privateKeyConfig,
@@ -66,31 +68,31 @@ func (p *altCommonParams) setCommonFlags(cmd commonFlagSetter) {
 	)
 	cmd.Uint64Var(
 		&p.confirmationTimeoutSeconds,
-		altConfirmationTimeoutSecondsFlag,
-		defaultALTConfirmationTimeoutSeconds,
-		altConfirmationTimeoutSecondsFlagDesc,
+		programAdminConfirmationTimeoutSecondsFlag,
+		defaultProgramAdminConfirmationTimeoutSeconds,
+		programAdminConfirmationTimeoutSecondsFlagDesc,
 	)
 }
 
-func (p *altCommonParams) setCommonFlagsOnCommand(cmd *cobra.Command) {
+func (p *programAdminParams) setCommonFlagsOnCommand(cmd *cobra.Command) {
 	p.setCommonFlags(cmd.Flags())
-	cmd.MarkFlagsMutuallyExclusive(altAdminKeyPathFlag, privateKeyConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(programAdminAdminKeyPathFlag, privateKeyConfigFlag)
 }
 
-func (p *altCommonParams) validateCommonFlags() error {
+func (p *programAdminParams) validateCommonFlags() error {
 	if !common.IsValidHTTPURL(p.rpcURL) {
 		return fmt.Errorf(
 			"invalid --%s flag (must be a valid http or https URL)",
-			altRPCURLFlag,
+			programAdminRPCURLFlag,
 		)
 	}
 
 	if p.adminKeyPath == "" && p.privateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", altAdminKeyPathFlag, privateKeyConfigFlag)
+		return fmt.Errorf("specify at least one: --%s or --%s", programAdminAdminKeyPathFlag, privateKeyConfigFlag)
 	}
 
 	if p.programID == "" {
-		return fmt.Errorf("program ID not specified: --%s", altProgramIDFlag)
+		return fmt.Errorf("program ID not specified: --%s", programAdminProgramIDFlag)
 	}
 
 	if p.privateKeyConfig == "" {
@@ -115,15 +117,11 @@ func (p *altCommonParams) validateCommonFlags() error {
 	if p.confirmationTimeoutSeconds == 0 {
 		return fmt.Errorf(
 			"confirmation timeout must be greater than 0: --%s",
-			altConfirmationTimeoutSecondsFlag,
+			programAdminConfirmationTimeoutSecondsFlag,
 		)
 	}
 
 	p.confirmationTimeout = time.Duration(p.confirmationTimeoutSeconds) * time.Second //nolint:gosec
-
-	if p.programID == "" {
-		return fmt.Errorf("program ID not specified: --%s", altProgramIDFlag)
-	}
 
 	programID, err := solanawallet.PublicKeyFromAddress(p.programID)
 	if err != nil {

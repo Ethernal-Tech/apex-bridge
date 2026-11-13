@@ -230,7 +230,6 @@ func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, log
 
 		evmTxHash, err := common.Keccak256(deposit.Data)
 		if err != nil {
-
 			return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to create txHash. err: %w", err)
 		}
 
