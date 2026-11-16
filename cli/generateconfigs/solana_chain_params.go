@@ -56,9 +56,6 @@ const (
 	defaultSolanaTTLSlotNumberInc           = uint64(0)
 	defaultSolanaConfirmationTimeout        = int64(60000) // 1 minute
 
-	altPublicKeyFlag     = "alt-public-key"
-	altPublicKeyFlagDesc = "alt public key for solana chain"
-
 	defaultSlotRoundingThresholdSolana = 10
 	defaultNoBatchPeriodPercentSolana  = 0
 	defaultSolanaAvgSlotTime           = 166 * time.Millisecond
@@ -102,7 +99,6 @@ type solanaChainGenerateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 	treasuryAddress   string
-	altPublicKey      string
 
 	slotRoundingThreshold uint64
 }
@@ -257,13 +253,6 @@ func (p *solanaChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.altPublicKey,
-		altPublicKeyFlag,
-		"",
-		altPublicKeyFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&p.relayerDataDir,
 		relayerDataDirFlag,
 		"",
@@ -340,7 +329,6 @@ func (p *solanaChainGenerateConfigsParams) Execute(outputter common.OutputFormat
 			TxProviderEndpoint:    p.solanaChainNodeURL,
 			SlotRoundingThreshold: p.slotRoundingThreshold,
 			NoBatchPeriodPercent:  defaultNoBatchPeriodPercentSolana,
-			ALTPublicKey:          p.altPublicKey,
 			ProgramID:             p.solanaTrackedProgram,
 		},
 		TrackerStartSlot:           p.solanaTrackerStartSlot,

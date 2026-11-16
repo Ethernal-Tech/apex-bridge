@@ -158,7 +158,6 @@ func loadTrackerConfigs(
 	scAddress := ethgo.HexToAddress(bridgingAddress)
 
 	eventSigs, err := eth.GetGatewayEventSignatures()
-
 	if err != nil {
 		logger.Error("failed to get nexus event signatures", "err", err)
 

@@ -281,7 +281,6 @@ $ apex-bridge generate-configs solana-chain \
         --slot-rounding-threshold <slot rounding threshold> \
         --sol-tracker-start-block <block to start solana chain tracker from. format slot:blockNumber> \
         --treasury-address <solana treasury public key> \
-        --alt-public-key <address lookup table public key> \
         --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
         --sol-ttl-number-inc <TTL increment for solana chain> \
         --sol-confirmation-timeout <confirmation timeout for solana chain txs in milliseconds> \
@@ -883,32 +882,6 @@ apex-bridge deploy-solana update-fee-config \
         --confirmation-timeout-seconds 120
 ```
 
-- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
-
-# How to create Solana ALT (Address Lookup Table)
-```shell
-apex-bridge deploy-solana create-alt \
-        --url http://127.0.0.1:8899 \
-        --program-id <> \
-        --admin-key ./admin-keypair.json \
-        --confirmation-timeout-seconds 120
-```
-
-- instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
-
-# How to extend Solana ALT for bridge transaction
-```shell
-apex-bridge deploy-solana extend-alt \
-        --url http://127.0.0.1:8899 \
-        --program-id <> \
-        --admin-key ./admin-keypair.json \
-        --alt-address <ALT_PUBLIC_KEY_FROM_CREATE_ALT> \
-        --token-id-and-mint <TOKEN_ID_1:TOKEN_MINT_1> \
-        --token-id-and-mint <TOKEN_ID_2:TOKEN_MINT_2> \
-        --token-id-and-mint <TOKEN_ID_3:TOKEN_MINT_3> \
-        --confirmation-timeout-seconds 120
-```
-- run `extend-alt` again with new `--token-id-and-mint` values when new tokens are registered.
 - instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to register lock/unlock Solana token

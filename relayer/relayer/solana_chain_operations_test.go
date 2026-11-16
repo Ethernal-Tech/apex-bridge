@@ -37,6 +37,7 @@ func Test_DecodePayload(t *testing.T) {
 	require.NoError(t, err)
 
 	var payload sendtx.SolanaPayload
+
 	err = payload.Unmarshal(payloadBytes)
 	require.NoError(t, err)
 
@@ -566,6 +567,7 @@ func TestPayload_Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 
 	var payload2 sendtx.SolanaPayload
+
 	err = payload2.Unmarshal(payloadBytes)
 	require.NoError(t, err)
 	require.Equal(t, payload, payload2)

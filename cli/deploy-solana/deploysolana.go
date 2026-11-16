@@ -7,8 +7,6 @@ import (
 
 const deployProgramCommandUse = "deploy-program"
 const upgradeProgramCommandUse = "upgrade-program"
-const createALTCommandUse = "create-alt"
-const extendALTCommandUse = "extend-alt"
 const registerLockUnlockTokenCommandUse = "register-lock-unlock-token"
 const registerMintBurnTokenCommandUse = "register-mint-burn-token"
 const hotWalletIncrementCommandUse = "hot-wallet-increment"
@@ -19,8 +17,6 @@ const exportKeypairCommandUse = "export-keypair"
 
 var deployProgramParamsData = &deployProgramParams{}
 var upgradeProgramParamsData = &upgradeProgramParams{}
-var createALTParamsData = &createALTParams{}
-var extendALTParamsData = &extendALTParams{}
 var registerLockUnlockTokenParamsData = &registerLockUnlockTokenParams{}
 var registerMintBurnTokenParamsData = &registerMintBurnTokenParams{}
 var hotWalletIncrementParamsData = &hotWalletIncrementParams{}
@@ -46,18 +42,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 		Short:   "upgrade an existing Solana program using the solana CLI",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(upgradeProgramParamsData),
-	}
-	cmdCreateALT := &cobra.Command{
-		Use:     createALTCommandUse,
-		Short:   "create a new Solana address lookup table (ALT)",
-		PreRunE: runPreRun,
-		Run:     common.GetCliRunCommand(createALTParamsData),
-	}
-	cmdExtendALT := &cobra.Command{
-		Use:     extendALTCommandUse,
-		Short:   "extend Solana address lookup table (ALT) with bridge addresses",
-		PreRunE: runPreRun,
-		Run:     common.GetCliRunCommand(extendALTParamsData),
 	}
 	cmdRegisterLockUnlockToken := &cobra.Command{
 		Use:     registerLockUnlockTokenCommandUse,
@@ -104,8 +88,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	upgradeProgramParamsData.setFlags(cmdUpgradeProgram)
-	createALTParamsData.setFlags(cmdCreateALT)
-	extendALTParamsData.setFlags(cmdExtendALT)
 	registerLockUnlockTokenParamsData.setFlags(cmdRegisterLockUnlockToken)
 	registerMintBurnTokenParamsData.setFlags(cmdRegisterMintBurnToken)
 	hotWalletIncrementParamsData.setFlags(cmdHotWalletIncrement)
@@ -115,8 +97,6 @@ func GetDeploySolanaCommand() *cobra.Command {
 	exportKeypairParamsData.setFlags(cmdExportKeypair)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdUpgradeProgram)
-	cmdDeploySolana.AddCommand(cmdCreateALT)
-	cmdDeploySolana.AddCommand(cmdExtendALT)
 	cmdDeploySolana.AddCommand(cmdRegisterLockUnlockToken)
 	cmdDeploySolana.AddCommand(cmdRegisterMintBurnToken)
 	cmdDeploySolana.AddCommand(cmdHotWalletIncrement)
@@ -135,14 +115,6 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == upgradeProgramCommandUse {
 		return upgradeProgramParamsData.validateFlags()
-	}
-
-	if cb.Use == createALTCommandUse {
-		return createALTParamsData.validateFlags()
-	}
-
-	if cb.Use == extendALTCommandUse {
-		return extendALTParamsData.validateFlags()
 	}
 
 	if cb.Use == registerLockUnlockTokenCommandUse {

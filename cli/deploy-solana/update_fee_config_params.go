@@ -25,7 +25,7 @@ const (
 )
 
 type updateFeeConfigParams struct {
-	altCommonParams
+	programAdminParams
 
 	minOperationFee uint64
 	bridgingFee     uint64
