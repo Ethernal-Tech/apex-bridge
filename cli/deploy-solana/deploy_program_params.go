@@ -40,7 +40,7 @@ const (
 	confirmationTimeoutSecondsFlag = "confirmation-timeout-seconds"
 
 	rpcURLFlagDesc                     = "Solana RPC URL"
-	feePayerKeyFlagDesc                = "path to fee payer keypair file (defaults to admin key when omitted and --key is set)" //nolint:lll
+	feePayerKeyFlagDesc                = "path to fee payer keypair file (defaults to admin key when omitted)"
 	programKeyFlagDesc                 = "path to program keypair file"
 	buildPathFlagDesc                  = "path to the compiled program (.so file)"
 	commitmentFlagDesc                 = "commitment level (processed, confirmed, finalized)"
