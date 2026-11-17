@@ -2,16 +2,19 @@ package cardanotx
 
 import (
 	"hash/crc32"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet/bech32"
 	"github.com/blinklabs-io/gouroboros/base58"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_IsValidOutputAddress(t *testing.T) {
+func Test_IsValidReceiverAddress_CIP19Vectors(t *testing.T) {
 	listValidMain := []string{
 		"addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 		"addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
@@ -42,28 +45,28 @@ func Test_IsValidOutputAddress(t *testing.T) {
 
 	// mainnet
 	for _, x := range listValidMain {
-		assert.True(t, IsValidOutputAddress(x, wallet.MainNetNetwork))
+		assert.True(t, IsValidReceiverAddress(x, wallet.MainNetNetwork))
 	}
 
 	for _, x := range listValidTest {
-		assert.False(t, IsValidOutputAddress(x, wallet.MainNetNetwork))
+		assert.False(t, IsValidReceiverAddress(x, wallet.MainNetNetwork))
 	}
 
 	for _, x := range listInvalid {
-		assert.False(t, IsValidOutputAddress(x, wallet.MainNetNetwork))
+		assert.False(t, IsValidReceiverAddress(x, wallet.MainNetNetwork))
 	}
 
 	// test
 	for _, x := range listValidMain {
-		assert.False(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
+		assert.False(t, IsValidReceiverAddress(x, wallet.TestNetNetwork))
 	}
 
 	for _, x := range listValidTest {
-		assert.True(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
+		assert.True(t, IsValidReceiverAddress(x, wallet.TestNetNetwork))
 	}
 
 	for _, x := range listInvalid {
-		assert.False(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
+		assert.False(t, IsValidReceiverAddress(x, wallet.TestNetNetwork))
 	}
 }
 
@@ -88,12 +91,11 @@ func Test_IsValidReceiverAddress(t *testing.T) {
 	})
 
 	t.Run("well formed byron addresses", func(t *testing.T) {
-		// IsValidOutputAddress accepts these, so only the Byron check rejects them
-		require.True(t, IsValidOutputAddress(byronMain, wallet.MainNetNetwork))
-		require.True(t, IsValidOutputAddress(byronTest, wallet.TestNetNetwork))
-		require.True(t, IsValidOutputAddress(newByronAddress(t, 28), wallet.MainNetNetwork))
-
 		for _, addr := range []string{byronMain, byronTest, newByronAddress(t, 28)} {
+			// the parser accepts these, so only the Byron check rejects them
+			_, err := wallet.NewCardanoAddressFromString(addr)
+			require.NoError(t, err)
+
 			require.False(t, IsValidReceiverAddress(addr, wallet.MainNetNetwork))
 			require.False(t, IsValidReceiverAddress(addr, wallet.TestNetNetwork))
 		}
@@ -112,6 +114,65 @@ func Test_IsValidReceiverAddress(t *testing.T) {
 				require.False(t, valid)
 			}
 		}
+	})
+}
+
+func Test_IsValidReceiverAddress_NonCanonical(t *testing.T) {
+	const (
+		baseTest    = "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae"
+		pointerTest = "addr_test1gz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrdw5vky"
+	)
+
+	// reencode decodes a valid address and encodes it again after mutate changes its bytes
+	reencode := func(t *testing.T, addr string, hrp string, mutate func([]byte) []byte) string {
+		t.Helper()
+
+		_, raw, err := bech32.DecodeToBase256(addr)
+		require.NoError(t, err)
+
+		out, err := bech32.EncodeFromBase256(hrp, mutate(slices.Clone(raw)))
+		require.NoError(t, err)
+
+		return out
+	}
+
+	unchanged := func(raw []byte) []byte { return raw }
+
+	t.Run("canonical encoding is accepted", func(t *testing.T) {
+		require.True(t, IsValidReceiverAddress(reencode(t, baseTest, "addr_test", unchanged), wallet.TestNetNetwork))
+		require.True(t, IsValidReceiverAddress(reencode(t, pointerTest, "addr_test", unchanged), wallet.TestNetNetwork))
+	})
+
+	t.Run("base address with trailing bytes", func(t *testing.T) {
+		addr := reencode(t, baseTest, "addr_test", func(raw []byte) []byte { return append(raw, 0) })
+
+		// the parser accepts it, so only the canonical check rejects it
+		_, err := wallet.NewCardanoAddressFromString(addr)
+		require.NoError(t, err)
+		require.False(t, IsValidReceiverAddress(addr, wallet.TestNetNetwork))
+	})
+
+	t.Run("pointer address with non-minimal varint", func(t *testing.T) {
+		addr := reencode(t, pointerTest, "addr_test", func(raw []byte) []byte {
+			// a leading 0x80 continuation byte adds nothing to the slot value
+			return slices.Insert(raw, 1+wallet.KeyHashSize, 0x80)
+		})
+
+		_, err := wallet.NewCardanoAddressFromString(addr)
+		require.NoError(t, err)
+		require.False(t, IsValidReceiverAddress(addr, wallet.TestNetNetwork))
+	})
+
+	t.Run("prefix does not match network", func(t *testing.T) {
+		addr := reencode(t, baseTest, "addr", unchanged)
+
+		_, err := wallet.NewCardanoAddressFromString(addr)
+		require.NoError(t, err)
+		require.False(t, IsValidReceiverAddress(addr, wallet.TestNetNetwork))
+	})
+
+	t.Run("upper case", func(t *testing.T) {
+		require.False(t, IsValidReceiverAddress(strings.ToUpper(baseTest), wallet.TestNetNetwork))
 	})
 }
 
