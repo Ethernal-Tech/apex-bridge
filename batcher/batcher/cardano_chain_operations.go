@@ -528,7 +528,7 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 				obj.Utxo.Output.Address, cco.chainIDConverter.ToChainIDStr(data.ChainID))
 		}
 
-		if !cardano.IsValidOutputAddress(obj.Addr, cco.config.NetworkID) {
+		if !cardano.IsValidReceiverAddress(obj.Addr, cco.config.NetworkID) {
 			cco.logger.Error("skipped unknown tokens refund: invalid receiver address",
 				"batchID", data.BatchNonceID, "input", obj.Utxo.Input.String(), "addr", obj.Addr)
 
