@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -158,9 +159,7 @@ func (p *RefundRequestProcessorImpl) validate(
 	}
 
 	amountSum := big.NewInt(0)
-	unknownNativeTokensUtxoCnt := uint(0)
-
-	var hasTokens bool
+	unknownTokensOutputs := make([]*indexer.TxOutput, 0, unknownNativeTokensUtxoCntMax)
 
 	for _, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
@@ -171,14 +170,15 @@ func (p *RefundRequestProcessorImpl) validate(
 
 		// since this is a reactor only processor, we decline all tokens
 		if len(out.Tokens) > 0 {
-			hasTokens = true
-			unknownNativeTokensUtxoCnt++
+			unknownTokensOutputs = append(unknownTokensOutputs, out)
 		}
 	}
 
-	if unknownNativeTokensUtxoCnt > unknownNativeTokensUtxoCntMax {
+	if len(unknownTokensOutputs) > unknownNativeTokensUtxoCntMax {
 		return fmt.Errorf("more UTxOs with unknown tokens than allowed. max: %d", unknownNativeTokensUtxoCntMax)
 	}
+
+	hasTokens := len(unknownTokensOutputs) > 0
 
 	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
 		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(
@@ -196,6 +196,12 @@ func (p *RefundRequestProcessorImpl) validate(
 			amountSum, minBridgingFee+calculatedMinUtxo)
 	}
 
+	// the sum check above is not enough: the batcher refunds every unknown tokens UTxO on its own
+	if err := validateUnknownTokensRefundOutputs(
+		chainConfig, p.chainInfos, senderAddr, unknownTokensOutputs); err != nil {
+		return fmt.Errorf("invalid refund of unknown tokens. err: %w", err)
+	}
+
 	return nil
 }
 
@@ -204,21 +210,12 @@ func calculateMinUtxoForRefund(
 	receiverAddr string, bridgingAddresses []string,
 	chainInfos map[string]*cChain.CardanoChainInfo,
 ) (uint64, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
+	builder, err := newRefundTxBuilder(config, chainInfos)
 	if err != nil {
 		return 0, err
 	}
 
 	defer builder.Dispose()
-
-	chainInfo, exists := chainInfos[config.ChainID]
-	if !exists {
-		return 0, fmt.Errorf("chain info for chainID: %s, not found", config.ChainID)
-	}
-
-	protocolParams := chainInfo.GetProtocolParams()
-
-	builder.SetProtocolParameters(protocolParams)
 
 	tokenNameToAmount := make(map[string]uint64)
 
@@ -257,6 +254,54 @@ func calculateMinUtxoForRefund(
 	}
 
 	return max(config.UtxoMinAmount, potentialTokenCost), nil
+}
+
+// validateUnknownTokensRefundOutputs checks every bridging output that the batcher refunds as a
+// separate UTxO. The batcher charges MinFeeForBridgingTokens per such output, so the sum check
+// alone lets a single output end up below the fee or below min UTxO, and the batch for the
+// chain can never be built or is rejected by the node.
+func validateUnknownTokensRefundOutputs(
+	config *cCore.CardanoChainConfig, chainInfos map[string]*cChain.CardanoChainInfo,
+	receiverAddr string, outputs []*indexer.TxOutput,
+) error {
+	if len(outputs) == 0 {
+		return nil
+	}
+
+	builder, err := newRefundTxBuilder(config, chainInfos)
+	if err != nil {
+		return err
+	}
+
+	defer builder.Dispose()
+
+	for _, out := range outputs {
+		_, err := cardanotx.CreateUnknownTokensRefundTxOutput(
+			builder, receiverAddr, out, config.MinFeeForBridgingTokens)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func newRefundTxBuilder(
+	config *cCore.CardanoChainConfig, chainInfos map[string]*cChain.CardanoChainInfo,
+) (*cardanowallet.TxBuilder, error) {
+	chainInfo, exists := chainInfos[config.ChainID]
+	if !exists {
+		return nil, fmt.Errorf("chain info for chainID: %s, not found", config.ChainID)
+	}
+
+	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.CardanoCliBinaryName))
+	if err != nil {
+		return nil, err
+	}
+
+	builder.SetProtocolParameters(chainInfo.GetProtocolParams())
+
+	return builder, nil
 }
 
 func (p *RefundRequestProcessorImpl) getSenderAddr(

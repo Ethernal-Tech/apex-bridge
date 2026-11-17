@@ -12,6 +12,7 @@ import (
 	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -215,7 +216,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	amountSum := big.NewInt(0)
-	unknownNativeTokensUtxoCnt := uint(0)
+	unknownTokensOutputs := make([]*indexer.TxOutput, 0, unknownNativeTokensUtxoCntMax)
 
 	var hasTokens bool
 
@@ -229,21 +230,13 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 		if len(out.Tokens) > 0 {
 			hasTokens = true
 
-			if chainConfig.Tokens == nil || zeroAddress != out.Address {
-				unknownNativeTokensUtxoCnt++
-			} else {
-				for _, token := range out.Tokens {
-					if _, exists := tokensNamesAndIds[token.TokenName()]; !exists {
-						unknownNativeTokensUtxoCnt++
-
-						break
-					}
-				}
+			if hasUnknownTokens(out, zeroAddress, tokensNamesAndIds) {
+				unknownTokensOutputs = append(unknownTokensOutputs, out)
 			}
 		}
 	}
 
-	if unknownNativeTokensUtxoCnt > unknownNativeTokensUtxoCntMax {
+	if len(unknownTokensOutputs) > unknownNativeTokensUtxoCntMax {
 		return fmt.Errorf("more UTxOs with unknown tokens than allowed. max: %d", unknownNativeTokensUtxoCntMax)
 	}
 
@@ -262,7 +255,34 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 			amountSum, minBridgingFee+calculatedMinUtxo)
 	}
 
+	// the sum check above is not enough: the batcher refunds every unknown tokens UTxO on its own
+	if err := validateUnknownTokensRefundOutputs(
+		chainConfig, p.chainInfos, senderAddr, unknownTokensOutputs); err != nil {
+		return fmt.Errorf("invalid refund of unknown tokens. err: %w", err)
+	}
+
 	return nil
+}
+
+// hasUnknownTokens reports whether out is refunded UTxO by UTxO by the batcher. It must match the
+// classification of unknownTokenOutputIndexes in addRefundRequestClaim: tokens are known only on
+// the zero address and only when they are in the chain's token config.
+func hasUnknownTokens(out *indexer.TxOutput, zeroAddress string, knownTokens map[string]uint16) bool {
+	if len(out.Tokens) == 0 {
+		return false
+	}
+
+	if out.Address != zeroAddress {
+		return true
+	}
+
+	for _, token := range out.Tokens {
+		if _, exists := knownTokens[token.TokenName()]; !exists {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *RefundRequestProcessorSkylineImpl) getSenderAddr(

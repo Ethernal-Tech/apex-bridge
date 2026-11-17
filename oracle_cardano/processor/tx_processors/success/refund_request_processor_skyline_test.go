@@ -482,6 +482,33 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "less than the minimum required for refund")
 	})
 
+	t.Run("ValidateAndAddClaim unknown tokens output below fee plus min utxo", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+
+		unknownToken := indexer.TokenAmount{PolicyID: policyID, Name: "unknown", Amount: 100}
+
+		// the sum covers one fee plus min utxo, but the batcher charges the fee per unknown tokens output
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 5_000_000, Tokens: []indexer.TokenAmount{unknownToken}},
+			{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + 1, Tokens: []indexer.TokenAmount{unknownToken}},
+		}
+
+		claims := &cCore.BridgeClaims{}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            indexer.Tx{Metadata: metadata, Outputs: txOutputs},
+			OriginChainID: common.ChainIDStrPrime,
+		}, getAppConfig(true))
+		require.ErrorIs(t, err, cardanotx.ErrUnpayableUnknownTokensRefund)
+		require.Empty(t, claims.RefundRequestClaims)
+	})
+
 	t.Run("ValidateAndAddClaim try count exceeded", func(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
