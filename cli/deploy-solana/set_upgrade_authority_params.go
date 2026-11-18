@@ -76,6 +76,7 @@ func (p *setUpgradeAuthorityParams) validateFlags() error {
 	newKeySource := solanatx.GetKeyNameForNewSolanaAdmin()
 	if p.newUpgradeAuthorityKeyPath != "" {
 		newKeySource = "--" + newUpgradeAuthorityKeyFlag
+
 		p.newUpgradeAuthorityKeyPath, err = resolveExistingFile(p.newUpgradeAuthorityKeyPath, "new upgrade authority key")
 		if err != nil {
 			return fmt.Errorf("%s: %w", newKeySource, err)
@@ -144,12 +145,14 @@ func (p *setUpgradeAuthorityParams) Execute(outputter common.OutputFormatter) (c
 	newKey := p.newPrivateKey.PublicKey()
 
 	var output string
+
 	var err error
 	if p.privateKeyConfig != "" {
 		output, err = p.submitUpgradeAuthorityChange()
 	} else {
 		output, err = common.ExecuteCLICommand("solana", p.buildArgs(p.upgradeAuthorityKeyPath), ".")
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("solana program set-upgrade-authority failed: %w", err)
 	}

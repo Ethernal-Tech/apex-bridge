@@ -25,6 +25,7 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 		"/bridge/node/other_solana_admin":     current,
 		"/bridge/node/other_new_solana_admin": next,
 	}
+
 	ssm := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Name           string
@@ -33,12 +34,15 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 		if !assert.NoError(t, json.NewDecoder(r.Body).Decode(&request)) {
 			return
 		}
+
 		key, ok := keys[request.Name]
 		if !assert.True(t, ok, "unexpected SSM parameter %s", request.Name) {
 			return
 		}
+
 		assert.Equal(t, "AmazonSSM.GetParameter", r.Header.Get("X-Amz-Target"))
 		assert.True(t, request.WithDecryption)
+
 		value, err := json.Marshal(key)
 		if assert.NoError(t, err) {
 			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"Parameter": map[string]string{
@@ -55,6 +59,7 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(cfg, config, 0o600))
+
 	program := solana.NewWallet().PublicKey()
 	p := setUpgradeAuthorityParams{
 		rpcURL: "http://localhost:8899", programID: program.String(), privateKeyConfig: cfg, commitment: "confirmed",
@@ -73,6 +78,7 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 		require.Equal(t, solana.BPFLoaderUpgradeableProgramID, tx.Message.AccountKeys[ix.ProgramIDIndex])
 		require.Equal(t, []byte{7, 0, 0, 0}, []byte(ix.Data))
 		require.Len(t, ix.Accounts, 3)
+
 		programData, _, err := solana.FindProgramAddress([][]byte{program.Bytes()}, solana.BPFLoaderUpgradeableProgramID)
 		require.NoError(t, err)
 		require.Equal(t, programData, tx.Message.AccountKeys[ix.Accounts[0]])
@@ -85,7 +91,9 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 	blockhash := solana.Hash{2}
 	wantTx, err := signUpgradeAuthorityChange(program, blockhash, current, next, current)
 	require.NoError(t, err)
+
 	wantSignature := wantTx.Signatures[0].String()
+
 	rpc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			ID     json.RawMessage
@@ -95,7 +103,9 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 		if !assert.NoError(t, json.NewDecoder(r.Body).Decode(&req)) {
 			return
 		}
+
 		var result any
+
 		switch req.Method {
 		case "getLatestBlockhash":
 			result = map[string]any{"value": map[string]string{"blockhash": blockhash.String()}}
@@ -104,23 +114,29 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 			if !assert.NotEmpty(t, req.Params) || !assert.NoError(t, json.Unmarshal(req.Params[0], &encoded)) {
 				return
 			}
+
 			tx, err := solana.TransactionFromBase64(encoded)
 			if !assert.NoError(t, err) {
 				return
 			}
+
 			assert.NoError(t, tx.VerifySignatures())
 			assert.Equal(t, wantTx.Signatures, tx.Signatures)
+
 			result = wantSignature
 		case "getSignatureStatuses":
 			result = map[string]any{"value": []map[string]string{{"confirmationStatus": "confirmed"}}}
 		default:
 			t.Errorf("unexpected RPC method %s", req.Method)
 			http.Error(w, "unknown method", http.StatusBadRequest)
+
 			return
 		}
+
 		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": result}))
 	}))
 	defer rpc.Close()
+
 	p.rpcURL = rpc.URL
 	result, err := p.Execute(fakeOutputter{})
 	require.NoError(t, err)

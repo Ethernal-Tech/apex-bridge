@@ -16,12 +16,14 @@ func signUpgradeAuthorityChange(
 	program solana.PublicKey, blockhash solana.Hash, current, next, payer solana.PrivateKey,
 ) (*solana.Transaction, error) {
 	loader := solana.BPFLoaderUpgradeableProgramID
+
 	programData, _, err := solana.FindProgramAddress([][]byte{program.Bytes()}, loader)
 	if err != nil {
 		return nil, fmt.Errorf("derive program-data address: %w", err)
 	}
 
 	const setAuthorityChecked = 7 // bincode u32 enum discriminant in solana-loader-v3-interface
+
 	ix := solana.NewInstruction(loader, solana.AccountMetaSlice{
 		solana.Meta(programData).WRITE(),
 		solana.Meta(current.PublicKey()).SIGNER(),
@@ -38,6 +40,7 @@ func signUpgradeAuthorityChange(
 		next.PublicKey():    &next,
 		payer.PublicKey():   &payer,
 	}
+
 	if _, err := tx.Sign(func(key solana.PublicKey) *solana.PrivateKey { return keys[key] }); err != nil {
 		return nil, err
 	}
@@ -65,6 +68,7 @@ func (p *setUpgradeAuthorityParams) submitUpgradeAuthorityChange() (string, erro
 	}
 
 	const timeout = 2 * time.Minute
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 

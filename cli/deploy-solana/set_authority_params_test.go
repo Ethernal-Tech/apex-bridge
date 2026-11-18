@@ -185,6 +185,7 @@ func TestSetAuthoritySubmitsCosignedTransaction(t *testing.T) {
 		cfg := skyline_program.ProgramConfig{Authority: authority}
 		body, err := cfg.Marshal()
 		require.NoError(t, err)
+
 		data := append(skyline_program.Account_ProgramConfig[:], body...)
 		provider.On("GetAccountInfo", ctx, pda).Return(&rpc.GetAccountInfoResult{
 			Value: &rpc.Account{Data: rpc.DataBytesOrJSONFromBytes(data)},
@@ -192,6 +193,7 @@ func TestSetAuthoritySubmitsCosignedTransaction(t *testing.T) {
 	}
 
 	provider.On("GetLatestBlockhash", ctx).Return(solana.Hash{1}, nil).Once()
+
 	sig := solana.Signature{1}
 	provider.On("SendTransaction", ctx, mock.Anything).Run(func(args mock.Arguments) {
 		tx := args.Get(1).(*solana.Transaction)
