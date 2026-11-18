@@ -58,7 +58,7 @@ func (p *registerTokenCommonParams) validateRegisterTokenCommonFlags() error {
 
 func sendSignedTransaction(
 	ctx context.Context,
-	provider *solanawallet.Provider,
+	provider solanawallet.ITxSubmiter,
 	txSender *solsendtx.TxSender,
 	tx *solana.Transaction,
 	confirmationTimeout time.Duration,

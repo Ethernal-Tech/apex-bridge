@@ -254,98 +254,60 @@ type ApexSolanaWallet struct {
 	FeeWallet    *solanawallet.Wallet
 }
 
+// ImportSolanaPrivateKey stores an existing private key under keyName instead of generating a new
+// one. Importing the key that is already stored is a no-op. A different key already stored under
+// keyName is only replaced when force is set.
+func ImportSolanaPrivateKey(
+	mngr secrets.SecretsManager, keyName string, privateKey solana.PrivateKey, force bool,
+) error {
+	if err := privateKey.Validate(); err != nil {
+		return fmt.Errorf("invalid solana private key: %w", err)
+	}
+
+	if mngr.HasSecret(keyName) {
+		existing, err := loadSolanaPrivateKeyFromSecretsManager(mngr, keyName)
+		if err == nil && existing.PublicKey() == privateKey.PublicKey() {
+			return nil
+		}
+
+		if !force {
+			if err != nil {
+				return fmt.Errorf("secret %s already exists and cannot be read (%w); use force to replace it",
+					keyName, err)
+			}
+
+			return fmt.Errorf("secret %s already holds a different key (%s); use force to replace it",
+				keyName, existing.PublicKey())
+		}
+	}
+
+	return StoreSolanaPrivateKey(mngr, keyName, privateKey)
+}
+
+func GetKeyNameForBatcherSolana(chain string) string {
+	return fmt.Sprintf("%s%s_key", secrets.OtherKeyLocalPrefix, chain)
+}
+
+func GetKeyNameForRelayerSolana(chain string) string {
+	return fmt.Sprintf("%s%s_relayer_solana_key", secrets.OtherKeyLocalPrefix, chain)
+}
+
 func GenerateAndStoreBatcherSolanaPrivateKey(
 	mngr secrets.SecretsManager, chain string, forceRegenerate bool,
 ) (*solana.PrivateKey, error) {
-	keyName := fmt.Sprintf("%s%s_key", secrets.OtherKeyLocalPrefix, chain)
-
-	if mngr.HasSecret(keyName) {
-		if !forceRegenerate {
-			return LoadBatcherSolanaPrivateKey(mngr, chain)
-		}
-
-		if err := mngr.RemoveSecret(keyName); err != nil {
-			return nil, err
-		}
-	}
-
-	privateKey, err := solana.NewRandomPrivateKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate wallet: %w", err)
-	}
-
-	bytes, err := json.Marshal(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal wallet: %w", err)
-	}
-
-	if err := mngr.SetSecret(keyName, bytes); err != nil {
-		return nil, fmt.Errorf("failed to store wallet: %w", err)
-	}
-
-	return &privateKey, err
+	return generateAndStoreSolanaPrivateKey(mngr, GetKeyNameForBatcherSolana(chain), forceRegenerate)
 }
 
 func LoadBatcherSolanaPrivateKey(mngr secrets.SecretsManager, chain string) (*solana.PrivateKey, error) {
-	keyName := fmt.Sprintf("%s%s_key", secrets.OtherKeyLocalPrefix, chain)
-
-	bytes, err := mngr.GetSecret(keyName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load wallet: %w", err)
-	}
-
-	solanaPrivateKey, err := decodeSolanaPrivateKeySecret(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load wallet: %w", err)
-	}
-
-	return &solanaPrivateKey, nil
+	return loadSolanaPrivateKeyFromSecretsManager(mngr, GetKeyNameForBatcherSolana(chain))
 }
 
 func GenerateAndStoreRelayerSolanaPrivateKey(
 	mngr secrets.SecretsManager, chain string, forceRegenerate bool,
 ) (*solana.PrivateKey, error) {
-	keyName := fmt.Sprintf("%s%s_relayer_solana_key", secrets.OtherKeyLocalPrefix, chain)
-
-	if mngr.HasSecret(keyName) {
-		if !forceRegenerate {
-			return LoadRelayerSolanaPrivateKey(mngr, chain)
-		}
-
-		if err := mngr.RemoveSecret(keyName); err != nil {
-			return nil, err
-		}
-	}
-
-	privateKey, err := solana.NewRandomPrivateKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate wallet: %w", err)
-	}
-
-	bytes, err := json.Marshal(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal wallet: %w", err)
-	}
-
-	if err := mngr.SetSecret(keyName, bytes); err != nil {
-		return nil, fmt.Errorf("failed to store wallet: %w", err)
-	}
-
-	return &privateKey, err
+	return generateAndStoreSolanaPrivateKey(mngr, GetKeyNameForRelayerSolana(chain), forceRegenerate)
 }
 
 func LoadRelayerSolanaPrivateKey(mngr secrets.SecretsManager, chain string) (*solana.PrivateKey, error) {
-	keyName := fmt.Sprintf("%s%s_relayer_solana_key", secrets.OtherKeyLocalPrefix, chain)
-
-	bytes, err := mngr.GetSecret(keyName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load wallet: %w", err)
-	}
-
-	solanaPrivateKey, err := decodeSolanaPrivateKeySecret(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load wallet: %w", err)
-	}
-
-	return &solanaPrivateKey, nil
+	return loadSolanaPrivateKeyFromSecretsManager(mngr, GetKeyNameForRelayerSolana(chain))
 }

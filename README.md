@@ -93,6 +93,18 @@ $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/ca
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-solana --network-id 2
 ```
 
+# How to store an existing solana key instead of generating one
+Works for `--type relayer-solana`, `batcher-solana`, `solana_admin` and `solana_program`, with either the local
+secrets manager (`--validator-data-dir`) or a secrets manager config such as AWS SSM (`--validator-config`).
+```shell
+$ go run ./main.go wallet-create --chain solana --validator-config /path/aws_config.json --type batcher-solana \
+        --key-file /path/existing-keypair.json
+```
+- `--key-file` takes a solana-keygen JSON keypair file; `--key KEY` (base58, base64 or keypair JSON) also works but leaves
+  the key in shell history
+- storing the key that is already there is a no-op; if a different key is already stored the command fails unless
+  `--force` is set, which replaces it
+
 # How to generate key for blade admin
 ```shell
 $ go run ./main.go wallet-create blade --type admin --key KEY --config CONFIG_PATTH
@@ -835,16 +847,53 @@ Runs `solana program deploy` for the binary, then submits `update_program_versio
 apex-bridge deploy-solana upgrade-program \
         --url http://127.0.0.1:8899 \
         --fee-payer ./fee-payer-key.json \
-        --key ./solana-program-key.json \
         --program-id <> \
         --build-path ./solana-program.so \
         --upgrade-program-version 1.2.3 \
         --admin-key ./admin-keypair.json \
+        --upgrade-authority-key ./upgrade-authority-keypair.json \
         --confirmation-timeout-seconds 120 \
         --commitment confirmed
 ```
 
 - instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--upgrade-authority-key` is the keypair that is the program's BPF upgrade authority (it signs `solana program deploy`). It is optional and defaults to the admin key; set it once the upgrade authority has been moved with `set-upgrade-authority`.
+- the on-chain checks (admin key equals the program config authority, version not smaller than the current one) run before the binary is deployed.
+- the former `--key` flag was removed: it signed nothing.
+
+# How to change the Solana program upgrade authority
+
+Moves the BPF upgrade authority of the program (the key allowed to deploy new binaries) with `solana program set-upgrade-authority`. This does not change the bridge admin stored in the program config.
+
+```shell
+apex-bridge deploy-solana set-upgrade-authority \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --upgrade-authority-key ./current-upgrade-authority.json \
+        --new-upgrade-authority-key ./new-upgrade-authority.json \
+        --fee-payer ./fee-payer-key.json \
+        --commitment confirmed
+```
+
+- the new upgrade authority must be a keypair file: it signs the change, so a bare public key is not accepted.
+- `--fee-payer` is optional and defaults to the current upgrade authority key; the fee is paid by this key.
+- instead of `--upgrade-authority-key` it is possible to set `--key-config /path/config.json`, which loads the bridge admin key, so it only works while the upgrade authority is the bridge admin.
+- afterwards `upgrade-program` needs `--upgrade-authority-key` pointing to the new key.
+
+# How to change the Solana bridge admin
+
+`set-authority` updates the admin on both the fee config and the program config in one transaction. The current admin pays the fee, and both admins sign.
+
+```shell
+apex-bridge deploy-solana set-authority \
+    --url http://127.0.0.1:8899 \
+    --program-id <skyline-program-id> \
+    --admin-key ./current-admin.json \
+    --new-authority <new-admin-public-key> \
+    --new-authority-key ./new-admin.json
+```
+
+You can use `--key-config /path/to/config.json` in place of `--admin-key` for the current admin. The new keypair must match `--new-authority`. After finalization, the command reads the program config to confirm the new admin.
 
 # Show solana program version
 

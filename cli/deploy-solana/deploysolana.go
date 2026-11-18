@@ -14,6 +14,8 @@ const updateFeeConfigCommandUse = "update-fee-config"
 const updateMinBridgingAmountCommandUse = "update-min-bridging-amount"
 const programVersionCommandUse = "program-version"
 const exportKeypairCommandUse = "export-keypair"
+const setUpgradeAuthorityCommandUse = "set-upgrade-authority"
+const setAuthorityCommandUse = "set-authority"
 
 var deployProgramParamsData = &deployProgramParams{}
 var upgradeProgramParamsData = &upgradeProgramParams{}
@@ -24,6 +26,8 @@ var updateFeeConfigParamsData = &updateFeeConfigParams{}
 var updateMinBridgingAmountParamsData = &updateMinBridgingAmountParams{}
 var programVersionParamsData = &programVersionParams{}
 var exportKeypairParamsData = &exportKeypairParams{}
+var setUpgradeAuthorityParamsData = &setUpgradeAuthorityParams{}
+var setAuthorityParamsData = &setAuthorityParams{}
 
 func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana := &cobra.Command{
@@ -86,6 +90,20 @@ func GetDeploySolanaCommand() *cobra.Command {
 		Run:     common.GetCliRunCommand(exportKeypairParamsData),
 	}
 
+	cmdSetUpgradeAuthority := &cobra.Command{
+		Use:     setUpgradeAuthorityCommandUse,
+		Short:   "change the upgrade authority of the skyline Solana program",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(setUpgradeAuthorityParamsData),
+	}
+
+	cmdSetAuthority := &cobra.Command{
+		Use:     setAuthorityCommandUse,
+		Short:   "change bridge admin of the skyline Solana program",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(setAuthorityParamsData),
+	}
+
 	deployProgramParamsData.setFlags(cmdDeployProgram)
 	upgradeProgramParamsData.setFlags(cmdUpgradeProgram)
 	registerLockUnlockTokenParamsData.setFlags(cmdRegisterLockUnlockToken)
@@ -95,6 +113,8 @@ func GetDeploySolanaCommand() *cobra.Command {
 	updateMinBridgingAmountParamsData.setFlags(cmdUpdateMinBridgingAmount)
 	programVersionParamsData.setFlags(cmdProgramVersion)
 	exportKeypairParamsData.setFlags(cmdExportKeypair)
+	setUpgradeAuthorityParamsData.setFlags(cmdSetUpgradeAuthority)
+	setAuthorityParamsData.setFlags(cmdSetAuthority)
 	cmdDeploySolana.AddCommand(cmdDeployProgram)
 	cmdDeploySolana.AddCommand(cmdUpgradeProgram)
 	cmdDeploySolana.AddCommand(cmdRegisterLockUnlockToken)
@@ -104,6 +124,8 @@ func GetDeploySolanaCommand() *cobra.Command {
 	cmdDeploySolana.AddCommand(cmdUpdateMinBridgingAmount)
 	cmdDeploySolana.AddCommand(cmdProgramVersion)
 	cmdDeploySolana.AddCommand(cmdExportKeypair)
+	cmdDeploySolana.AddCommand(cmdSetUpgradeAuthority)
+	cmdDeploySolana.AddCommand(cmdSetAuthority)
 
 	return cmdDeploySolana
 }
@@ -143,6 +165,14 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == exportKeypairCommandUse {
 		return exportKeypairParamsData.validateFlags()
+	}
+
+	if cb.Use == setUpgradeAuthorityCommandUse {
+		return setUpgradeAuthorityParamsData.validateFlags()
+	}
+
+	if cb.Use == setAuthorityCommandUse {
+		return setAuthorityParamsData.validateFlags()
 	}
 
 	return nil
