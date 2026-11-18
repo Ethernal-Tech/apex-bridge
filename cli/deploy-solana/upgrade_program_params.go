@@ -239,11 +239,13 @@ func (p *upgradeProgramParams) setFlags(cmd *cobra.Command) {
 }
 
 // buildUpgradeDeployArgs builds the `solana program deploy` arguments for an upgrade. All paths
-// must already be absolute. There is no -k: the fee payer and the upgrade authority are explicit.
+// must already be absolute. -k is the fee payer: the solana CLI resolves the default signer even
+// when --fee-payer and --upgrade-authority are given, and fails without ~/.config/solana/id.json.
 func buildUpgradeDeployArgs(rpcURL, feePayer, programID, upgradeAuthority, commitment, buildPath string) []string {
 	return []string{
 		solanaCLIProgramArg, "deploy",
 		solanaCLIURLArg, rpcURL,
+		"-k", feePayer,
 		"--fee-payer", feePayer,
 		"--program-id", programID,
 		solanaCLIUpgradeAuthorityArg, upgradeAuthority,

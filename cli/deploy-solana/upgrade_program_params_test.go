@@ -81,7 +81,8 @@ func TestBuildUpgradeDeployArgs(t *testing.T) {
 		require.Equal(t, p.adminKeyPath, argValue(t, args, "--fee-payer"))
 		require.Equal(t, p.rpcURL, argValue(t, args, "--url"))
 		require.Equal(t, "confirmed", argValue(t, args, "--commitment"))
-		require.NotContains(t, args, "-k")
+		// the solana CLI needs -k even with --fee-payer, or it looks for ~/.config/solana/id.json
+		require.Equal(t, p.adminKeyPath, argValue(t, args, "-k"))
 		require.Equal(t, p.buildPath, args[len(args)-1])
 	})
 
@@ -116,12 +117,13 @@ func TestBuildUpgradeDeployArgs(t *testing.T) {
 
 		args := p.deployArgs(p.adminKeyPath)
 
-		for _, name := range []string{"--fee-payer", "--upgrade-authority"} {
+		for _, name := range []string{"-k", "--fee-payer", "--upgrade-authority"} {
 			v := argValue(t, args, name)
 			require.True(t, strings.HasPrefix(v, "/"), "%s=%s", name, v)
 		}
 
 		require.Equal(t, filepath.Join(dir, "with space", "fee payer.json"), argValue(t, args, "--fee-payer"))
+		require.Equal(t, argValue(t, args, "--fee-payer"), argValue(t, args, "-k"))
 		require.True(t, strings.HasPrefix(args[len(args)-1], "/"))
 		require.NotContains(t, args, "--final")
 
