@@ -81,10 +81,11 @@ func runSolana(t *testing.T, p *walletCreateParams) (*evmCmdResult, error) {
 
 func TestWalletCreateImportSolanaKey(t *testing.T) {
 	keyNames := map[string]string{
-		relayerSolanaKeyType: solanatx.GetKeyNameForRelayerSolana("solana"),
-		batcherSolanaKeyType: solanatx.GetKeyNameForBatcherSolana("solana"),
-		solanaAdminKeyType:   solanatx.GetKeyNameForSolanaAdmin(),
-		solanaProgramKeyType: solanatx.GetKeyNameForSolanaProgram(),
+		relayerSolanaKeyType:  solanatx.GetKeyNameForRelayerSolana("solana"),
+		batcherSolanaKeyType:  solanatx.GetKeyNameForBatcherSolana("solana"),
+		solanaAdminKeyType:    solanatx.GetKeyNameForSolanaAdmin(),
+		newSolanaAdminKeyType: "other_new_solana_admin",
+		solanaProgramKeyType:  solanatx.GetKeyNameForSolanaProgram(),
 	}
 
 	for walletType, keyName := range keyNames {
@@ -114,6 +115,22 @@ func TestWalletCreateImportSolanaKey(t *testing.T) {
 			require.Equal(t, key.PublicKey(), storedKey(t, dataDir, keyName))
 		})
 	}
+}
+
+func TestWalletCreateNewSolanaAdmin(t *testing.T) {
+	dir := t.TempDir()
+	current, err := runSolana(t, newSolanaParams(t, dir, solanaAdminKeyType))
+	require.NoError(t, err)
+	next, err := runSolana(t, newSolanaParams(t, dir, newSolanaAdminKeyType))
+	require.NoError(t, err)
+	require.NotEqual(t, current.PublicKey, next.PublicKey)
+	require.NotContains(t, next.GetOutput(), next.PrivateKey)
+	require.Equal(t, current.PublicKey, storedKey(t, dir, "other_solana_admin").String())
+	require.Equal(t, next.PublicKey, storedKey(t, dir, "other_new_solana_admin").String())
+
+	again, err := runSolana(t, newSolanaParams(t, dir, newSolanaAdminKeyType))
+	require.NoError(t, err)
+	require.Equal(t, next.PublicKey, again.PublicKey)
 }
 
 func TestWalletCreateImportSolanaKeyExisting(t *testing.T) {

@@ -15,8 +15,8 @@ import (
 const (
 	newUpgradeAuthorityKeyFlag = "new-upgrade-authority-key"
 
-	setUpgradeAuthorityKeyConfigFlagDesc = "key secret manager configuration file; loads the bridge admin key as the current upgrade authority (only valid while the upgrade authority is the bridge admin)" //nolint:lll
-	newUpgradeAuthorityKeyFlagDesc       = "path to the new upgrade authority keypair file (it must sign the change)"
+	setUpgradeAuthorityKeyConfigFlagDesc = "secrets config for other_solana_admin (current) and other_new_solana_admin (incoming)" //nolint:lll
+	newUpgradeAuthorityKeyFlagDesc       = "incoming keypair file (overrides other_new_solana_admin)"
 	setUpgradeAuthorityFeePayerFlagDesc  = "path to fee payer keypair file (defaults to the current upgrade authority key)"
 )
 
@@ -69,23 +69,27 @@ func (p *setUpgradeAuthorityParams) validateFlags() error {
 		return fmt.Errorf("failed to load current upgrade authority key: %w", err)
 	}
 
-	if p.newUpgradeAuthorityKeyPath == "" {
+	if p.newUpgradeAuthorityKeyPath == "" && p.privateKeyConfig == "" {
 		return fmt.Errorf("new upgrade authority key not specified: --%s", newUpgradeAuthorityKeyFlag)
 	}
 
-	p.newUpgradeAuthorityKeyPath, err = resolveExistingFile(p.newUpgradeAuthorityKeyPath, "new upgrade authority key")
-	if err != nil {
-		return fmt.Errorf("--%s: %w", newUpgradeAuthorityKeyFlag, err)
+	newKeySource := solanatx.GetKeyNameForNewSolanaAdmin()
+	if p.newUpgradeAuthorityKeyPath != "" {
+		newKeySource = "--" + newUpgradeAuthorityKeyFlag
+		p.newUpgradeAuthorityKeyPath, err = resolveExistingFile(p.newUpgradeAuthorityKeyPath, "new upgrade authority key")
+		if err != nil {
+			return fmt.Errorf("%s: %w", newKeySource, err)
+		}
 	}
 
-	p.newPrivateKey, err = solanatx.GetSolanaPrivateKey(p.newUpgradeAuthorityKeyPath, "", "")
+	p.newPrivateKey, err = solanatx.GetSolanaPrivateKey(
+		p.newUpgradeAuthorityKeyPath, p.privateKeyConfig, solanatx.GetKeyNameForNewSolanaAdmin())
 	if err != nil {
-		return fmt.Errorf("--%s is not a valid keypair file: %w", newUpgradeAuthorityKeyFlag, err)
+		return fmt.Errorf("load incoming upgrade authority from %s: %w", newKeySource, err)
 	}
 
 	if p.newPrivateKey.PublicKey() == p.currentPrivateKey.PublicKey() {
-		return fmt.Errorf("--%s is the same as the current upgrade authority %s",
-			newUpgradeAuthorityKeyFlag, p.currentPrivateKey.PublicKey())
+		return fmt.Errorf("%s is the same as the current upgrade authority %s", newKeySource, p.currentPrivateKey.PublicKey())
 	}
 
 	if p.feePayerKeyPath != "" {
@@ -136,17 +140,16 @@ func (p *setUpgradeAuthorityParams) Execute(outputter common.OutputFormatter) (c
 	_, _ = outputter.Write([]byte("Changing Solana program upgrade authority..."))
 	outputter.WriteOutput()
 
-	currentKeyPath, cleanupCurrentKey, err := solanaKeypairPathForCLI(p.upgradeAuthorityKeyPath, p.currentPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("prepare current upgrade authority keypair: %w", err)
-	}
-
-	defer cleanupCurrentKey()
-
 	oldKey := p.currentPrivateKey.PublicKey()
 	newKey := p.newPrivateKey.PublicKey()
 
-	output, err := common.ExecuteCLICommand("solana", p.buildArgs(currentKeyPath), ".")
+	var output string
+	var err error
+	if p.privateKeyConfig != "" {
+		output, err = p.submitUpgradeAuthorityChange()
+	} else {
+		output, err = common.ExecuteCLICommand("solana", p.buildArgs(p.upgradeAuthorityKeyPath), ".")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("solana program set-upgrade-authority failed: %w", err)
 	}

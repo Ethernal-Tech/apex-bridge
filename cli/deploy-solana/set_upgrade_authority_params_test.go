@@ -183,7 +183,7 @@ func TestDeploySolanaCommand(t *testing.T) {
 	})
 }
 
-func TestSetUpgradeAuthorityTempFileCleanup(t *testing.T) {
+func TestSetUpgradeAuthorityConfigRPCFailure(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("TMPDIR", tmp)
 
@@ -191,13 +191,13 @@ func TestSetUpgradeAuthorityTempFileCleanup(t *testing.T) {
 	p.rpcURL = "http://127.0.0.1:1"
 	require.NoError(t, p.validateFlags())
 
-	// simulate --key-config: key held in memory only, written to a temp file for the CLI
+	// Use the in-memory signers as loaded by --key-config.
 	p.currentPrivateKey = writeTestKeypair(t, filepath.Join(t.TempDir(), "cur.json"))
 	p.upgradeAuthorityKeyPath = ""
 	p.privateKeyConfig = "/cfg.json"
 
 	_, err := p.Execute(fakeOutputter{})
-	require.Error(t, err)
+	require.ErrorContains(t, err, "get latest blockhash")
 
 	entries, err := os.ReadDir(tmp)
 	require.NoError(t, err)

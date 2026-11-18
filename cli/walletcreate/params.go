@@ -29,7 +29,7 @@ const (
 	validatorDataDirFlagDesc = "(mandatory validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc  = "(mandatory validator-data not specified) path to bridge chain secrets manager config file"                       //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
-	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, solana_admin, solana_program, etc)"
+	walletTypeFlagDesc       = "wallet type (cardano, evm, solana_admin, new_solana_admin, solana_program, etc.)"
 	networkIDFlagDesc        = "network id"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
 	showPrivateKeyFlagDesc   = "show private key in output"
@@ -40,11 +40,12 @@ const (
 	keyFileFlagDesc   = "path to an existing solana keypair file (solana-keygen JSON) to store instead of generating a new one; solana types only"                                                                        //nolint:lll
 
 	solanaAdminKeyType    = "solana_admin"
+	newSolanaAdminKeyType = "new_solana_admin"
 	solanaProgramKeyType  = "solana_program"
 	relayerSolanaKeyType  = "relayer-solana"
 	batcherSolanaKeyType  = "batcher-solana"
 	solanaKeyTypesForHelp = relayerSolanaKeyType + ", " + batcherSolanaKeyType + ", " +
-		solanaAdminKeyType + ", " + solanaProgramKeyType
+		solanaAdminKeyType + ", " + newSolanaAdminKeyType + ", " + solanaProgramKeyType
 )
 
 type walletCreateParams struct {
@@ -118,7 +119,7 @@ func (ip *walletCreateParams) resolveImportKey() error {
 
 func isSolanaKeyType(walletType string) bool {
 	switch strings.ToLower(walletType) {
-	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, solanaProgramKeyType:
+	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, newSolanaAdminKeyType, solanaProgramKeyType:
 		return true
 	default:
 		return false
@@ -235,7 +236,7 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			showPrivateKey: ip.showPrivateKey,
 		}, nil
 
-	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, solanaProgramKeyType:
+	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, newSolanaAdminKeyType, solanaProgramKeyType:
 		return ip.executeSolana(secretsManager, walletType)
 
 	case "relayer-cardano":
@@ -327,6 +328,11 @@ func (ip *walletCreateParams) executeSolana(
 		keyName, resultID = solanatx.GetKeyNameForSolanaAdmin(), solanaAdminKeyType
 		generate = func() (*solana.PrivateKey, error) {
 			return solanatx.GenerateAndStoreSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
+		}
+	case newSolanaAdminKeyType:
+		keyName, resultID = solanatx.GetKeyNameForNewSolanaAdmin(), newSolanaAdminKeyType
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreNewSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
 		}
 	case solanaProgramKeyType:
 		keyName, resultID = solanatx.GetKeyNameForSolanaProgram(), solanaProgramKeyType

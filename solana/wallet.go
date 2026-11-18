@@ -17,6 +17,10 @@ func GetKeyNameForSolanaAdmin() string {
 	return secrets.OtherKeyLocalPrefix + "solana_admin"
 }
 
+func GetKeyNameForNewSolanaAdmin() string {
+	return secrets.OtherKeyLocalPrefix + "new_solana_admin"
+}
+
 func GetKeyNameForSolanaProgram() string {
 	return secrets.OtherKeyLocalPrefix + "solana_program_key"
 }
@@ -46,7 +50,7 @@ func GetSolanaPrivateKey(keyPath, config, keyName string) (solana.PrivateKey, er
 
 func decodeSolanaPrivateKeySecret(bytes []byte) (solana.PrivateKey, error) {
 	var privateKey solana.PrivateKey
-	if err := json.Unmarshal(bytes, &privateKey); err == nil {
+	if err := json.Unmarshal(bytes, &privateKey); err == nil && privateKey.Validate() == nil {
 		return privateKey, nil
 	}
 
@@ -222,6 +226,12 @@ func GenerateAndStoreSolanaAdminPrivateKey(
 	mngr secrets.SecretsManager, forceRegenerate bool,
 ) (*solana.PrivateKey, error) {
 	return generateAndStoreSolanaPrivateKey(mngr, GetKeyNameForSolanaAdmin(), forceRegenerate)
+}
+
+func GenerateAndStoreNewSolanaAdminPrivateKey(
+	mngr secrets.SecretsManager, forceRegenerate bool,
+) (*solana.PrivateKey, error) {
+	return generateAndStoreSolanaPrivateKey(mngr, GetKeyNameForNewSolanaAdmin(), forceRegenerate)
 }
 
 func GenerateAndStoreSolanaProgramPrivateKey(
