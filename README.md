@@ -93,6 +93,18 @@ $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/ca
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-solana --network-id 2
 ```
 
+# How to store an existing solana key instead of generating one
+Works for `--type relayer-solana`, `batcher-solana`, `solana_admin`, `new_solana_admin` and `solana_program`, with either the local
+secrets manager (`--validator-data-dir`) or a secrets manager config such as AWS SSM (`--validator-config`).
+```shell
+$ go run ./main.go wallet-create --chain solana --validator-config /path/aws_config.json --type batcher-solana \
+        --key-file /path/existing-keypair.json
+```
+- `--key-file` takes a solana-keygen JSON keypair file; `--key KEY` (base58, base64 or keypair JSON) also works but leaves
+  the key in shell history
+- storing the key that is already there is a no-op; if a different key is already stored the command fails unless
+  `--force` is set, which replaces it
+
 # How to generate key for blade admin
 ```shell
 $ go run ./main.go wallet-create blade --type admin --key KEY --config CONFIG_PATTH
@@ -835,16 +847,79 @@ Runs `solana program deploy` for the binary, then submits `update_program_versio
 apex-bridge deploy-solana upgrade-program \
         --url http://127.0.0.1:8899 \
         --fee-payer ./fee-payer-key.json \
-        --key ./solana-program-key.json \
         --program-id <> \
         --build-path ./solana-program.so \
         --upgrade-program-version 1.2.3 \
         --admin-key ./admin-keypair.json \
+        --upgrade-authority-key ./upgrade-authority-keypair.json \
         --confirmation-timeout-seconds 120 \
         --commitment confirmed
 ```
 
 - instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--upgrade-authority-key` is the keypair that is the program's BPF upgrade authority (it signs `solana program deploy`). It is optional and defaults to the admin key; set it once the upgrade authority has been moved with `set-upgrade-authority`.
+- the on-chain checks (admin key equals the program config authority, version not smaller than the current one) run before the binary is deployed.
+- the former `--key` flag was removed: it signed nothing.
+
+# How to change the Solana program upgrade authority
+
+Both the current and incoming authorities sign the transfer of the right to deploy new program binaries. With AWS SSM, use the same config for both keys. The current authority must be stored as `other_solana_admin`.
+
+To generate and store the incoming key as `other_new_solana_admin`, run the following on the trusted runner. To import an existing keypair instead, add `--key-file /path/to/keypair.json`.
+
+```shell
+apex-bridge wallet-create --chain solana --type new_solana_admin --validator-config ./aws-ssm.json
+```
+
+To transfer program upgrade authority using those two keys, run
+
+```shell
+apex-bridge deploy-solana set-upgrade-authority \
+        --url "$SOLANA_RPC_URL" \
+        --program-id "$PROGRAM_ID" \
+        --key-config ./aws-ssm.json
+```
+
+The runner signs in memory, and the current authority pays the fee by default. To keep private keys from deployers, give the trusted runner the SSM read and decrypt permissions and let deployers trigger only the fixed job. Anyone who can assume the runner role or change its code can read the keys.
+
+To use existing keypair files, run
+
+```shell
+apex-bridge deploy-solana set-upgrade-authority \
+        --url http://127.0.0.1:8899 \
+        --program-id <> \
+        --upgrade-authority-key ./current-upgrade-authority.json \
+        --new-upgrade-authority-key ./new-upgrade-authority.json \
+        --fee-payer ./fee-payer-key.json \
+        --commitment confirmed
+```
+
+- `--new-upgrade-authority-key` can also override the incoming SSM key with a keypair file.
+- `--fee-payer` is optional and defaults to the current upgrade authority key; the fee is paid by this key.
+- afterwards `upgrade-program` needs `--upgrade-authority-key` pointing to the new key.
+
+# How to change the Solana bridge admin
+
+`set-authority` updates the admin on both the fee config and the program config in one transaction. The current admin pays the fee, and both admins sign.
+
+```shell
+apex-bridge deploy-solana set-authority \
+    --url http://127.0.0.1:8899 \
+    --program-id <skyline-program-id> \
+    --admin-key ./current-admin.json \
+    --new-authority <new-admin-public-key> \
+    --new-authority-key ./new-admin.json
+```
+
+With both keys in AWS SSM, use the same config for the current signer (`other_solana_admin`) and incoming signer (`other_new_solana_admin`).
+
+```shell
+apex-bridge deploy-solana set-authority \
+    --url "$SOLANA_RPC_URL" --program-id "$PROGRAM_ID" \
+    --key-config "$AWS_CONFIG" --new-authority "$NEW_ADMIN_PUBLIC_KEY"
+```
+
+The incoming signer must match `--new-authority`. You can override the incoming SSM key with `--new-authority-key`. After finalization, the command reads the program config to confirm the new admin.
 
 # Show solana program version
 

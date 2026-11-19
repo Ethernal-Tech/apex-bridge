@@ -3,13 +3,17 @@ package cliwalletcreate
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/gagliardetto/solana-go"
 	"github.com/spf13/cobra"
 )
 
@@ -25,13 +29,23 @@ const (
 	validatorDataDirFlagDesc = "(mandatory validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc  = "(mandatory validator-data not specified) path to bridge chain secrets manager config file"                       //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
-	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, solana_admin, solana_program, etc)"
+	walletTypeFlagDesc       = "wallet type (cardano, evm, solana_admin, new_solana_admin, solana_program, etc.)"
 	networkIDFlagDesc        = "network id"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
 	showPrivateKeyFlagDesc   = "show private key in output"
 
-	solanaAdminKeyType   = "solana_admin"
-	solanaProgramKeyType = "solana_program"
+	keyFileFlag = "key-file"
+
+	importKeyFlagDesc = "existing solana private key to store instead of generating a new one (base58, base64 or keypair JSON); solana types only. Prefer --key-file: a key on the command line ends up in shell history" //nolint:lll
+	keyFileFlagDesc   = "path to an existing solana keypair file (solana-keygen JSON) to store instead of generating a new one; solana types only"                                                                        //nolint:lll
+
+	solanaAdminKeyType    = "solana_admin"
+	newSolanaAdminKeyType = "new_solana_admin"
+	solanaProgramKeyType  = "solana_program"
+	relayerSolanaKeyType  = "relayer-solana"
+	batcherSolanaKeyType  = "batcher-solana"
+	solanaKeyTypesForHelp = relayerSolanaKeyType + ", " + batcherSolanaKeyType + ", " +
+		solanaAdminKeyType + ", " + newSolanaAdminKeyType + ", " + solanaProgramKeyType
 )
 
 type walletCreateParams struct {
@@ -42,6 +56,10 @@ type walletCreateParams struct {
 	networkID        uint32
 	forceRegenerate  bool
 	showPrivateKey   bool
+	key              string
+	keyFile          string
+
+	importKey solana.PrivateKey
 }
 
 func (ip *walletCreateParams) validateFlags() error {
@@ -53,7 +71,59 @@ func (ip *walletCreateParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
+	return ip.resolveImportKey()
+}
+
+// resolveImportKey parses --key or --key-file, when one is set, into importKey.
+func (ip *walletCreateParams) resolveImportKey() error {
+	ip.importKey = nil
+
+	if ip.key == "" && ip.keyFile == "" {
+		return nil
+	}
+
+	if ip.key != "" && ip.keyFile != "" {
+		return fmt.Errorf("specify only one of --%s or --%s", keyFlag, keyFileFlag)
+	}
+
+	if !isSolanaKeyType(ip.walletType) {
+		return fmt.Errorf("--%s and --%s are only supported for --%s %s",
+			keyFlag, keyFileFlag, walletTypeFlag, solanaKeyTypesForHelp)
+	}
+
+	if ip.key != "" {
+		privateKey, err := solanatx.PrivateKeyFromWalletString(ip.key)
+		if err != nil {
+			return fmt.Errorf("invalid --%s: %w", keyFlag, err)
+		}
+
+		ip.importKey = privateKey
+
+		return nil
+	}
+
+	content, err := os.ReadFile(filepath.Clean(ip.keyFile))
+	if err != nil {
+		return fmt.Errorf("--%s: %w", keyFileFlag, err)
+	}
+
+	privateKey, err := solanatx.PrivateKeyFromWalletString(string(content))
+	if err != nil {
+		return fmt.Errorf("--%s is not a valid solana keypair file: %w", keyFileFlag, err)
+	}
+
+	ip.importKey = privateKey
+
 	return nil
+}
+
+func isSolanaKeyType(walletType string) bool {
+	switch strings.ToLower(walletType) {
+	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, newSolanaAdminKeyType, solanaProgramKeyType:
+		return true
+	default:
+		return false
+	}
 }
 
 func (ip *walletCreateParams) setFlags(cmd *cobra.Command) {
@@ -105,7 +175,22 @@ func (ip *walletCreateParams) setFlags(cmd *cobra.Command) {
 		networkIDFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.key,
+		keyFlag,
+		"",
+		importKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.keyFile,
+		keyFileFlag,
+		"",
+		keyFileFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(keyFlag, keyFileFlag)
 }
 
 func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -151,61 +236,8 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			showPrivateKey: ip.showPrivateKey,
 		}, nil
 
-	case "relayer-solana":
-		privateKey, err := solanatx.GenerateAndStoreRelayerSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
-		if err != nil {
-			return nil, err
-		}
-
-		return &evmCmdResult{
-			ChainID:        ip.chainID,
-			PrivateKey:     privateKey.String(),
-			PublicKey:      privateKey.PublicKey().String(),
-			Address:        privateKey.PublicKey().String(),
-			showPrivateKey: ip.showPrivateKey,
-		}, nil
-
-	case "batcher-solana":
-		privateKey, err := solanatx.GenerateAndStoreBatcherSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
-		if err != nil {
-			return nil, err
-		}
-
-		return &evmCmdResult{
-			ChainID:        ip.chainID,
-			PrivateKey:     privateKey.String(),
-			PublicKey:      privateKey.PublicKey().String(),
-			Address:        privateKey.PublicKey().String(),
-			showPrivateKey: ip.showPrivateKey,
-		}, nil
-
-	case solanaAdminKeyType:
-		privateKey, err := solanatx.GenerateAndStoreSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
-		if err != nil {
-			return nil, err
-		}
-
-		return &evmCmdResult{
-			ChainID:        solanaAdminKeyType,
-			PrivateKey:     privateKey.String(),
-			PublicKey:      privateKey.PublicKey().String(),
-			Address:        privateKey.PublicKey().String(),
-			showPrivateKey: ip.showPrivateKey,
-		}, nil
-
-	case solanaProgramKeyType:
-		privateKey, err := solanatx.GenerateAndStoreSolanaProgramPrivateKey(secretsManager, ip.forceRegenerate)
-		if err != nil {
-			return nil, err
-		}
-
-		return &evmCmdResult{
-			ChainID:        solanaProgramKeyType,
-			PrivateKey:     privateKey.String(),
-			PublicKey:      privateKey.PublicKey().String(),
-			Address:        privateKey.PublicKey().String(),
-			showPrivateKey: ip.showPrivateKey,
-		}, nil
+	case relayerSolanaKeyType, batcherSolanaKeyType, solanaAdminKeyType, newSolanaAdminKeyType, solanaProgramKeyType:
+		return ip.executeSolana(secretsManager, walletType)
 
 	case "relayer-cardano":
 		wallet, err := cardanotx.GenerateWallet(secretsManager, ip.chainID, false, ip.forceRegenerate)
@@ -269,4 +301,71 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			ChainID:         ip.chainID,
 		}, nil
 	}
+}
+
+// executeSolana stores the key given with --key/--key-file, or generates one when neither is set.
+func (ip *walletCreateParams) executeSolana(
+	secretsManager secrets.SecretsManager, walletType string,
+) (common.ICommandResult, error) {
+	var (
+		keyName  string
+		resultID string
+		generate func() (*solana.PrivateKey, error)
+	)
+
+	switch walletType {
+	case relayerSolanaKeyType:
+		keyName, resultID = solanatx.GetKeyNameForRelayerSolana(ip.chainID), ip.chainID
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreRelayerSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
+		}
+	case batcherSolanaKeyType:
+		keyName, resultID = solanatx.GetKeyNameForBatcherSolana(ip.chainID), ip.chainID
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreBatcherSolanaPrivateKey(secretsManager, ip.chainID, ip.forceRegenerate)
+		}
+	case solanaAdminKeyType:
+		keyName, resultID = solanatx.GetKeyNameForSolanaAdmin(), solanaAdminKeyType
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
+		}
+	case newSolanaAdminKeyType:
+		keyName, resultID = solanatx.GetKeyNameForNewSolanaAdmin(), newSolanaAdminKeyType
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreNewSolanaAdminPrivateKey(secretsManager, ip.forceRegenerate)
+		}
+	case solanaProgramKeyType:
+		keyName, resultID = solanatx.GetKeyNameForSolanaProgram(), solanaProgramKeyType
+		generate = func() (*solana.PrivateKey, error) {
+			return solanatx.GenerateAndStoreSolanaProgramPrivateKey(secretsManager, ip.forceRegenerate)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported solana wallet type: %s", walletType)
+	}
+
+	var privateKey solana.PrivateKey
+
+	if ip.importKey != nil {
+		if err := solanatx.ImportSolanaPrivateKey(
+			secretsManager, keyName, ip.importKey, ip.forceRegenerate); err != nil {
+			return nil, err
+		}
+
+		privateKey = ip.importKey
+	} else {
+		generated, err := generate()
+		if err != nil {
+			return nil, err
+		}
+
+		privateKey = *generated
+	}
+
+	return &evmCmdResult{
+		ChainID:        resultID,
+		PrivateKey:     privateKey.String(),
+		PublicKey:      privateKey.PublicKey().String(),
+		Address:        privateKey.PublicKey().String(),
+		showPrivateKey: ip.showPrivateKey,
+	}, nil
 }

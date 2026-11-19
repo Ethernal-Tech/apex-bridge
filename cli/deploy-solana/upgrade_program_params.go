@@ -25,18 +25,28 @@ const (
 	upgradeProgramVersionFlag     = "upgrade-program-version"
 	upgradeProgramVersionFlagDesc = "semver written to on-chain program config after deploy (e.g. 1.2.3); must not be smaller than the current version" //nolint:lll
 
-	upgradeProgramAdminKeyPathFlag                   = "admin-key"                                                                                        //nolint:lll //nolint:gofmt
-	upgradeProgramAdminKeyPathFlagDesc               = "path to bridge admin keypair (signs update_program_version; must match program config authority)" //nolint:lll
+	upgradeProgramAdminKeyPathFlag     = "admin-key"
+	upgradeProgramAdminKeyPathFlagDesc = "path to bridge admin keypair (signs update_program_version; must match program config authority)" //nolint:lll
+
+	upgradeAuthorityKeyFlag     = "upgrade-authority-key"
+	upgradeAuthorityKeyFlagDesc = "path to the program upgrade authority keypair (defaults to the admin key)"
+
 	upgradeProgramConfirmationTimeoutSecondsFlag     = "confirmation-timeout-seconds"
 	upgradeProgramConfirmationTimeoutSecondsFlagDesc = "max wait time in seconds for update-program-version tx finalization" //nolint:lll
 
 	defaultUpgradeProgramConfirmationTimeoutSeconds = uint64(120)
+
+	// solana CLI arguments shared by the commands that shell out to it
+	solanaCLIProgramArg          = "program"
+	solanaCLIURLArg              = "--url"
+	solanaCLIUpgradeAuthorityArg = "--upgrade-authority"
+	solanaCLICommitmentArg       = "--commitment"
 )
 
 type upgradeProgramParams struct {
 	rpcURL                     string
 	feePayerKeyPath            string
-	programKeyPath             string
+	upgradeAuthorityKeyPath    string
 	programID                  string
 	buildPath                  string
 	commitment                 string
@@ -50,32 +60,53 @@ type upgradeProgramParams struct {
 	confirmationTimeout time.Duration
 }
 
+// validateCommitment accepts only the commitment levels the solana CLI and RPC understand.
+func validateCommitment(commitment string) error {
+	switch commitment {
+	case "processed", "confirmed", "finalized":
+		return nil
+	default:
+		return fmt.Errorf("invalid --%s %q (must be processed, confirmed or finalized)", commitmentFlag, commitment)
+	}
+}
+
+// resolveExistingFile makes path clean and absolute (so a value starting with "-" can never be
+// read as a flag by the solana CLI) and checks that the file exists.
+func resolveExistingFile(path, description string) (string, error) {
+	abs, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve %s path %s: %w", description, path, err)
+	}
+
+	if _, err := os.Stat(abs); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("%s file does not exist: %s", description, abs)
+		}
+
+		return "", fmt.Errorf("failed to check %s file %s: %w", description, abs, err)
+	}
+
+	return abs, nil
+}
+
 func (p *upgradeProgramParams) validateFlags() error {
 	if !common.IsValidHTTPURL(p.rpcURL) {
 		return fmt.Errorf("invalid --%s flag (must be a valid http or https URL)", rpcURLFlag)
 	}
 
+	var err error
+
 	if p.feePayerKeyPath != "" {
-		p.feePayerKeyPath = filepath.Clean(p.feePayerKeyPath)
-		if _, err := os.Stat(p.feePayerKeyPath); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("fee payer key file does not exist: %s", p.feePayerKeyPath)
-			}
-
-			return fmt.Errorf("failed to check fee payer key file: %w", err)
+		if p.feePayerKeyPath, err = resolveExistingFile(p.feePayerKeyPath, "fee payer key"); err != nil {
+			return err
 		}
 	}
 
-	if p.programKeyPath == "" {
-		return fmt.Errorf("program key path not specified: --%s", programKeyFlag)
-	}
-
-	if _, err := os.Stat(p.programKeyPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("program key file does not exist: %s", p.programKeyPath)
+	if p.upgradeAuthorityKeyPath != "" {
+		p.upgradeAuthorityKeyPath, err = resolveExistingFile(p.upgradeAuthorityKeyPath, "upgrade authority key")
+		if err != nil {
+			return err
 		}
-
-		return fmt.Errorf("failed to check program key file: %w", err)
 	}
 
 	if p.programID == "" {
@@ -93,16 +124,16 @@ func (p *upgradeProgramParams) validateFlags() error {
 		return fmt.Errorf("build path not specified: --%s", buildPathFlag)
 	}
 
-	if _, err := os.Stat(p.buildPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("build path does not exist: %s", p.buildPath)
-		}
-
-		return fmt.Errorf("failed to check build path: %w", err)
+	if p.buildPath, err = resolveExistingFile(p.buildPath, "build path"); err != nil {
+		return err
 	}
 
 	if p.commitment == "" {
 		p.commitment = defaultCommitment
+	}
+
+	if err := validateCommitment(p.commitment); err != nil {
+		return err
 	}
 
 	p.upgradeProgramVersion = strings.TrimSpace(p.upgradeProgramVersion)
@@ -119,13 +150,8 @@ func (p *upgradeProgramParams) validateFlags() error {
 	}
 
 	if p.privateKeyConfig == "" {
-		p.adminKeyPath = filepath.Clean(p.adminKeyPath)
-		if _, err := os.Stat(p.adminKeyPath); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("admin key file does not exist: %s", p.adminKeyPath)
-			}
-
-			return fmt.Errorf("failed to check admin key file: %w", err)
+		if p.adminKeyPath, err = resolveExistingFile(p.adminKeyPath, "admin key"); err != nil {
+			return err
 		}
 	}
 
@@ -161,10 +187,10 @@ func (p *upgradeProgramParams) setFlags(cmd *cobra.Command) {
 		feePayerKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.programKeyPath,
-		programKeyFlag,
+		&p.upgradeAuthorityKeyPath,
+		upgradeAuthorityKeyFlag,
 		"",
-		programKeyFlagDesc,
+		upgradeAuthorityKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.programID,
@@ -212,42 +238,43 @@ func (p *upgradeProgramParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(upgradeProgramAdminKeyPathFlag, privateKeyConfigFlag)
 }
 
-func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	ctx := context.Background()
-	buildPath := filepath.Clean(p.buildPath)
-
-	_, _ = outputter.Write([]byte("Upgrading Solana program..."))
-	outputter.WriteOutput()
-
-	adminKeyPath, cleanupAdminKey, err := solanaKeypairPathForCLI(p.adminKeyPath, p.adminPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("prepare admin keypair: %w", err)
-	}
-
-	defer cleanupAdminKey()
-
-	feePayerKeyPath := p.feePayerKeyPath
-	if feePayerKeyPath == "" {
-		feePayerKeyPath = adminKeyPath
-	}
-
-	args := []string{
-		"program", "deploy",
-		"--url", p.rpcURL,
-		"--fee-payer", feePayerKeyPath,
-		"-k", p.programKeyPath,
-		"--program-id", p.programID,
-		"--upgrade-authority", adminKeyPath,
-		"--commitment", p.commitment,
+// buildUpgradeDeployArgs builds the `solana program deploy` arguments for an upgrade. All paths
+// must already be absolute. -k is the fee payer: the solana CLI resolves the default signer even
+// when --fee-payer and --upgrade-authority are given, and fails without ~/.config/solana/id.json.
+func buildUpgradeDeployArgs(rpcURL, feePayer, programID, upgradeAuthority, commitment, buildPath string) []string {
+	return []string{
+		solanaCLIProgramArg, "deploy",
+		solanaCLIURLArg, rpcURL,
+		"-k", feePayer,
+		"--fee-payer", feePayer,
+		"--program-id", programID,
+		solanaCLIUpgradeAuthorityArg, upgradeAuthority,
+		solanaCLICommitmentArg, commitment,
 		buildPath,
 	}
+}
 
-	output, err := common.ExecuteCLICommand("solana", args, ".")
-	if err != nil {
-		return nil, fmt.Errorf("solana program upgrade failed: %w", err)
+// deployArgs picks the fee payer (default: admin key) and the upgrade authority (default: admin
+// key) and builds the deploy arguments. adminKeyPath is the absolute path of the admin keypair.
+func (p *upgradeProgramParams) deployArgs(adminKeyPath string) []string {
+	feePayer := p.feePayerKeyPath
+	if feePayer == "" {
+		feePayer = adminKeyPath
 	}
 
-	_, _ = outputter.Write([]byte("Updating on-chain program version..."))
+	upgradeAuthority := p.upgradeAuthorityKeyPath
+	if upgradeAuthority == "" {
+		upgradeAuthority = adminKeyPath
+	}
+
+	return buildUpgradeDeployArgs(
+		p.rpcURL, feePayer, p.programID, upgradeAuthority, p.commitment, p.buildPath)
+}
+
+func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	ctx := context.Background()
+
+	_, _ = outputter.Write([]byte("Checking on-chain program config..."))
 	outputter.WriteOutput()
 
 	provider, err := solanawallet.NewProvider(p.rpcURL, nil)
@@ -257,6 +284,8 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 
 	txSender := solsendtx.NewTxSender(provider, nil)
 
+	// every on-chain check runs before the deploy, so a wrong admin key or version never leaves
+	// a deployed binary with a stale on-chain version
 	cfg, err := txSender.GetProgramConfig(ctx, p.programPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("get program config: %w", err)
@@ -291,6 +320,24 @@ func (p *upgradeProgramParams) Execute(outputter common.OutputFormatter) (common
 			currentScore,
 		)
 	}
+
+	_, _ = outputter.Write([]byte("Upgrading Solana program..."))
+	outputter.WriteOutput()
+
+	adminKeyPath, cleanupAdminKey, err := solanaKeypairPathForCLI(p.adminKeyPath, p.adminPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("prepare admin keypair: %w", err)
+	}
+
+	defer cleanupAdminKey()
+
+	output, err := common.ExecuteCLICommand("solana", p.deployArgs(adminKeyPath), ".")
+	if err != nil {
+		return nil, fmt.Errorf("solana program upgrade failed: %w", err)
+	}
+
+	_, _ = outputter.Write([]byte("Updating on-chain program version..."))
+	outputter.WriteOutput()
 
 	recentBlockhash, err := provider.GetLatestBlockhash(ctx)
 	if err != nil {
