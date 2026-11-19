@@ -13,14 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
+func mockAuthorityKeyConfig(t *testing.T, current, next solana.PrivateKey) string {
+	t.Helper()
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	t.Setenv("AWS_PROFILE", "")
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 
-	current := solana.NewWallet().PrivateKey
-	next := solana.NewWallet().PrivateKey
 	keys := map[string]solana.PrivateKey{
 		"/bridge/node/other_solana_admin":     current,
 		"/bridge/node/other_new_solana_admin": next,
@@ -50,7 +49,7 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 			}}))
 		}
 	}))
-	defer ssm.Close()
+	t.Cleanup(ssm.Close)
 
 	cfg := filepath.Join(t.TempDir(), "aws.json")
 	config, err := json.Marshal(map[string]any{
@@ -60,6 +59,13 @@ func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(cfg, config, 0o600))
 
+	return cfg
+}
+
+func TestSetUpgradeAuthorityFromSSM(t *testing.T) {
+	current := solana.NewWallet().PrivateKey
+	next := solana.NewWallet().PrivateKey
+	cfg := mockAuthorityKeyConfig(t, current, next)
 	program := solana.NewWallet().PublicKey()
 	p := setUpgradeAuthorityParams{
 		rpcURL: "http://localhost:8899", programID: program.String(), privateKeyConfig: cfg, commitment: "confirmed",

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	solanatx "github.com/Ethernal-Tech/apex-bridge/solana"
 	solsendtx "github.com/Ethernal-Tech/solana-infrastructure/sendtx"
 	solanawallet "github.com/Ethernal-Tech/solana-infrastructure/wallet"
 	"github.com/gagliardetto/solana-go"
@@ -33,7 +34,7 @@ func (p *setAuthorityParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&p.newAuthority, setAuthorityNewAuthorityFlag, "", setAuthorityNewAuthorityFlagDesc)
 	cmd.Flags().StringVar(&p.newAuthorityKeyPath, setAuthorityNewAuthorityKeyFlag, "",
-		"path to the new bridge admin keypair that co-signs the handover")
+		"incoming admin keypair file (overrides other_new_solana_admin from --key-config)")
 }
 
 func (p *setAuthorityParams) validateFlags() error {
@@ -66,17 +67,24 @@ func (p *setAuthorityParams) validateFlags() error {
 		return fmt.Errorf("new authority equals current admin %s", newKey)
 	}
 
-	if p.newAuthorityKeyPath == "" {
+	if p.newAuthorityKeyPath == "" && p.privateKeyConfig == "" {
 		return fmt.Errorf("new authority keypair not specified: --%s", setAuthorityNewAuthorityKeyFlag)
 	}
 
-	signer, err := solana.PrivateKeyFromSolanaKeygenFile(p.newAuthorityKeyPath)
+	secretName := solanatx.GetKeyNameForNewSolanaAdmin()
+
+	source := secretName
+	if p.newAuthorityKeyPath != "" {
+		source = "--" + setAuthorityNewAuthorityKeyFlag
+	}
+
+	signer, err := solanatx.GetSolanaPrivateKey(p.newAuthorityKeyPath, p.privateKeyConfig, secretName)
 	if err != nil {
-		return fmt.Errorf("invalid --%s: %w", setAuthorityNewAuthorityKeyFlag, err)
+		return fmt.Errorf("invalid %s: %w", source, err)
 	}
 
 	if signer.PublicKey() != newKey {
-		return fmt.Errorf("--%s does not match --%s", setAuthorityNewAuthorityKeyFlag, setAuthorityNewAuthorityFlag)
+		return fmt.Errorf("%s does not match --%s", source, setAuthorityNewAuthorityFlag)
 	}
 
 	p.newAuthorityKey = signer

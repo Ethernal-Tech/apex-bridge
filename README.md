@@ -911,7 +911,15 @@ apex-bridge deploy-solana set-authority \
     --new-authority-key ./new-admin.json
 ```
 
-You can use `--key-config /path/to/config.json` in place of `--admin-key` for the current admin. The new keypair must match `--new-authority`. After finalization, the command reads the program config to confirm the new admin.
+With both keys in AWS SSM, use the same config for the current signer (`other_solana_admin`) and incoming signer (`other_new_solana_admin`).
+
+```shell
+apex-bridge deploy-solana set-authority \
+    --url "$SOLANA_RPC_URL" --program-id "$PROGRAM_ID" \
+    --key-config "$AWS_CONFIG" --new-authority "$NEW_ADMIN_PUBLIC_KEY"
+```
+
+The incoming signer must match `--new-authority`. You can override the incoming SSM key with `--new-authority-key`. After finalization, the command reads the program config to confirm the new admin.
 
 # Show solana program version
 

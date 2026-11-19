@@ -172,9 +172,23 @@ func TestSetAuthorityReadBack(t *testing.T) {
 }
 
 func TestSetAuthoritySubmitsCosignedTransaction(t *testing.T) {
-	p := newValidSetAuthorityParams(t)
+	current := solana.NewWallet().PrivateKey
+	next := solana.NewWallet().PrivateKey
+	p := &setAuthorityParams{
+		programAdminParams: programAdminParams{
+			rpcURL:                     "http://127.0.0.1:8899",
+			programID:                  solana.NewWallet().PublicKey().String(),
+			privateKeyConfig:           mockAuthorityKeyConfig(t, current, next),
+			confirmationTimeoutSeconds: 120,
+		},
+		newAuthority: solana.NewWallet().PublicKey().String(),
+	}
+	require.ErrorContains(t, p.validateFlags(), "other_new_solana_admin does not match --new-authority")
+
+	p.newAuthority = next.PublicKey().String()
 	require.NoError(t, p.validateFlags())
-	admin, recipient := p.adminPrivateKey.PublicKey(), p.newAuthorityKey.PublicKey()
+
+	admin, recipient := current.PublicKey(), next.PublicKey()
 
 	ctx := context.Background()
 	provider := new(solanawallet.MockTxProvider)
