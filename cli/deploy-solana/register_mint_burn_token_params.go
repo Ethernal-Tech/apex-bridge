@@ -129,12 +129,16 @@ func (p *registerMintBurnTokenParams) validateFlags() error {
 		return err
 	}
 
-	if p.tokenName == "" {
-		return fmt.Errorf("token name not specified: --%s", registerMintBurnTokenNameFlag)
-	}
-
 	if p.tokenSymbol == "" {
 		p.tokenSymbol = p.tokenName
+	}
+
+	if err := validateTokenMetadata(
+		p.tokenName, registerMintBurnTokenNameFlag,
+		p.tokenSymbol, registerMintBurnTokenSymbolFlag,
+		p.tokenURI, registerMintBurnTokenURIFlag,
+	); err != nil {
+		return err
 	}
 
 	if p.tokenDecimals > uint64(^uint8(0)) {
