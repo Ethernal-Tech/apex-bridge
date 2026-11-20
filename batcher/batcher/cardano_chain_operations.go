@@ -279,16 +279,21 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		}
 	}
 
-	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress, isRedistribution, len(refundUtxos))
-	if err != nil {
-		return nil, multisigAddresses, err
-	}
-
 	refundUtxoInputs, refundUtxoOutputs, err :=
-		cco.prepareRefundInputsOutputs(data.ChainID, refundUtxos)
+		cco.prepareRefundInputsOutputs(data, refundUtxos)
 	if err != nil {
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare refund inputs/outputs. err: %w", err)
+	}
+
+	refundUtxosCnt := 0
+	for _, inputs := range refundUtxoInputs {
+		refundUtxosCnt += len(inputs)
+	}
+
+	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
+		multisigAddresses, feeMultisigAddress, isRedistribution, refundUtxosCnt)
+	if err != nil {
+		return nil, multisigAddresses, err
 	}
 
 	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs, refundUtxoOutputs...)
@@ -442,6 +447,10 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 		}
 	}
 
+	if len(filteredUtxos) == 0 {
+		return nil, fmt.Errorf("no utxos found for relayer address %s", relayerAddr)
+	}
+
 	sort.SliceStable(filteredUtxos, func(i, j int) bool {
 		return relayerUtxos[i].Amount > relayerUtxos[j].Amount
 	})
@@ -479,8 +488,13 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 	}, nil
 }
 
+// prepareRefundInputsOutputs turns UTxOs with unknown native tokens into refund inputs and outputs.
+// A UTxO that cannot be refunded (invalid receiver, amount below fee or below min UTxO after the
+// fee) is skipped and stays on the bridging address: failing here would fail every batch for the
+// chain, and a rejected batch would loop through TTL expiry. The oracle rejects such requests, so
+// a skip here means validators disagree on protocol parameters or the oracle has a bug.
 func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
-	chainID uint8,
+	data *batchInitialData,
 	refundUtxos []refundUtxoWithReceiverAddr,
 ) (
 	map[uint8][]*indexer.TxInputOutput,
@@ -490,36 +504,55 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 	refundUtxoInputs := make(map[uint8][]*indexer.TxInputOutput)
 	refundUtxoOutputs := make([]cardanowallet.TxOutput, 0, 2*len(refundUtxos))
 
+	if len(refundUtxos) == 0 {
+		return refundUtxoInputs, refundUtxoOutputs, nil
+	}
+
+	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer txBuilder.Dispose()
+
+	txBuilder.SetProtocolParameters(data.ProtocolParams)
+
+	feeAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
+
 	// process refund utxos by adding them into inputs, and creating outputs
 	for _, obj := range refundUtxos {
 		index, ok := cco.bridgingAddressesManager.GetPaymentAddressIndex(
-			chainID, obj.Utxo.Output.Address)
+			data.ChainID, obj.Utxo.Output.Address)
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to get index for address %s on chain %s",
-				obj.Utxo.Output.Address, cco.chainIDConverter.ToChainIDStr(chainID))
+				obj.Utxo.Output.Address, cco.chainIDConverter.ToChainIDStr(data.ChainID))
 		}
 
-		refundUtxoInputs[index] = append(refundUtxoInputs[index], obj.Utxo)
+		if !cardano.IsValidReceiverAddress(obj.Addr, cco.config.NetworkID) {
+			cco.logger.Error("skipped unknown tokens refund: invalid receiver address",
+				"batchID", data.BatchNonceID, "input", obj.Utxo.Input.String(), "addr", obj.Addr)
 
-		tokens := make([]cardanowallet.TokenAmount, len(obj.Utxo.Output.Tokens))
-		for i, t := range obj.Utxo.Output.Tokens {
-			tokens[i] = cardanowallet.NewTokenAmount(
-				cardanowallet.NewToken(t.PolicyID, t.Name),
-				t.Amount,
-			)
+			continue
 		}
 
 		// using cco.Config.MinFeeForBridgingTokens here without checking if there are native tokens
 		// because this is a special refund case that only happens when someone sends unknown tokens
 		// to the bridging address. So here we assume that there are tokens to be returned
-		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
-			Addr:   obj.Addr,
-			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridgingTokens,
-			Tokens: tokens,
-		})
+		refundOutput, err := cardano.CreateUnknownTokensRefundTxOutput(
+			txBuilder, obj.Addr, &obj.Utxo.Output, cco.config.MinFeeForBridgingTokens)
+		if errors.Is(err, cardano.ErrUnpayableUnknownTokensRefund) {
+			cco.logger.Error("skipped unknown tokens refund",
+				"batchID", data.BatchNonceID, "input", obj.Utxo.Input.String(), "err", err)
 
-		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
-			Addr:   cco.bridgingAddressesManager.GetFeeMultisigAddress(chainID),
+			continue
+		} else if err != nil {
+			return nil, nil, err
+		}
+
+		refundUtxoInputs[index] = append(refundUtxoInputs[index], obj.Utxo)
+
+		refundUtxoOutputs = append(refundUtxoOutputs, refundOutput, cardanowallet.TxOutput{
+			Addr:   feeAddress,
 			Amount: cco.config.MinFeeForBridgingTokens,
 		})
 	}

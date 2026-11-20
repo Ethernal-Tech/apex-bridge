@@ -482,6 +482,33 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "less than the minimum required for refund")
 	})
 
+	t.Run("ValidateAndAddClaim unknown tokens output below fee plus min utxo", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+
+		unknownToken := indexer.TokenAmount{PolicyID: policyID, Name: "unknown", Amount: 100}
+
+		// the sum covers one fee plus min utxo, but the batcher charges the fee per unknown tokens output
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 5_000_000, Tokens: []indexer.TokenAmount{unknownToken}},
+			{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + 1, Tokens: []indexer.TokenAmount{unknownToken}},
+		}
+
+		claims := &cCore.BridgeClaims{}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            indexer.Tx{Metadata: metadata, Outputs: txOutputs},
+			OriginChainID: common.ChainIDStrPrime,
+		}, getAppConfig(true))
+		require.ErrorIs(t, err, cardanotx.ErrUnpayableUnknownTokensRefund)
+		require.Empty(t, claims.RefundRequestClaims)
+	})
+
 	t.Run("ValidateAndAddClaim try count exceeded", func(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -730,5 +757,101 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
+	})
+
+	t.Run("ValidateAndAddClaim byron sender address", func(t *testing.T) {
+		for _, byronAddr := range getByronAddresses(t) {
+			metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: common.ChainIDStrCardano,
+				SenderAddr:         sendtx.AddrToMetaDataAddr(byronAddr),
+				Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			})
+			require.NoError(t, err)
+
+			appConfig := getAppConfig(true)
+
+			err = proc.ValidateAndAddClaim(&cCore.BridgeClaims{}, &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: metadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: 3},
+						{Address: primeBridgingFeeAddr, Amount: 4},
+					},
+				},
+				OriginChainID: common.ChainIDStrPrime,
+			}, appConfig)
+			require.ErrorContains(t, err, "invalid sender addr")
+		}
+	})
+
+	t.Run("ValidateAndAddClaim NUL in metadata strings", func(t *testing.T) {
+		// the refund is paid to the sender read from metadata, so a NUL there has to stop
+		// it, while a NUL in a field the refund never reads must not
+		validateAndAddClaim := func(
+			t *testing.T, txType, destinationChainID string, senderAddr []string,
+		) (*cCore.BridgeClaims, error) {
+			t.Helper()
+
+			metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(txType),
+				DestinationChainID: destinationChainID,
+				SenderAddr:         senderAddr,
+				Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			})
+			require.NoError(t, err)
+
+			claims := &cCore.BridgeClaims{}
+
+			err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+				Tx: indexer.Tx{
+					Metadata: metadata,
+					Outputs: []*indexer.TxOutput{
+						{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + 2_500_000},
+					},
+				},
+				OriginChainID: common.ChainIDStrPrime,
+			}, getAppConfig(true))
+
+			for _, claim := range claims.RefundRequestClaims {
+				require.NotContains(t, claim.OriginSenderAddress, "\x00")
+			}
+
+			return claims, err
+		}
+
+		bridge := string(common.BridgingTxTypeBridgingRequest)
+		senderAddr := sendtx.AddrToMetaDataAddr(validPrimeTestAddress)
+
+		claims, err := validateAndAddClaim(t, bridge, common.ChainIDStrCardano, senderAddr)
+		require.NoError(t, err)
+		require.Len(t, claims.RefundRequestClaims, 1)
+
+		for variant, value := range metadataAddrWithNUL(validPrimeTestAddress) {
+			t.Run("sender address "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, bridge, common.ChainIDStrCardano, value)
+				require.ErrorContains(t, err, "invalid sender addr")
+				require.Empty(t, claims.RefundRequestClaims)
+			})
+		}
+
+		// an unknown tx type is handed to the refund processor, so these are refunded
+		for variant, value := range withNUL(bridge) {
+			t.Run("tx type "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, value, common.ChainIDStrCardano, senderAddr)
+				require.NoError(t, err)
+				require.Len(t, claims.RefundRequestClaims, 1)
+				require.Equal(t, validPrimeTestAddress, claims.RefundRequestClaims[0].OriginSenderAddress)
+			})
+		}
+
+		for variant, value := range withNUL(common.ChainIDStrCardano) {
+			t.Run("destination chain "+variant, func(t *testing.T) {
+				claims, err := validateAndAddClaim(t, bridge, value, senderAddr)
+				require.NoError(t, err)
+				require.Len(t, claims.RefundRequestClaims, 1)
+				require.Equal(t, validPrimeTestAddress, claims.RefundRequestClaims[0].OriginSenderAddress)
+			})
+		}
 	})
 }

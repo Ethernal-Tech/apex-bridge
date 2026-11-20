@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -310,6 +311,50 @@ func TestSolanaChain_GenerateBatchTransaction(t *testing.T) {
 	})
 }
 
+func TestSolanaChain_GenerateBatchTransaction_InvalidReceiver(t *testing.T) {
+	sco := &SolanaChainOperations{
+		config: &solanatx.SolanaChainConfig{MinFeeForBridging: big.NewInt(0)},
+	}
+	addresses := map[string]string{
+		"uppercase fee marker":  strings.ToUpper(common.EthZeroAddr),
+		"prefixless fee marker": strings.TrimPrefix(common.EthZeroAddr, "0x"),
+		"invalid base58":        "invalid0address",
+		"wrong decoded length":  "1111",
+		"embedded NUL":          "So11111111111111111111111111111111111111112\x00",
+	}
+
+	for name, address := range addresses {
+		t.Run(name, func(t *testing.T) {
+			for _, wrapped := range []bool{false, true} {
+				asset := "native"
+				amount, tokenAmount := common.LamportToWei(big.NewInt(1)), big.NewInt(0)
+
+				if wrapped {
+					asset = "token"
+					amount, tokenAmount = tokenAmount, amount
+				}
+
+				t.Run(asset, func(t *testing.T) {
+					confirmed := []eth.ConfirmedTransaction{{
+						Receivers: []eth.BridgeReceiver{{
+							DestinationAddress: address,
+							Amount:             amount,
+							AmountWrapped:      tokenAmount,
+							TokenId:            1,
+						}},
+					}}
+
+					require.NotPanics(t, func() {
+						batch, err := sco.GenerateBatchTransaction(context.Background(), common.ChainIDStrSolana, confirmed, 1)
+						require.ErrorContains(t, err, "invalid solana receiver address")
+						require.Nil(t, batch)
+					})
+				})
+			}
+		})
+	}
+}
+
 func TestSolanaChain_SignBatchTransaction(t *testing.T) {
 	ctx := context.Background()
 	batchNonceID := uint64(77)
@@ -551,6 +596,11 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 					AmountWrapped:      wrappedAmount,
 					TokenId:            0,
 				},
+				{
+					DestinationAddress: common.EthZeroAddr,
+					Amount:             common.LamportToWei(big.NewInt(7)),
+					AmountWrapped:      big.NewInt(0),
+				},
 			},
 		},
 	}
@@ -563,6 +613,7 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, receivers)
 	require.NotNil(t, feeAmount)
+	require.Equal(t, big.NewInt(7), feeAmount)
 	require.Len(t, receivers, 3)
 
 	for i := 0; i < len(receivers)-1; i++ {
@@ -578,6 +629,7 @@ func TestSolanaChain_newSolanaReceivers_AggregationAndSorting(t *testing.T) {
 
 	for _, r := range receivers {
 		require.NotZero(t, r.TokenAmount.Amount)
+		require.Contains(t, []string{receiver1, receiver2}, solana.PublicKey(r.Address).String())
 	}
 }
 

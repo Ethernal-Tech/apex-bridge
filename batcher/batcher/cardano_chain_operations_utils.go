@@ -175,7 +175,7 @@ func getOutputs(
 			logger.Warn("skipped output with zero amount", "addr", addr)
 
 			continue
-		} else if !cardano.IsValidOutputAddress(addr, cardanoConfig.NetworkID) {
+		} else if !cardano.IsValidReceiverAddress(addr, cardanoConfig.NetworkID) {
 			logger.Warn("skipped output because it is invalid", "addr", addr)
 
 			continue

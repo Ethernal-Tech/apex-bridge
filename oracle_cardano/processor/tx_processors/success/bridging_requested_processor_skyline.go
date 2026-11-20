@@ -162,8 +162,9 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if receiverAddr == destChainInfo.FeeAddress {
-			// fee address will be added at the end
+		if cUtils.NormalizeAddr(receiverAddr) == cUtils.NormalizeAddr(destChainInfo.FeeAddress) {
+			// Match validateReceiver: fee aliases must not become payout receivers.
+			// The canonical fee address will be added at the end.
 			continue
 		}
 
@@ -419,7 +420,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 ) error {
 	receiverAddr := strings.Join(receiver.Address, "")
 
-	if !cardanotx.IsValidOutputAddress(receiverAddr, ctx.CardanoDestConfig.NetworkID) {
+	if !cardanotx.IsValidReceiverAddress(receiverAddr, ctx.CardanoDestConfig.NetworkID) {
 		return fmt.Errorf(
 			"found an invalid receiver addr in metadata. metadata: %v, receiver: %v", ctx.metadata, receiver)
 	}
