@@ -12,7 +12,7 @@ require (
 	github.com/DataDog/dd-trace-go/v2 v2.12.0
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20261023113908-ed976452bc2d
 	github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261110112856-c2f5f928a6ae
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20261120094442-ed1836115b79
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/blinklabs-io/gouroboros v0.103.1
 	github.com/ethereum/go-ethereum v1.17.10
