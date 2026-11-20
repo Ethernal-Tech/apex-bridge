@@ -992,6 +992,22 @@ apex-bridge deploy-solana register-mint-burn-token \
 
 - instead of `--admin-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
+# How to rename a Solana mint/burn token
+
+Use the registered token ID and a Skyline deployment that supports `rename_mint_burn_token`.
+The bridge admin signs and pays the transaction fee. The command looks up the mint and
+updates its on-chain name (up to 32 bytes) and symbol (up to 10 bytes).
+
+```shell
+apex-bridge deploy-solana rename-mint-burn-token \
+    --url "$SOLANA_RPC_URL" --program-id "$PROGRAM_ID" \
+    --token-id 2 --token-name "New Token Name" --token-symbol NEW \
+    --admin-key ./admin-keypair.json
+```
+
+For an admin key in AWS SSM, replace `--admin-key ./admin-keypair.json` with
+`--key-config ./aws-ssm.json`. The command reads `other_solana_admin` from the configured parameter path.
+
 # How to submit Solana hot wallet increment tx
 ```shell
 apex-bridge deploy-solana hot-wallet-increment \
