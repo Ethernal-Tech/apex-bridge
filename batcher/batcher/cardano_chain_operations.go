@@ -688,7 +688,7 @@ func getOutputs(
 			logger.Warn("skipped output with zero amount", "addr", addr)
 
 			continue
-		} else if !cardano.IsValidOutputAddress(addr, networkID) {
+		} else if !cardano.IsValidReceiverAddress(addr, networkID) {
 			// apex-361 fix
 			logger.Warn("skipped output because it is invalid", "addr", addr)
 
