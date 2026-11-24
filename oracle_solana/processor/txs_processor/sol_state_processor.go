@@ -594,7 +594,14 @@ func (s *SolStateProcessor) checkExpectedTxs(
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
+		processedTx, err := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
+		if err != nil {
+			s.logger.Error("Failed to resolve expired Solana transaction", "chainID", expiredTx.ChainID,
+				"innerActionHash", fmt.Sprintf("%x", expiredTx.Hash), "err", err)
+
+			continue
+		}
+
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)

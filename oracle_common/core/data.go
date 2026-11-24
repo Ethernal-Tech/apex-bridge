@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const (
@@ -128,9 +129,9 @@ func (e *DBBatchInfoEvent) DBKey() []byte {
 }
 
 type ProcessedTxByInnerAction struct {
-	ChainID         string     `json:"chain_id"`
-	Hash            ethgo.Hash `json:"hash"`
-	InnerActionHash ethgo.Hash `json:"ia_hash"`
+	ChainID         string        `json:"chain_id"`
+	Hash            hexutil.Bytes `json:"hash"`
+	InnerActionHash ethgo.Hash    `json:"ia_hash"`
 }
 
 func IsTxReady(triesCount uint32, lastTimeTried time.Time, settings RetryUnprocessedSettings) bool {
