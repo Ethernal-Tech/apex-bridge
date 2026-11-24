@@ -9,6 +9,15 @@ import (
 	solana "github.com/gagliardetto/solana-go"
 )
 
+type claimBlock struct {
+	ChainID string
+	Height  uint64
+}
+
+func (b claimBlock) matches(chainID string, height uint64) bool {
+	return b.ChainID == chainID && b.Height == height
+}
+
 type perTickState struct {
 	updateData *core.SolanaUpdateTxsData
 
@@ -18,7 +27,7 @@ type perTickState struct {
 
 	expectedTxsMap map[string]*core.BridgeExpectedSolanaTx
 	unprocessedTxs []*core.SolanaTx
-	blockInfo      *core.BridgeClaimsSlotInfo
+	blockInfo      *claimBlock
 }
 
 type txProcessorsCollection struct {

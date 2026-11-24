@@ -129,6 +129,63 @@ func TestSolTxsProcessor(t *testing.T) {
 		return oracleDB, nil
 	}
 
+	t.Run("schedule by block height", func(t *testing.T) {
+		const (
+			chainID      = common.ChainIDStrSolana
+			slot         = 472973801
+			ttl          = 450987461
+			expiryHeight = ttl + TTLInsuranceOffset
+		)
+		for _, tc := range []struct {
+			name            string
+			executionHeight uint64
+			wantSuccess     bool
+		}{
+			{"execution before expiry", 450987312, true},
+			{"execution at expiry", expiryHeight, true},
+			{"expiry before execution", expiryHeight + 1, false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				db, err := createOracleDB(filepath.Join(t.TempDir(), "oracle.db"))
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, db.DB.Close()) })
+
+				event := &core.SolanaTx{
+					OriginChainID: chainID, SlotNumber: slot, BlockNumber: tc.executionHeight,
+					TxSignature: solana.Signature{1}, InnerActionHash: [32]byte{2}, Metadata: []byte(`{"t":"batch","n":1}`),
+				}
+				require.NoError(t, db.AddTxs(nil, []*core.SolanaTx{event}))
+				require.NoError(t, db.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{
+					{ChainID: chainID, Hash: event.InnerActionHash, TTL: ttl, Metadata: event.Metadata},
+				}))
+
+				indexer := &solanaTxsStore.MockStorageHandler{}
+				indexer.On("GetLatestFinalizedBlockNumber").Return(uint64(expiryHeight+1), nil)
+
+				logger := hclog.NewNullLogger()
+				processors := NewTxProcessorsCollection(
+					[]core.SolanaTxSuccessProcessor{success.NewSolanaBatchExecutedProcessor(logger)},
+					[]core.SolanaTxFailedProcessor{failed.NewSolanaBatchExecutionFailedProcessor(logger)},
+				)
+				processor := NewSolStateProcessor(t.Context(), appConfig, db, processors,
+					map[string]solanaTxsStore.StorageHandler{chainID: indexer}, logger)
+				processor.Reset()
+
+				claims := &oCore.BridgeClaims{ChainIDConverter: appConfig.ChainIDConverter}
+				// A single available claim makes the scheduler's first choice observable.
+				processor.RunChecks(claims, chainID, 1, 0)
+
+				if tc.wantSuccess {
+					require.Len(t, claims.BatchExecutedClaims, 1)
+					require.Empty(t, claims.BatchExecutionFailedClaims)
+				} else {
+					require.Len(t, claims.BatchExecutionFailedClaims, 1)
+					require.Empty(t, claims.BatchExecutedClaims)
+				}
+			})
+		}
+	})
+
 	for _, scenario := range []string{"full signature", "legacy prefix", "dangling link", "ambiguous prefix"} {
 		t.Run("late expectation/"+scenario, func(t *testing.T) {
 			oracleDB, err := createOracleDB(filepath.Join(t.TempDir(), "oracle.db"))

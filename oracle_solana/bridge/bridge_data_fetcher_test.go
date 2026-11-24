@@ -222,6 +222,28 @@ func TestSolanaBridgeDataFetcher(t *testing.T) {
 		require.Nil(t, expectedTx)
 	})
 
+	t.Run("FetchExpectedTx unknown block height", func(t *testing.T) {
+		chainID := common.ChainIDStrSolana
+		blockhash := solana.Hash(solana.NewWallet().PublicKey())
+
+		rawPayload, err := sendtx.SolanaPayload{Blockhash: blockhash, BatchID: 42}.Marshal()
+		require.NoError(t, err)
+
+		bridgeSC := &eth.OracleBridgeSmartContractMock{}
+		bridgeSC.On("GetRawTransactionFromLastBatch").Return(rawPayload, nil).Once()
+
+		indexerDB := &solanaTxsStore.MockStorageHandler{}
+		indexerDB.On("GetBlockNumberByBlockhash", blockhash).Return(uint64(0), nil).Once()
+
+		fetcher := NewSolanaBridgeDataFetcher(context.Background(), bridgeSC,
+			map[string]solanaTxsStore.StorageHandler{chainID: indexerDB}, hclog.NewNullLogger(), appConfig)
+
+		expectedTx, err := fetcher.FetchExpectedTx(chainID)
+		require.ErrorContains(t, err, "block height for blockhash")
+		require.Nil(t, expectedTx)
+		indexerDB.AssertExpectations(t)
+	})
+
 	t.Run("FetchExpectedTx passes", func(t *testing.T) {
 		chainID := common.ChainIDStrSolana
 		batchID := uint64(42)

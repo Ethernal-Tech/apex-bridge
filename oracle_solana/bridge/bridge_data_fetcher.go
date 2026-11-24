@@ -19,7 +19,6 @@ import (
 const (
 	MaxRetries = 5
 
-	// Solana slot target is 400ms
 	// TTL for solana tx is caped to 150 blocks
 	// source: https://solana.com/developers/guides/advanced/confirmation#how-does-transaction-expiration-work
 	// we add 50 blocks on top of the ttl to be safe
@@ -93,6 +92,12 @@ func (df *SolanaBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Br
 			blockNumber, err := indexerDB.GetBlockNumberByBlockhash(blockhash)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get block by hash. err: %w", err)
+			}
+
+			// The tracker stores 0 when the RPC returned a block without a height. A TTL built from it
+			// expires at once, so the oracle would claim the batch failed while Solana can still execute it.
+			if blockNumber == 0 {
+				return nil, fmt.Errorf("block height for blockhash %s is unknown", blockhash)
 			}
 
 			hash := sha256.Sum256(lastBatchRawTx)

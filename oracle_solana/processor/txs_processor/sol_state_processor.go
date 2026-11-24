@@ -116,9 +116,7 @@ func (s *SolStateProcessor) RunChecks(
 		return
 	}
 
-	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
-	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
-	// that all claims are filled only from unprocessedTxs and never from expectedTxs
+	// Interleave queued executions and finalized expiries in block-height order.
 	s.state.blockInfo = s.constructBridgeClaimsBlockInfo(
 		chainID, s.state.unprocessedTxs, expectedTxs, nil)
 	if s.state.blockInfo == nil {
@@ -384,20 +382,18 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	chainID string,
 	unprocessedTxs []*core.SolanaTx,
 	expectedTxs []*core.BridgeExpectedSolanaTx,
-	prevBlockInfo *core.BridgeClaimsSlotInfo,
-) *core.BridgeClaimsSlotInfo {
+	prevBlockInfo *claimBlock,
+) *claimBlock {
 	found := false
 	minBlockNumber := uint64(math.MaxUint64)
 
-	if len(unprocessedTxs) > 0 {
-		// unprocessed are ordered by slot number, so first in collection is min
-		for _, tx := range unprocessedTxs {
-			if prevBlockInfo == nil || prevBlockInfo.Number < tx.SlotNumber {
-				minBlockNumber = tx.SlotNumber
-				found = true
+	// Queued finalized transactions are in slot order, which also orders their block heights.
+	for _, tx := range unprocessedTxs {
+		if prevBlockInfo == nil || prevBlockInfo.Height < tx.BlockNumber {
+			minBlockNumber = tx.BlockNumber
+			found = true
 
-				break
-			}
+			break
 		}
 	}
 
@@ -416,7 +412,7 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 						"chainId", chainID, "err", err)
 				} else if latestFinalizedBlockNumber >= fromBlockNumber &&
 					fromBlockNumber < minBlockNumber &&
-					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
+					(prevBlockInfo == nil || prevBlockInfo.Height < fromBlockNumber) {
 					minBlockNumber = fromBlockNumber
 					found = true
 
@@ -427,9 +423,9 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	}
 
 	if found {
-		return &core.BridgeClaimsSlotInfo{
+		return &claimBlock{
 			ChainID: chainID,
-			Number:  minBlockNumber,
+			Height:  minBlockNumber,
 		}
 	}
 
@@ -443,7 +439,7 @@ func (s *SolStateProcessor) checkUnprocessedTxs(
 	var relevantUnprocessedTxs []*core.SolanaTx
 
 	for _, unprocessedTx := range s.state.unprocessedTxs {
-		if s.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && oracleCore.IsTxReady(
+		if s.state.blockInfo.matches(unprocessedTx.OriginChainID, unprocessedTx.BlockNumber) && oracleCore.IsTxReady(
 			unprocessedTx.SubmitTryCount, unprocessedTx.LastTimeTried, s.appConfig.RetryUnprocessedSettings) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
@@ -573,7 +569,7 @@ func (s *SolStateProcessor) checkExpectedTxs(
 			}
 
 			if latestFinalizedBlockNumber >= fromBlockNumber &&
-				s.state.blockInfo.EqualWithExpected(expectedTx, fromBlockNumber) {
+				s.state.blockInfo.matches(expectedTx.ChainID, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}
 		}

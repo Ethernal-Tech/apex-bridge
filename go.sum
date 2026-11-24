@@ -62,8 +62,8 @@ github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94 h1:xUvsP9JPf8B
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94/go.mod h1:B8gumPuc8eynSJmAcMd2CEjhlOSE8CynwFx9G3AlaQ8=
 github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f h1:+jmWJUaCoz/QjsE+TH1suO0RPLs7f/dXxTe0JM8p0O8=
 github.com/Ethernal-Tech/gouroboros v0.0.0-20260914132917-4454e1199f8f/go.mod h1:wjiNCbZ2uQy9DGfLCgEgqagHxNBAv5UYsOdRBgoi3SU=
-github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261123101009-573ef1728f28 h1:2Cpyqspwh7zmLpKiGnvbJT7l9XhW4domT0+EmlNU6sA=
-github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261123101009-573ef1728f28/go.mod h1:7Nhf72xZNkIoKdOAcagD/i4Gc1VKRMHz0msdzx2b8u4=
+github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261124122948-60e80a52fa5a h1:MrPpVu/KyOn/VmfWIjkzXx3RHpAYOZr7gCrLGEW/aR8=
+github.com/Ethernal-Tech/solana-infrastructure v0.0.0-20261124122948-60e80a52fa5a/go.mod h1:7Nhf72xZNkIoKdOAcagD/i4Gc1VKRMHz0msdzx2b8u4=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
