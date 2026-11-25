@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -19,6 +20,11 @@ import (
 
 const expiredBlockhashErrMsg = "Blockhash not found"
 
+var (
+	_ core.ChainOperations = (*SolanaChainOperations)(nil)
+	_ core.BalanceReporter = (*SolanaChainOperations)(nil)
+)
+
 type SolanaChainOperations struct {
 	chainID    string
 	config     *solanatx.SolanaChainConfig
@@ -26,6 +32,22 @@ type SolanaChainOperations struct {
 	txSender   *sendtx.TxSender
 	txProvider wallet.ITxProvider
 	logger     hclog.Logger
+}
+
+// GetRelayerAddress implements core.BalanceReporter.
+func (sco *SolanaChainOperations) GetRelayerAddress() string {
+	return sco.privateKey.PublicKey().String()
+}
+
+// GetRelayerBalance implements core.BalanceReporter.
+// It returns the balance in wei, like the other chains, so the telemetry worker converts it the same way.
+func (sco *SolanaChainOperations) GetRelayerBalance(ctx context.Context) (*big.Int, error) {
+	lamports, err := sco.txProvider.GetBalance(ctx, sco.privateKey.PublicKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get relayer balance: %w", err)
+	}
+
+	return common.LamportToWei(new(big.Int).SetUint64(lamports)), nil
 }
 
 func NewSolanaChainOperations(
