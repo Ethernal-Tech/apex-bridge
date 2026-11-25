@@ -382,14 +382,14 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	chainID string,
 	unprocessedTxs []*core.SolanaTx,
 	expectedTxs []*core.BridgeExpectedSolanaTx,
-	prevBlockInfo *claimBlock,
-) *claimBlock {
+	prevBlockInfo *core.BridgeClaimsBlockInfo,
+) *core.BridgeClaimsBlockInfo {
 	found := false
 	minBlockNumber := uint64(math.MaxUint64)
 
 	// Queued finalized transactions are in slot order, which also orders their block heights.
 	for _, tx := range unprocessedTxs {
-		if prevBlockInfo == nil || prevBlockInfo.Height < tx.BlockNumber {
+		if prevBlockInfo == nil || prevBlockInfo.Number < tx.BlockNumber {
 			minBlockNumber = tx.BlockNumber
 			found = true
 
@@ -412,7 +412,7 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 						"chainId", chainID, "err", err)
 				} else if latestFinalizedBlockNumber >= fromBlockNumber &&
 					fromBlockNumber < minBlockNumber &&
-					(prevBlockInfo == nil || prevBlockInfo.Height < fromBlockNumber) {
+					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
 					minBlockNumber = fromBlockNumber
 					found = true
 
@@ -423,9 +423,9 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	}
 
 	if found {
-		return &claimBlock{
+		return &core.BridgeClaimsBlockInfo{
 			ChainID: chainID,
-			Height:  minBlockNumber,
+			Number:  minBlockNumber,
 		}
 	}
 
@@ -439,7 +439,7 @@ func (s *SolStateProcessor) checkUnprocessedTxs(
 	var relevantUnprocessedTxs []*core.SolanaTx
 
 	for _, unprocessedTx := range s.state.unprocessedTxs {
-		if s.state.blockInfo.matches(unprocessedTx.OriginChainID, unprocessedTx.BlockNumber) && oracleCore.IsTxReady(
+		if s.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && oracleCore.IsTxReady(
 			unprocessedTx.SubmitTryCount, unprocessedTx.LastTimeTried, s.appConfig.RetryUnprocessedSettings) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
@@ -569,7 +569,7 @@ func (s *SolStateProcessor) checkExpectedTxs(
 			}
 
 			if latestFinalizedBlockNumber >= fromBlockNumber &&
-				s.state.blockInfo.matches(expectedTx.ChainID, fromBlockNumber) {
+				s.state.blockInfo.EqualWithExpected(expectedTx, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}
 		}

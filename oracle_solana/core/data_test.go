@@ -217,6 +217,43 @@ func TestBridgeExpectedSolanaTx(t *testing.T) {
 	})
 }
 
+func TestBridgeClaimsSlotInfo(t *testing.T) {
+	bi := &BridgeClaimsBlockInfo{
+		ChainID: "solana",
+		Number:  100,
+	}
+
+	t.Run("EqualWithUnprocessed matching block number", func(t *testing.T) {
+		tx := &SolanaTx{OriginChainID: "solana", BlockNumber: 100, SlotNumber: 150}
+		require.True(t, bi.EqualWithUnprocessed(tx))
+	})
+
+	t.Run("EqualWithUnprocessed ignores slot number", func(t *testing.T) {
+		tx := &SolanaTx{OriginChainID: "solana", BlockNumber: 90, SlotNumber: 100}
+		require.False(t, bi.EqualWithUnprocessed(tx))
+	})
+
+	t.Run("EqualWithUnprocessed different chain", func(t *testing.T) {
+		tx := &SolanaTx{OriginChainID: "other", BlockNumber: 100}
+		require.False(t, bi.EqualWithUnprocessed(tx))
+	})
+
+	t.Run("EqualWithExpected matching", func(t *testing.T) {
+		etx := &BridgeExpectedSolanaTx{ChainID: "solana"}
+		require.True(t, bi.EqualWithExpected(etx, 100))
+	})
+
+	t.Run("EqualWithExpected different chain", func(t *testing.T) {
+		etx := &BridgeExpectedSolanaTx{ChainID: "other"}
+		require.False(t, bi.EqualWithExpected(etx, 100))
+	})
+
+	t.Run("EqualWithExpected different block", func(t *testing.T) {
+		etx := &BridgeExpectedSolanaTx{ChainID: "solana"}
+		require.False(t, bi.EqualWithExpected(etx, 200))
+	})
+}
+
 func TestToSolanaTxKey(t *testing.T) {
 	sig := solana.Signature{1, 2, 3}
 	key := ToSolanaTxKey("solana", sig[:])

@@ -191,6 +191,19 @@ func (b BridgeExpectedSolanaTx) ToExpectedTxKey() []byte {
 	return append(bytes[:], b.Hash[:]...)
 }
 
+type BridgeClaimsBlockInfo struct {
+	ChainID string
+	Number  uint64
+}
+
+func (bi *BridgeClaimsBlockInfo) EqualWithUnprocessed(tx *SolanaTx) bool {
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber
+}
+
+func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, blockNumber uint64) bool {
+	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
+}
+
 // toUnprocessedSolanaTxKey builds a sortable composite DB key: priority(1B) | slotNumber(8B BigEndian) | signature(64B)
 func toUnprocessedSolanaTxKey(priority uint8, slotNumber uint64, sig solana.Signature) []byte {
 	bytes := [9]byte{priority}
