@@ -68,36 +68,43 @@ func findProcessedExecution(tx *bbolt.Tx, chainID string, actionHash []byte) (*c
 		return nil, err
 	}
 
-	// A full signature identifies one row. Older links stored only the first
-	// 32 bytes, so check every signature with that prefix for the requested action.
-	if len(key) != sha256.Size && len(key) != ed25519.SignatureSize {
-		return nil, fmt.Errorf("invalid processed transaction key length %d for inner action %x", len(key), actionHash)
-	}
-
 	bucket := tx.Bucket(cDatabaseaccess.ChainBucket(cDatabaseaccess.ProcessedTxsBucket, chainID))
-	cursor := bucket.Cursor()
 
 	var match *core.ProcessedSolanaTx
 
-	for k, v := cursor.Seek(key); bytes.HasPrefix(k, key); k, v = cursor.Next() {
-		if len(k) != ed25519.SignatureSize {
-			continue
+	switch len(key) {
+	case ed25519.SignatureSize:
+		if value := bucket.Get(key); value != nil {
+			match, err = decodeMatchingExecution(value, key, actionHash)
+			if err != nil {
+				return nil, err
+			}
 		}
+	case sha256.Size:
+		// Legacy links contain only the first 32 bytes of the signature.
+		cursor := bucket.Cursor()
+		for k, v := cursor.Seek(key); bytes.HasPrefix(k, key); k, v = cursor.Next() {
+			if len(k) != ed25519.SignatureSize {
+				continue
+			}
 
-		var candidate core.ProcessedSolanaTx
-		if err := json.Unmarshal(v, &candidate); err != nil {
-			return nil, err
+			candidate, err := decodeMatchingExecution(v, k, actionHash)
+			if err != nil {
+				return nil, err
+			}
+
+			if candidate == nil {
+				continue
+			}
+
+			if match != nil {
+				return nil, fmt.Errorf("ambiguous signature prefix %x for inner action %x", key, actionHash)
+			}
+
+			match = candidate
 		}
-
-		if !bytes.Equal(candidate.InnerActionHash[:], actionHash) || !bytes.Equal(candidate.TxSignature[:], k) {
-			continue
-		}
-
-		if match != nil {
-			return nil, fmt.Errorf("ambiguous signature prefix %x for inner action %x", key, actionHash)
-		}
-
-		match = &candidate
+	default:
+		return nil, fmt.Errorf("invalid processed transaction key length %d for inner action %x", len(key), actionHash)
 	}
 
 	if match == nil {
@@ -105,4 +112,17 @@ func findProcessedExecution(tx *bbolt.Tx, chainID string, actionHash []byte) (*c
 	}
 
 	return match, nil
+}
+
+func decodeMatchingExecution(value, signature, actionHash []byte) (*core.ProcessedSolanaTx, error) {
+	var candidate core.ProcessedSolanaTx
+	if err := json.Unmarshal(value, &candidate); err != nil {
+		return nil, err
+	}
+
+	if !bytes.Equal(candidate.InnerActionHash[:], actionHash) || !bytes.Equal(candidate.TxSignature[:], signature) {
+		return nil, nil
+	}
+
+	return &candidate, nil
 }
