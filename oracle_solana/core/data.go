@@ -191,21 +191,16 @@ func (b BridgeExpectedSolanaTx) ToExpectedTxKey() []byte {
 	return append(bytes[:], b.Hash[:]...)
 }
 
-// BridgeClaimsSlotInfo tracks the current Solana slot being processed for claim grouping.
-type BridgeClaimsSlotInfo struct {
+type BridgeClaimsBlockInfo struct {
 	ChainID string
 	Number  uint64
 }
 
-func (bi *BridgeClaimsSlotInfo) EqualWithUnprocessed(tx *SolanaTx) bool {
-	return bi.ChainID == tx.OriginChainID && bi.Number == tx.SlotNumber
+func (bi *BridgeClaimsBlockInfo) EqualWithUnprocessed(tx *SolanaTx) bool {
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber
 }
 
-func (bi *BridgeClaimsSlotInfo) EqualWithProcessed(tx *ProcessedSolanaTx) bool {
-	return bi.ChainID == tx.OriginChainID && bi.Number == tx.SlotNumber
-}
-
-func (bi *BridgeClaimsSlotInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, blockNumber uint64) bool {
+func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedSolanaTx, blockNumber uint64) bool {
 	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
 }
 

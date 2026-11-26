@@ -159,24 +159,41 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetProcessedTxByInnerActi
 	}
 
 	err = bd.DB.View(func(tx *bbolt.Tx) error {
-		var processedTxByInnerAction *core.ProcessedTxByInnerAction
+		key, err := ReadInnerActionTxKey(tx, chainID, innerActionTxHash)
+		if err != nil || key == nil {
+			return err
+		}
 
-		midBucket := tx.Bucket(ChainBucket(ProcessedTxsByInnerActionBucket, chainID))
-		if data := midBucket.Get(innerActionTxHash); len(data) > 0 {
-			if err := json.Unmarshal(data, &processedTxByInnerAction); err != nil {
-				return err
-			}
-
-			bucket := tx.Bucket(ChainBucket(ProcessedTxsBucket, chainID))
-			if data := bucket.Get(processedTxByInnerAction.Hash[:]); len(data) > 0 {
-				return json.Unmarshal(data, &result)
-			}
+		bucket := tx.Bucket(ChainBucket(ProcessedTxsBucket, chainID))
+		if data := bucket.Get(key); data != nil {
+			return json.Unmarshal(data, &result)
 		}
 
 		return nil
 	})
 
 	return result, err
+}
+
+// ReadInnerActionTxKey reads the processed transaction key within the caller's transaction.
+func ReadInnerActionTxKey(tx *bbolt.Tx, chainID string, actionHash []byte) ([]byte, error) {
+	bucket := tx.Bucket(ChainBucket(ProcessedTxsByInnerActionBucket, chainID))
+
+	data := bucket.Get(actionHash)
+	if data == nil {
+		return nil, nil
+	}
+
+	var link core.ProcessedTxByInnerAction
+	if err := json.Unmarshal(data, &link); err != nil {
+		return nil, err
+	}
+
+	if len(link.Hash) == 0 {
+		return nil, fmt.Errorf("empty processed transaction key for inner action %x", actionHash)
+	}
+
+	return link.Hash, nil
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddTxs(
@@ -362,6 +379,13 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddExpectedTxs(expectedTxs []TExpectedTx) error {
+	return bd.AddExpectedTxsUnless(expectedTxs, nil)
+}
+
+// AddExpectedTxsUnless checks skip and writes new expectations in the same transaction.
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddExpectedTxsUnless(
+	expectedTxs []TExpectedTx, skip func(*bbolt.Tx, TExpectedTx) (bool, error),
+) error {
 	return bd.DB.Update(func(tx *bbolt.Tx) error {
 		for _, expectedTx := range expectedTxs {
 			if supported := bd.SupportedChains[expectedTx.GetChainID()]; !supported {
@@ -372,15 +396,28 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddExpectedTxs(expectedTx
 			processedBucket := tx.Bucket(ChainBucket(ProcessedExpectedTxsBucket, expectedTx.GetChainID()))
 			key := expectedTx.DBKey()
 
-			if len(bucket.Get(key)) == 0 && len(processedBucket.Get(key)) == 0 {
-				bytes, err := json.Marshal(expectedTx)
+			if bucket.Get(key) != nil || processedBucket.Get(key) != nil {
+				continue
+			}
+
+			if skip != nil {
+				skipExpected, err := skip(tx, expectedTx)
 				if err != nil {
-					return fmt.Errorf("could not marshal expected tx: %w", err)
+					return err
 				}
 
-				if err = bucket.Put(key, bytes); err != nil {
-					return fmt.Errorf("expected tx write error: %w", err)
+				if skipExpected {
+					continue
 				}
+			}
+
+			bytes, err := json.Marshal(expectedTx)
+			if err != nil {
+				return fmt.Errorf("could not marshal expected tx: %w", err)
+			}
+
+			if err = bucket.Put(key, bytes); err != nil {
+				return fmt.Errorf("expected tx write error: %w", err)
 			}
 		}
 
@@ -810,7 +847,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 		if tx.HasInnerActionTxHash() {
 			links = append(links, &core.ProcessedTxByInnerAction{
 				ChainID:         tx.GetChainID(),
-				Hash:            ethgo.Hash(tx.GetTxHash()),
+				Hash:            tx.GetTxHash(),
 				InnerActionHash: ethgo.Hash(tx.GetInnerActionTxHash()),
 			})
 		}
@@ -820,7 +857,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 		if tx.HasInnerActionTxHash() {
 			links = append(links, &core.ProcessedTxByInnerAction{
 				ChainID:         tx.GetChainID(),
-				Hash:            ethgo.Hash(tx.GetTxHash()),
+				Hash:            tx.GetTxHash(),
 				InnerActionHash: ethgo.Hash(tx.GetInnerActionTxHash()),
 			})
 		}

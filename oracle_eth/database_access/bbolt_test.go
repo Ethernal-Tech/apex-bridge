@@ -1,6 +1,7 @@
 package databaseaccess
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
+	"go.etcd.io/bbolt"
 )
 
 func TestBoltDatabase(t *testing.T) {
@@ -96,6 +98,27 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, listTxs, 1)
 		require.Equal(t, tx, listTxs[0])
+	})
+
+	t.Run("legacy inner action link", func(t *testing.T) {
+		db, err := createDB(filepath.Join(t.TempDir(), "oracle.db"))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, db.DB.Close()) })
+
+		chainID := common.ChainIDStrNexus
+		processed := &core.ProcessedEthTx{OriginChainID: chainID, Hash: ethgo.Hash{1}, InnerActionHash: ethgo.Hash{2}}
+		_, _, err = db.AddNewTxs([]*core.ProcessedEthTx{processed}, nil)
+		require.NoError(t, err)
+		require.NoError(t, db.DB.Update(func(tx *bbolt.Tx) error {
+			legacy := fmt.Sprintf(`{"chain_id":%q,"hash":%q,"ia_hash":%q}`, chainID, processed.Hash.String(), processed.InnerActionHash.String())
+
+			return tx.Bucket(cDatabaseaccess.ChainBucket(cDatabaseaccess.ProcessedTxsByInnerActionBucket, chainID)).
+				Put(processed.InnerActionHash[:], []byte(legacy))
+		}))
+
+		found, err := db.GetProcessedTxByInnerActionTxHash(chainID, processed.InnerActionHash[:])
+		require.NoError(t, err)
+		require.Equal(t, processed, found)
 	})
 
 	t.Run("AddProcessedTxs", func(t *testing.T) {

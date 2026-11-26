@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,12 +17,16 @@ import (
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_solana/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_solana/database_access"
+	failed "github.com/Ethernal-Tech/apex-bridge/oracle_solana/processor/tx_processors/failed"
+	success "github.com/Ethernal-Tech/apex-bridge/oracle_solana/processor/tx_processors/success"
 	"github.com/Ethernal-Tech/solana-infrastructure/tracker"
 	solanaTxsStore "github.com/Ethernal-Tech/solana-infrastructure/tracker/store"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/gagliardetto/solana-go"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.etcd.io/bbolt"
 )
 
 func newSolTxsProcessor(
@@ -123,6 +128,196 @@ func TestSolTxsProcessor(t *testing.T) {
 
 		return oracleDB, nil
 	}
+
+	t.Run("schedule by block height", func(t *testing.T) {
+		const (
+			chainID      = common.ChainIDStrSolana
+			slot         = 472973801
+			ttl          = 450987461
+			expiryHeight = ttl + TTLInsuranceOffset
+		)
+		for _, tc := range []struct {
+			name            string
+			executionHeight uint64
+			wantSuccess     bool
+		}{
+			{"execution before expiry", 450987312, true},
+			{"execution at expiry", expiryHeight, true},
+			{"expiry before execution", expiryHeight + 1, false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				db, err := createOracleDB(filepath.Join(t.TempDir(), "oracle.db"))
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, db.DB.Close()) })
+
+				event := &core.SolanaTx{
+					OriginChainID: chainID, SlotNumber: slot, BlockNumber: tc.executionHeight,
+					TxSignature: solana.Signature{1}, InnerActionHash: [32]byte{2}, Metadata: []byte(`{"t":"batch","n":1}`),
+				}
+				require.NoError(t, db.AddTxs(nil, []*core.SolanaTx{event}))
+				require.NoError(t, db.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{
+					{ChainID: chainID, Hash: event.InnerActionHash, TTL: ttl, Metadata: event.Metadata},
+				}))
+
+				indexer := &solanaTxsStore.MockStorageHandler{}
+				indexer.On("GetLatestFinalizedBlockNumber").Return(uint64(expiryHeight+1), nil)
+
+				logger := hclog.NewNullLogger()
+				processors := NewTxProcessorsCollection(
+					[]core.SolanaTxSuccessProcessor{success.NewSolanaBatchExecutedProcessor(logger)},
+					[]core.SolanaTxFailedProcessor{failed.NewSolanaBatchExecutionFailedProcessor(logger)},
+				)
+				processor := NewSolStateProcessor(t.Context(), appConfig, db, processors,
+					map[string]solanaTxsStore.StorageHandler{chainID: indexer}, logger)
+				processor.Reset()
+
+				claims := &oCore.BridgeClaims{ChainIDConverter: appConfig.ChainIDConverter}
+				// A single available claim makes the scheduler's first choice observable.
+				processor.RunChecks(claims, chainID, 1, 0)
+
+				if tc.wantSuccess {
+					require.Len(t, claims.BatchExecutedClaims, 1)
+					require.Empty(t, claims.BatchExecutionFailedClaims)
+				} else {
+					require.Len(t, claims.BatchExecutionFailedClaims, 1)
+					require.Empty(t, claims.BatchExecutedClaims)
+				}
+			})
+		}
+	})
+
+	for _, scenario := range []string{"full signature", "legacy prefix", "dangling link", "ambiguous prefix"} {
+		t.Run("late expectation/"+scenario, func(t *testing.T) {
+			oracleDB, err := createOracleDB(filepath.Join(t.TempDir(), "oracle.db"))
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, oracleDB.DB.Close()) })
+
+			chainID := common.ChainIDStrSolana
+			action := [32]byte{4, 5}
+			sig := solana.Signature{0: 1, 63: 2}
+			metadata := []byte(`{"t":"batch","n":1}`)
+			event := &core.SolanaTx{
+				OriginChainID: chainID, SlotNumber: 12, TxSignature: sig, InnerActionHash: action, Metadata: metadata,
+			}
+			expected := &core.BridgeExpectedSolanaTx{ChainID: chainID, Hash: action, TTL: 100, Metadata: metadata}
+			logger := hclog.NewNullLogger()
+			store := &solanaTxsStore.MockStorageHandler{}
+			store.On("GetLatestFinalizedBlockNumber").Return(uint64(102), nil)
+
+			newProcessor := func() *SolStateProcessor {
+				processors := NewTxProcessorsCollection(
+					[]core.SolanaTxSuccessProcessor{success.NewSolanaBatchExecutedProcessor(logger)},
+					[]core.SolanaTxFailedProcessor{failed.NewSolanaBatchExecutionFailedProcessor(logger)},
+				)
+				processor := NewSolStateProcessor(t.Context(), appConfig, oracleDB, processors,
+					map[string]solanaTxsStore.StorageHandler{chainID: store}, logger)
+				processor.Reset()
+
+				return processor
+			}
+
+			require.NoError(t, oracleDB.AddTxs(nil, []*core.SolanaTx{event}))
+
+			processor := newProcessor()
+			claims := &oCore.BridgeClaims{ChainIDConverter: appConfig.ChainIDConverter}
+			processor.RunChecks(claims, chainID, 10, 0)
+			require.Len(t, claims.BatchExecutedClaims, 1)
+
+			// The expected record arrives after the success check, before the claim is persisted.
+			require.NoError(t, oracleDB.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{expected}))
+			processor.PersistNew()
+			require.NoError(t, oracleDB.DB.View(func(tx *bbolt.Tx) error {
+				key, err := oDatabaseaccess.ReadInnerActionTxKey(tx, chainID, action[:])
+				require.NoError(t, err)
+				require.Equal(t, sig[:], key)
+
+				return nil
+			}))
+
+			if scenario == "legacy prefix" || scenario == "ambiguous prefix" {
+				// A second row shares the prefix. Only matching inner actions count.
+				other := event.ToProcessedSolanaTx(false)
+
+				other.TxSignature[63] = 1
+				if scenario == "legacy prefix" {
+					other.InnerActionHash[0]++
+				}
+
+				require.NoError(t, oracleDB.AddTxs([]*core.ProcessedSolanaTx{other}, nil))
+				require.NoError(t, oracleDB.DB.Update(func(tx *bbolt.Tx) error {
+					legacy := fmt.Sprintf(`{"chain_id":%q,"hash":"0x%x","ia_hash":"0x%x"}`, chainID, sig[:32], action)
+
+					return tx.Bucket(oDatabaseaccess.ChainBucket(oDatabaseaccess.ProcessedTxsByInnerActionBucket, chainID)).
+						Put(action[:], []byte(legacy))
+				}))
+			}
+
+			if scenario == "dangling link" {
+				require.NoError(t, oracleDB.DB.Update(func(tx *bbolt.Tx) error {
+					return tx.Bucket(oDatabaseaccess.ChainBucket(oDatabaseaccess.ProcessedTxsBucket, chainID)).Delete(sig[:])
+				}))
+			}
+
+			expiry := newProcessor()
+			claims = &oCore.BridgeClaims{ChainIDConverter: appConfig.ChainIDConverter}
+			expiry.RunChecks(claims, chainID, 10, 0)
+			require.Empty(t, claims.BatchExecutionFailedClaims)
+			expiry.PersistNew()
+
+			queued, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+			require.NoError(t, err)
+
+			if scenario == "dangling link" || scenario == "ambiguous prefix" {
+				require.Len(t, queued, 1, "lookup errors must leave the expectation available for retry")
+
+				return
+			}
+
+			require.Empty(t, queued)
+
+			// A different TTL makes this a fresh expectation key for an already committed execution.
+			expected.TTL++
+			require.NoError(t, oracleDB.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{expected}))
+			queued, err = oracleDB.GetAllExpectedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Empty(t, queued)
+		})
+	}
+
+	t.Run("absent and invalid executions can expire", func(t *testing.T) {
+		oracleDB, err := createOracleDB(filepath.Join(t.TempDir(), "oracle.db"))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, oracleDB.DB.Close()) })
+
+		chainID := common.ChainIDStrSolana
+		invalid := &core.ProcessedSolanaTx{
+			OriginChainID: chainID, TxSignature: solana.Signature{63: 1}, IsInvalid: true, InnerActionHash: [32]byte{1},
+		}
+		require.NoError(t, oracleDB.UpdateTxs(&core.SolanaUpdateTxsData{
+			MoveUnprocessedToProcessed: []*core.ProcessedSolanaTx{invalid},
+		}, appConfig.ChainIDConverter))
+
+		metadata := []byte(`{"t":"batch","n":1}`)
+		require.NoError(t, oracleDB.AddExpectedTxs([]*core.BridgeExpectedSolanaTx{
+			{ChainID: chainID, Hash: invalid.InnerActionHash, TTL: 100, Metadata: metadata},
+			{ChainID: chainID, Hash: [32]byte{2}, TTL: 100, Metadata: metadata},
+		}))
+
+		store := &solanaTxsStore.MockStorageHandler{}
+		store.On("GetLatestFinalizedBlockNumber").Return(uint64(102), nil)
+
+		logger := hclog.NewNullLogger()
+		processors := NewTxProcessorsCollection(nil, []core.SolanaTxFailedProcessor{
+			failed.NewSolanaBatchExecutionFailedProcessor(logger),
+		})
+		processor := NewSolStateProcessor(t.Context(), appConfig, oracleDB, processors,
+			map[string]solanaTxsStore.StorageHandler{chainID: store}, logger)
+		processor.Reset()
+
+		claims := &oCore.BridgeClaims{ChainIDConverter: appConfig.ChainIDConverter}
+		processor.RunChecks(claims, chainID, 10, 0)
+		require.Len(t, claims.BatchExecutionFailedClaims, 2)
+	})
 
 	t.Run("NewSolTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)

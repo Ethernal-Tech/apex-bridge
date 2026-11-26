@@ -116,9 +116,7 @@ func (s *SolStateProcessor) RunChecks(
 		return
 	}
 
-	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
-	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
-	// that all claims are filled only from unprocessedTxs and never from expectedTxs
+	// Interleave queued executions and finalized expiries in block-height order.
 	s.state.blockInfo = s.constructBridgeClaimsBlockInfo(
 		chainID, s.state.unprocessedTxs, expectedTxs, nil)
 	if s.state.blockInfo == nil {
@@ -384,20 +382,18 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	chainID string,
 	unprocessedTxs []*core.SolanaTx,
 	expectedTxs []*core.BridgeExpectedSolanaTx,
-	prevBlockInfo *core.BridgeClaimsSlotInfo,
-) *core.BridgeClaimsSlotInfo {
+	prevBlockInfo *core.BridgeClaimsBlockInfo,
+) *core.BridgeClaimsBlockInfo {
 	found := false
 	minBlockNumber := uint64(math.MaxUint64)
 
-	if len(unprocessedTxs) > 0 {
-		// unprocessed are ordered by slot number, so first in collection is min
-		for _, tx := range unprocessedTxs {
-			if prevBlockInfo == nil || prevBlockInfo.Number < tx.SlotNumber {
-				minBlockNumber = tx.SlotNumber
-				found = true
+	// Queued finalized transactions are in slot order, which also orders their block heights.
+	for _, tx := range unprocessedTxs {
+		if prevBlockInfo == nil || prevBlockInfo.Number < tx.BlockNumber {
+			minBlockNumber = tx.BlockNumber
+			found = true
 
-				break
-			}
+			break
 		}
 	}
 
@@ -427,7 +423,7 @@ func (s *SolStateProcessor) constructBridgeClaimsBlockInfo(
 	}
 
 	if found {
-		return &core.BridgeClaimsSlotInfo{
+		return &core.BridgeClaimsBlockInfo{
 			ChainID: chainID,
 			Number:  minBlockNumber,
 		}
@@ -594,7 +590,14 @@ func (s *SolStateProcessor) checkExpectedTxs(
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
+		processedTx, err := s.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
+		if err != nil {
+			s.logger.Error("Failed to resolve expired Solana transaction", "chainID", expiredTx.ChainID,
+				"innerActionHash", fmt.Sprintf("%x", expiredTx.Hash), "err", err)
+
+			continue
+		}
+
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)

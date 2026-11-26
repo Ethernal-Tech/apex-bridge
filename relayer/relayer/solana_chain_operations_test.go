@@ -572,3 +572,43 @@ func TestPayload_Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, payload, payload2)
 }
+
+func TestSolanaChainOperations_RelayerBalance(t *testing.T) {
+	privateKey, err := solana.NewRandomPrivateKey()
+	require.NoError(t, err)
+
+	newOps := func(provider *solanaWallet.MockTxProvider) *SolanaChainOperations {
+		return &SolanaChainOperations{
+			chainID:    common.ChainIDStrSolana,
+			privateKey: &privateKey,
+			txProvider: provider,
+			logger:     hclog.NewNullLogger(),
+		}
+	}
+
+	t.Run("address is the relayer key", func(t *testing.T) {
+		require.Equal(t, privateKey.PublicKey().String(), newOps(&solanaWallet.MockTxProvider{}).GetRelayerAddress())
+	})
+
+	t.Run("balance is reported in wei", func(t *testing.T) {
+		provider := &solanaWallet.MockTxProvider{}
+		provider.On("GetBalance", mock.Anything, privateKey.PublicKey()).Return(uint64(1_500_000_000), nil).Once()
+
+		balance, err := newOps(provider).GetRelayerBalance(context.Background())
+		require.NoError(t, err)
+
+		// 1.5 SOL
+		oneAndHalf, _ := new(big.Int).SetString("1500000000000000000", 10)
+		require.Equal(t, oneAndHalf, balance)
+		provider.AssertExpectations(t)
+	})
+
+	t.Run("node error", func(t *testing.T) {
+		provider := &solanaWallet.MockTxProvider{}
+		provider.On("GetBalance", mock.Anything, privateKey.PublicKey()).Return(uint64(0), errors.New("node unreachable")).Once()
+
+		balance, err := newOps(provider).GetRelayerBalance(context.Background())
+		require.ErrorContains(t, err, "node unreachable")
+		require.Nil(t, balance)
+	})
+}

@@ -18,7 +18,7 @@ type perTickState struct {
 
 	expectedTxsMap map[string]*core.BridgeExpectedSolanaTx
 	unprocessedTxs []*core.SolanaTx
-	blockInfo      *core.BridgeClaimsSlotInfo
+	blockInfo      *core.BridgeClaimsBlockInfo
 }
 
 type txProcessorsCollection struct {
