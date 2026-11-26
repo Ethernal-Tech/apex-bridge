@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -15,6 +19,8 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -29,6 +35,60 @@ type EVMChainOperations struct {
 	ttlFormatter testenv.TTLFormatterFunc
 	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
+
+	gateway        ethcommon.Address
+	chainIDFetcher func(ctx context.Context) (*big.Int, error)
+	chainIDMu      sync.Mutex
+	chainIDCached  *big.Int
+}
+
+// chainIDFetchTimeout bounds one eth_chainId attempt, so a node that accepts the connection but never
+// answers cannot stall this chain's batcher loop; the next tick retries.
+const chainIDFetchTimeout = 5 * time.Second
+
+func newNodeChainIDFetcher(nodeURL string) func(ctx context.Context) (*big.Int, error) {
+	return newNodeChainIDFetcherWithTimeout(nodeURL, chainIDFetchTimeout)
+}
+
+func newNodeChainIDFetcherWithTimeout(
+	nodeURL string, timeout time.Duration,
+) func(ctx context.Context) (*big.Int, error) {
+	return func(ctx context.Context) (*big.Int, error) {
+		ctx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		client, err := ethclient.DialContext(ctx, nodeURL)
+		if err != nil {
+			return nil, fmt.Errorf("dial evm node: %w", err)
+		}
+
+		defer client.Close()
+
+		return client.ChainID(ctx)
+	}
+}
+
+// getChainID returns the numeric EVM chain id, read lazily from the node and cached after first success
+func (cco *EVMChainOperations) getChainID(ctx context.Context) (*big.Int, error) {
+	cco.chainIDMu.Lock()
+	defer cco.chainIDMu.Unlock()
+
+	if cco.chainIDCached != nil {
+		return cco.chainIDCached, nil
+	}
+
+	chainID, err := cco.chainIDFetcher(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch evm chain id: %w", err)
+	}
+
+	if chainID == nil || chainID.Sign() <= 0 {
+		return nil, fmt.Errorf("invalid evm chain id: %v", chainID)
+	}
+
+	cco.chainIDCached = new(big.Int).Set(chainID)
+
+	return cco.chainIDCached, nil
 }
 
 func NewEVMChainOperations(
@@ -43,6 +103,11 @@ func NewEVMChainOperations(
 		return nil, err
 	}
 
+	if !ethcommon.IsHexAddress(config.GatewayAddress) ||
+		ethcommon.HexToAddress(config.GatewayAddress) == (ethcommon.Address{}) {
+		return nil, errors.New("invalid gatewayAddress: must be a non-zero hex address")
+	}
+
 	privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, err
@@ -55,6 +120,9 @@ func NewEVMChainOperations(
 		ttlFormatter: testenv.GetTTLFormatter(config.TestMode),
 		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
+
+		gateway:        ethcommon.HexToAddress(config.GatewayAddress),
+		chainIDFetcher: newNodeChainIDFetcher(config.NodeURL),
 	}, nil
 }
 
@@ -76,6 +144,11 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
+	evmChainID, err := cco.getChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	txs, err := newEVMSmartContractTransaction(
 		cco.config,
 		batchNonceID,
@@ -85,6 +158,9 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	if err != nil {
 		return nil, err
 	}
+
+	txs.ChainID = evmChainID
+	txs.Gateway = cco.gateway
 
 	txsBytes, err := txs.Pack()
 	if err != nil {

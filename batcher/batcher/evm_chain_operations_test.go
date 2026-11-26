@@ -5,9 +5,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -49,6 +52,7 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 	tokenID := uint16(3)
 
 	batcherConfig := cardanotx.BatcherEVMChainConfig{
+		GatewayAddress:         testGatewayAddr,
 		TTLBlockNumberInc:      ttlBlockNumberInc,
 		BlockRoundingThreshold: 6,
 		NoBatchPeriodPercent:   0.1,
@@ -121,11 +125,16 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 			chainSpecificJSONRaw, secretsMngr, dbMock, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 
+		ops.chainIDFetcher = func(context.Context) (*big.Int, error) { return big.NewInt(9070), nil }
+
 		dt, err := ops.GenerateBatchTransaction(ctx, chainID, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
 		txs, err := newEVMSmartContractTransaction(&batcherConfig, batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
 		require.NoError(t, err)
+
+		txs.ChainID = big.NewInt(9070)
+		txs.Gateway = common.HexToAddress(testGatewayAddr)
 
 		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
 			{
@@ -476,5 +485,131 @@ func TestEthChain_IsSynchronized(t *testing.T) {
 		val, err := cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
 		require.NoError(t, err)
 		require.Equal(t, i >= scBlock.BlockSlot.Uint64(), val)
+	}
+}
+
+const testGatewayAddr = "0x2222222222222222222222222222222222222222"
+
+func newTestEVMOps(t *testing.T, gateway string) (*EVMChainOperations, error) {
+	t.Helper()
+
+	chainID := "nexus"
+	testDir := t.TempDir()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = eth.CreateAndSaveBatcherEVMPrivateKey(secretsMngr, chainID, true)
+	require.NoError(t, err)
+
+	raw, err := cardanotx.BatcherEVMChainConfig{
+		GatewayAddress:         gateway,
+		TTLBlockNumberInc:      5,
+		BlockRoundingThreshold: 6,
+		NoBatchPeriodPercent:   0.1,
+		MinFeeForBridging:      big.NewInt(0),
+		Tokens: map[uint16]common.Token{
+			1: {ChainSpecific: "lovelace"},
+		},
+	}.Serialize()
+	require.NoError(t, err)
+
+	dbMock := eventTrackerStore.NewTestTrackerStore(t)
+	require.NoError(t, dbMock.InsertLastProcessedBlock(uint64(4)))
+
+	return NewEVMChainOperations(raw, secretsMngr, dbMock, chainID, hclog.NewNullLogger())
+}
+
+func TestEthChain_GenerateBatchTransaction_DestinationFields(t *testing.T) {
+	ops, err := newTestEVMOps(t, testGatewayAddr)
+	require.NoError(t, err)
+
+	ops.chainIDFetcher = func(context.Context) (*big.Int, error) { return big.NewInt(9070), nil }
+
+	dt, err := ops.GenerateBatchTransaction(context.Background(), "nexus", nil, 3)
+	require.NoError(t, err)
+
+	tx, err := eth.NewEVMSmartContractTransaction(dt.TxRaw)
+	require.NoError(t, err)
+	require.Equal(t, big.NewInt(9070), tx.ChainID)
+	require.Equal(t, common.HexToAddress(testGatewayAddr), tx.Gateway)
+
+	hash, err := common.Keccak256(dt.TxRaw)
+	require.NoError(t, err)
+	require.Equal(t, hex.EncodeToString(hash), dt.TxHash)
+}
+
+func TestEthChain_GenerateBatchTransaction_ChainIDUnavailable(t *testing.T) {
+	ops, err := newTestEVMOps(t, testGatewayAddr)
+	require.NoError(t, err)
+
+	var (
+		calls  int
+		result *big.Int
+		ferr   error
+	)
+
+	ops.chainIDFetcher = func(context.Context) (*big.Int, error) {
+		calls++
+
+		return result, ferr
+	}
+
+	ctx := context.Background()
+
+	ferr = errors.New("node down")
+	_, err = ops.GenerateBatchTransaction(ctx, "nexus", nil, 3)
+	require.Error(t, err)
+
+	ferr, result = nil, big.NewInt(0)
+	_, err = ops.GenerateBatchTransaction(ctx, "nexus", nil, 3)
+	require.Error(t, err)
+
+	result = big.NewInt(-5)
+	_, err = ops.GenerateBatchTransaction(ctx, "nexus", nil, 3)
+	require.Error(t, err)
+
+	result = big.NewInt(9070)
+	callsBefore := calls
+
+	dt, err := ops.GenerateBatchTransaction(ctx, "nexus", nil, 3)
+	require.NoError(t, err)
+	require.NotNil(t, dt)
+	require.Equal(t, callsBefore+1, calls)
+
+	_, err = ops.GenerateBatchTransaction(ctx, "nexus", nil, 4)
+	require.NoError(t, err)
+	require.Equal(t, callsBefore+1, calls)
+}
+
+func TestNodeChainIDFetcher_TimesOut(t *testing.T) {
+	// a node that accepts the request but never answers
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+
+	defer srv.Close()
+	defer close(release)
+
+	fetch := newNodeChainIDFetcherWithTimeout(srv.URL, 200*time.Millisecond)
+
+	start := time.Now().UTC()
+	_, err := fetch(context.Background())
+
+	require.Error(t, err)
+	require.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestNewEVMChainOperations_RequiresGateway(t *testing.T) {
+	for _, gw := range []string{"", "0xzz", "0x0000000000000000000000000000000000000000"} {
+		_, err := newTestEVMOps(t, gw)
+		require.ErrorContains(t, err, "gatewayAddress", gw)
 	}
 }

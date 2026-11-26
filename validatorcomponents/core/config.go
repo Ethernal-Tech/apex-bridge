@@ -111,6 +111,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		oracleEthChains[ecConfig.ChainID] = ecConfig
 
 		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
+			GatewayAddress:         ecConfig.BridgingAddresses.BridgingAddress,
+			NodeURL:                ecConfig.NodeURL,
 			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
 			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
