@@ -42,6 +42,7 @@ type EthChainConfig struct {
 	ChainID                               string                       `json:"-"`
 	BridgingAddresses                     EthBridgingAddresses         `json:"-"`
 	NodeURL                               string                       `json:"nodeUrl"`
+	EVMChainID                            uint64                       `json:"evmChainId"`
 	SyncBatchSize                         uint64                       `json:"syncBatchSize"`
 	ConfirmationStrategy                  string                       `json:"confirmationStrategy"`
 	NumBlockConfirmations                 uint64                       `json:"numBlockConfirmations"`

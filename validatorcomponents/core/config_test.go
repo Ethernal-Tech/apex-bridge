@@ -11,15 +11,15 @@ import (
 
 func TestSeparateConfigs_EVMDestination(t *testing.T) {
 	const (
-		nodeURL = "http://localhost:8545"
-		gateway = "0x2222222222222222222222222222222222222222"
+		evmChainID = uint64(9070)
+		gateway    = "0x2222222222222222222222222222222222222222"
 	)
 
 	appConfig := &AppConfig{
 		EthChains: map[string]*oracleCore.EthChainConfig{
 			"nexus": {
 				ChainID:           "nexus",
-				NodeURL:           nodeURL,
+				EVMChainID:        evmChainID,
 				BridgingAddresses: oracleCore.EthBridgingAddresses{BridgingAddress: gateway},
 			},
 		},
@@ -39,7 +39,7 @@ func TestSeparateConfigs_EVMDestination(t *testing.T) {
 		var cfg cardanotx.BatcherEVMChainConfig
 
 		require.NoError(t, json.Unmarshal(chain.ChainSpecific, &cfg))
-		require.Equal(t, nodeURL, cfg.NodeURL)
+		require.Equal(t, evmChainID, cfg.EVMChainID)
 		require.Equal(t, gateway, cfg.GatewayAddress)
 	}
 

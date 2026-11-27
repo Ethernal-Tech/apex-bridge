@@ -112,7 +112,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
 			GatewayAddress:         ecConfig.BridgingAddresses.BridgingAddress,
-			NodeURL:                ecConfig.NodeURL,
+			EVMChainID:             ecConfig.EVMChainID,
 			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
 			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,

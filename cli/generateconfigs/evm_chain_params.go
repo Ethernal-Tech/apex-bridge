@@ -19,6 +19,7 @@ import (
 
 const (
 	evmChainNodeURLFlag                = "evm-node-url"
+	evmChainIDFlag                     = "evm-chain-id"
 	evmChainTTLBlockNumberIncFlag      = "evm-ttl-block-inc"
 	evmChainBlockRoundingThresholdFlag = "evm-block-rounding-threshold"
 	evmNoBatchPeriodPercentFlag        = "evm-no-batch-period-percent"
@@ -33,6 +34,7 @@ const (
 	evmSyncBatchSizeFlag               = "evm-sync-batch-size"
 
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
+	evmChainIDFlagDesc                     = "numeric EVM chain id (eth_chainId); every batch is bound to it"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
 	evmChainBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for evm chain. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
 	evmNoBatchPeriodPercentFlagDesc        = "part of the block rounding threshold at both ends of a rounding window in which no batch is created, from 0 (disabled) up to but excluding 0.5"                               //nolint:lll
@@ -62,6 +64,7 @@ type evmChainGenerateConfigsParams struct {
 	chainIDString string
 
 	evmChainNodeURL                string
+	evmChainID                     uint64
 	evmChainTTLBlockNumberInc      uint64
 	evmChainBlockRoundingThreshold uint64
 	evmNoBatchPeriodPercent        float64
@@ -97,6 +100,10 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 
 	if !common.IsValidHTTPURL(p.evmChainNodeURL) {
 		return fmt.Errorf("invalid %s: %s", evmChainNodeURLFlag, p.evmChainNodeURL)
+	}
+
+	if p.evmChainID == 0 {
+		return fmt.Errorf("missing or zero %s", evmChainIDFlag)
 	}
 
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
@@ -157,6 +164,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		evmChainNodeURLFlag,
 		"",
 		evmChainNodeURLFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.evmChainID,
+		evmChainIDFlag,
+		0,
+		evmChainIDFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.evmChainTTLBlockNumberInc,
@@ -310,6 +323,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
 		NodeURL:                    p.evmChainNodeURL,
+		EVMChainID:                 p.evmChainID,
 		SyncBatchSize:              p.evmSyncBatchSize,
 		ConfirmationStrategy:       p.evmConfirmationStrategy,
 		NumBlockConfirmations:      p.evmNumBlockConfirmations,
