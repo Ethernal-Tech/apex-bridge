@@ -241,6 +241,7 @@ Evm chain config all options
 ``` shell
 $ apex-bridge generate-configs evm-chain \
         --evm-node-url <node URL> \
+        --evm-chain-id <numeric EVM chain id (eth_chainId), required> \
         --evm-ttl-block-inc <ttl block increment> \
         --evm-block-rounding-threshold <block rounding threshold> \
         --evm-no-batch-period-percent <part of the rounding window at both ends in which no batch is created, 0 - default 0.2> \
@@ -269,6 +270,7 @@ Add evm chain config minimal example
 ``` shell
 $ apex-bridge generate-configs evm-chain \
         --evm-node-url localhost:5500 \
+        --evm-chain-id 9070 \
         --evm-ttl-block-inc 10 \
         --evm-block-rounding-threshold 5 \
         --evm-starting-block 3 \

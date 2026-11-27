@@ -94,6 +94,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 			BatchNonceID: 1,
 			TTL:          2,
 			FeeAmount:    big.NewInt(1),
+			ChainID:      big.NewInt(9070),
 			Receivers: []eth.EVMSmartContractTransactionReceiver{
 				{
 					Address: goEthCommon.Address([20]byte{1, 2}),

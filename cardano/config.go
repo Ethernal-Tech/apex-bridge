@@ -165,6 +165,8 @@ var (
 )
 
 type BatcherEVMChainConfig struct {
+	GatewayAddress         string                       `json:"gatewayAddress"`
+	EVMChainID             uint64                       `json:"evmChainId"`
 	TTLBlockNumberInc      uint64                       `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold uint64                       `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64                      `json:"noBatchPeriodPercent"`

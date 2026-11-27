@@ -1047,7 +1047,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		// first hash corresponds to simulateDepositRealData
-		txHash := ethgo.HexToHash("0xec6a5ce4612fac51f1429086a4370b546d2279c83410fc6dd9f3b661ac85b11b")
+		txHash := ethgo.HexToHash("0x3b669341f2c2e4f1a127f90c3ec98e0b8051acbbdba95fb7200804c289f06ff5")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1819,6 +1819,7 @@ func simulateDepositRealData(t *testing.T) []byte {
 		BatchNonceID: uint64(100),
 		TTL:          uint64(100),
 		FeeAmount:    big.NewInt(1_000_000),
+		ChainID:      big.NewInt(9070),
 		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: ethereum_common.HexToAddress("0x0ff"),

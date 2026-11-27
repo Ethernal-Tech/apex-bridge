@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -9,39 +10,38 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const (
+	abiTypeUint256 = "uint256"
+	abiTypeUint64  = "uint64"
+)
+
 var (
+	receiversAbi = abi.ArgumentMarshaling{
+		Name:         "receivers",
+		Type:         "tuple[]",
+		InternalType: "struct IGatewayStructs.ReceiverDeposit[]",
+		Components: []abi.ArgumentMarshaling{
+			{Name: "receiver", Type: "address"},
+			{Name: "amount", Type: abiTypeUint256},
+			{Name: "tokenId", Type: "uint16"},
+		},
+	}
+
+	// txAbiLegacy is the payload layout used before the destination binding (chainId, gateway)
+	txAbiLegacy, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{Name: "batchId", Type: abiTypeUint64},
+		{Name: "ttlExpired", Type: abiTypeUint64},
+		{Name: "feeAmount", Type: abiTypeUint256},
+		receiversAbi,
+	})
+
 	txAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
-		{
-			Name: "batchId",
-			Type: "uint64",
-		},
-		{
-			Name: "ttlExpired",
-			Type: "uint64",
-		},
-		{
-			Name: "feeAmount",
-			Type: "uint256",
-		},
-		{
-			Name:         "receivers",
-			Type:         "tuple[]",
-			InternalType: "struct IGatewayStructs.ReceiverDeposit[]",
-			Components: []abi.ArgumentMarshaling{
-				{
-					Name: "receiver",
-					Type: "address",
-				},
-				{
-					Name: "amount",
-					Type: "uint256",
-				},
-				{
-					Name: "tokenId",
-					Type: "uint16",
-				},
-			},
-		},
+		{Name: "batchId", Type: abiTypeUint64},
+		{Name: "ttlExpired", Type: abiTypeUint64},
+		{Name: "feeAmount", Type: abiTypeUint256},
+		receiversAbi,
+		{Name: "chainId", Type: abiTypeUint256},
+		{Name: "gateway", Type: "address"},
 	})
 )
 
@@ -56,20 +56,51 @@ type EVMSmartContractTransaction struct {
 	TTL          uint64                                `json:"ttl" abi:"ttlExpired"`
 	FeeAmount    *big.Int                              `json:"feeAmount" abi:"feeAmount"`
 	Receivers    []EVMSmartContractTransactionReceiver `json:"receivers" abi:"receivers"`
+	ChainID      *big.Int                              `json:"chainId" abi:"chainId"`
+	Gateway      common.Address                        `json:"gateway" abi:"gateway"`
 }
 
+// evmSmartContractTransactionLegacy is the payload without destination fields (old batches and events)
+type evmSmartContractTransactionLegacy struct {
+	BatchNonceID uint64                                `abi:"batchId"`
+	TTL          uint64                                `abi:"ttlExpired"`
+	FeeAmount    *big.Int                              `abi:"feeAmount"`
+	Receivers    []EVMSmartContractTransactionReceiver `abi:"receivers"`
+}
+
+// NewEVMSmartContractTransaction decodes the new payload and falls back to the legacy one
+// (without chainId and gateway), leaving ChainID nil in that case.
 func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction, error) {
-	dt, err := abi.Arguments{{Type: txAbi}}.Unpack(bytes)
+	if dt, err := (abi.Arguments{{Type: txAbi}}).Unpack(bytes); err == nil {
+		tx, _ := abi.ConvertType(dt[0], new(EVMSmartContractTransaction)).(*EVMSmartContractTransaction)
+
+		// legacy bytes may decode as the new layout with garbage destination fields, so only
+		// accept the result when it re-encodes to exactly the same bytes
+		if repacked, err := tx.Pack(); err == nil && string(repacked) == string(bytes) {
+			return tx, nil
+		}
+	}
+
+	dt, err := abi.Arguments{{Type: txAbiLegacy}}.Unpack(bytes)
 	if err != nil {
 		return nil, err
 	}
 
-	tx, _ := abi.ConvertType(dt[0], new(EVMSmartContractTransaction)).(*EVMSmartContractTransaction)
+	legacy, _ := abi.ConvertType(dt[0], new(evmSmartContractTransactionLegacy)).(*evmSmartContractTransactionLegacy)
 
-	return tx, nil
+	return &EVMSmartContractTransaction{
+		BatchNonceID: legacy.BatchNonceID,
+		TTL:          legacy.TTL,
+		FeeAmount:    legacy.FeeAmount,
+		Receivers:    legacy.Receivers,
+	}, nil
 }
 
 func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {
+	if evmsctx.ChainID == nil {
+		return nil, errors.New("evm smart contract transaction: chainId is not set")
+	}
+
 	return abi.Arguments{{Type: txAbi}}.Pack(evmsctx)
 }
 
@@ -97,6 +128,11 @@ func (evmsctx EVMSmartContractTransaction) String() string {
 		sb.WriteString(fmt.Sprintf("%v", v.TokenID))
 		sb.WriteRune(')')
 	}
+
+	sb.WriteString("\nchainId = ")
+	sb.WriteString(fmt.Sprintf("%v\n", evmsctx.ChainID))
+	sb.WriteString("gateway = ")
+	sb.WriteString(evmsctx.Gateway.String())
 
 	return sb.String()
 }

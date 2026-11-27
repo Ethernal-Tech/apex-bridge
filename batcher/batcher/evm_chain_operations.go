@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"sort"
 
@@ -15,6 +16,7 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -29,6 +31,9 @@ type EVMChainOperations struct {
 	ttlFormatter testenv.TTLFormatterFunc
 	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
+
+	gateway    ethcommon.Address
+	evmChainID *big.Int
 }
 
 func NewEVMChainOperations(
@@ -43,6 +48,15 @@ func NewEVMChainOperations(
 		return nil, err
 	}
 
+	if !ethcommon.IsHexAddress(config.GatewayAddress) ||
+		ethcommon.HexToAddress(config.GatewayAddress) == (ethcommon.Address{}) {
+		return nil, errors.New("invalid gatewayAddress: must be a non-zero hex address")
+	}
+
+	if config.EVMChainID == 0 {
+		return nil, errors.New("invalid evmChainId: must be the numeric EVM chain id of the chain")
+	}
+
 	privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, err
@@ -55,6 +69,9 @@ func NewEVMChainOperations(
 		ttlFormatter: testenv.GetTTLFormatter(config.TestMode),
 		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
+
+		gateway:    ethcommon.HexToAddress(config.GatewayAddress),
+		evmChainID: new(big.Int).SetUint64(config.EVMChainID),
 	}, nil
 }
 
@@ -85,6 +102,9 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	if err != nil {
 		return nil, err
 	}
+
+	txs.ChainID = new(big.Int).Set(cco.evmChainID)
+	txs.Gateway = cco.gateway
 
 	txsBytes, err := txs.Pack()
 	if err != nil {

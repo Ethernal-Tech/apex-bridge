@@ -49,6 +49,8 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 	tokenID := uint16(3)
 
 	batcherConfig := cardanotx.BatcherEVMChainConfig{
+		GatewayAddress:         testGatewayAddr,
+		EVMChainID:             testEVMChainID,
 		TTLBlockNumberInc:      ttlBlockNumberInc,
 		BlockRoundingThreshold: 6,
 		NoBatchPeriodPercent:   0.1,
@@ -126,6 +128,9 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 
 		txs, err := newEVMSmartContractTransaction(&batcherConfig, batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
 		require.NoError(t, err)
+
+		txs.ChainID = big.NewInt(9070)
+		txs.Gateway = common.HexToAddress(testGatewayAddr)
 
 		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
 			{
@@ -477,4 +482,73 @@ func TestEthChain_IsSynchronized(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, i >= scBlock.BlockSlot.Uint64(), val)
 	}
+}
+
+const (
+	testGatewayAddr = "0x2222222222222222222222222222222222222222"
+	testEVMChainID  = uint64(9070)
+)
+
+func newTestEVMOps(t *testing.T, gateway string, evmChainID uint64) (*EVMChainOperations, error) {
+	t.Helper()
+
+	chainID := "nexus"
+	testDir := t.TempDir()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = eth.CreateAndSaveBatcherEVMPrivateKey(secretsMngr, chainID, true)
+	require.NoError(t, err)
+
+	raw, err := cardanotx.BatcherEVMChainConfig{
+		GatewayAddress:         gateway,
+		EVMChainID:             evmChainID,
+		TTLBlockNumberInc:      5,
+		BlockRoundingThreshold: 6,
+		NoBatchPeriodPercent:   0.1,
+		MinFeeForBridging:      big.NewInt(0),
+		Tokens: map[uint16]common.Token{
+			1: {ChainSpecific: "lovelace"},
+		},
+	}.Serialize()
+	require.NoError(t, err)
+
+	dbMock := eventTrackerStore.NewTestTrackerStore(t)
+	require.NoError(t, dbMock.InsertLastProcessedBlock(uint64(4)))
+
+	return NewEVMChainOperations(raw, secretsMngr, dbMock, chainID, hclog.NewNullLogger())
+}
+
+// AD-1196: every generated EVM batch carries the configured chain id and the Gateway address.
+func TestEthChain_GenerateBatchTransaction_DestinationFields(t *testing.T) {
+	ops, err := newTestEVMOps(t, testGatewayAddr, testEVMChainID)
+	require.NoError(t, err)
+
+	dt, err := ops.GenerateBatchTransaction(context.Background(), "nexus", nil, 3)
+	require.NoError(t, err)
+
+	tx, err := eth.NewEVMSmartContractTransaction(dt.TxRaw)
+	require.NoError(t, err)
+	require.Equal(t, new(big.Int).SetUint64(testEVMChainID), tx.ChainID)
+	require.Equal(t, common.HexToAddress(testGatewayAddr), tx.Gateway)
+
+	hash, err := common.Keccak256(dt.TxRaw)
+	require.NoError(t, err)
+	require.Equal(t, hex.EncodeToString(hash), dt.TxHash)
+}
+
+func TestNewEVMChainOperations_RequiresGateway(t *testing.T) {
+	for _, gw := range []string{"", "0xzz", "0x0000000000000000000000000000000000000000"} {
+		_, err := newTestEVMOps(t, gw, testEVMChainID)
+		require.ErrorContains(t, err, "gatewayAddress", gw)
+	}
+}
+
+func TestNewEVMChainOperations_RequiresEVMChainID(t *testing.T) {
+	_, err := newTestEVMOps(t, testGatewayAddr, 0)
+	require.ErrorContains(t, err, "evmChainId")
 }
